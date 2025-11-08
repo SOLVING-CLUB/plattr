@@ -649,9 +649,51 @@ export default function CategoryPage() {
     return sum + (parseFloat(item.price) * item.quantity);
   }, 0);
 
+  // Helper function to interleave dishes by dish_type
+  // This creates a mixed variety view when no specific dish type is selected
+  const interleaveDishTypes = (dishList: typeof dishes): typeof dishes => {
+    // Group dishes by dish_type
+    const groupedByType: Record<string, typeof dishes> = {};
+    dishList.forEach(dish => {
+      const dishType = (dish as any).dish_type || dish.dishType || 'other';
+      if (!groupedByType[dishType]) {
+        groupedByType[dishType] = [];
+      }
+      groupedByType[dishType].push(dish);
+    });
+    
+    // Get all dish type keys
+    const dishTypeKeys = Object.keys(groupedByType);
+    if (dishTypeKeys.length === 0) return dishList;
+    
+    // Interleave: take 2-3 items from each dish type in rotation
+    const interleaved: typeof dishes = [];
+    const itemsPerBatch = 2; // Take 2 items from each type per round
+    let hasMore = true;
+    let roundIndex = 0;
+    
+    while (hasMore) {
+      hasMore = false;
+      dishTypeKeys.forEach(dishType => {
+        const group = groupedByType[dishType];
+        const startIdx = roundIndex * itemsPerBatch;
+        const batch = group.slice(startIdx, startIdx + itemsPerBatch);
+        
+        if (batch.length > 0) {
+          interleaved.push(...batch);
+          hasMore = true;
+        }
+      });
+      roundIndex++;
+    }
+    
+    return interleaved;
+  };
+
   // Filter and sort dishes
-  const filteredAndSortedDishes = dishes
-    .filter(dish => {
+  const filteredAndSortedDishes = (() => {
+    // First, apply all filters
+    const filtered = dishes.filter(dish => {
       // Search filter
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
@@ -687,8 +729,10 @@ export default function CategoryPage() {
       }
       
       return true;
-    })
-    .sort((a, b) => {
+    });
+    
+    // Then, sort the filtered dishes
+    const sorted = filtered.sort((a, b) => {
       const priceA = parseFloat(a.price as string);
       const priceB = parseFloat(b.price as string);
       
@@ -705,6 +749,15 @@ export default function CategoryPage() {
           return 0;
       }
     });
+    
+    // Finally, if no specific dish type is selected, interleave by dish_type
+    // This shows variety - 2 items from each type in rotation
+    if (selectedDishType === 'all' && !searchQuery) {
+      return interleaveDishTypes(sorted);
+    }
+    
+    return sorted;
+  })();
 
 
   const resetFilters = () => {
