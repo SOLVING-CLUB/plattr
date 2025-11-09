@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { useAndroidBackButton } from "@/hooks/useAndroidBackButton";
 import NotFound from "@/pages/not-found";
 import HomePage from "@/pages/HomePage";
+import AdminDashboard from "@/pages/AdminDashboard";
 import CategoryPage from "@/pages/CategoryPage";
 import DishesPage from "@/pages/DishesPage";
 import CheckoutPage from "@/pages/CheckoutPage";
@@ -20,6 +21,8 @@ import CorporatePage from "@/pages/CorporatePage";
 import PlannerDetailPage from "@/pages/PlannerDetailPage";
 import AuthPage from "@/pages/AuthPage";
 import OrderConfirmationPage from "@/pages/OrderConfirmationPage";
+import ConciergeWizardPage from "@/pages/ConciergeWizardPage";
+import ConciergeResultsPage from "./pages/ConciergeResultsPage";
 
 function Router() {
   // Handle Android back button globally
@@ -43,6 +46,10 @@ function Router() {
       <Route path="/about" component={AboutPage} />
       <Route path="/referral" component={ReferralPage} />
       <Route path="/corporate" component={CorporatePage} />
+      <Route path="/concierge" component={ConciergeWizardPage} />
+      <Route path="/concierge/results" component={ConciergeResultsPage} />
+      <Route path="/concierge-results" component={ConciergeResultsPage} />
+      <Route path="/admin" component={AdminDashboard} />
       <Route component={NotFound} />
     </Switch>
   );
