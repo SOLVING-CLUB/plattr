@@ -3,6 +3,7 @@ import AppHeader from "@/components/AppHeader";
 import BottomNav from "@/components/BottomNav";
 import FloatingCartButton from "@/components/FloatingCartButton";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { MapPin, Bell, Coffee, Cookie, Utensils, Building2, Users, Calendar, Truck, Sparkles, Gift, Percent, Star, TrendingUp, ChevronRight } from "lucide-react";
 import { useState, useCallback, useEffect } from "react";
@@ -304,6 +305,62 @@ export default function HomePage() {
             </div>
           </Card>
         </div>
+
+                {/* Smart Menu Concierge Section */}
+                <div className="mb-8" data-testid="section-concierge">
+          <Card 
+            className="overflow-hidden bg-gradient-to-br from-amber-500/10 via-orange-500/10 to-red-500/10 border-2 border-primary/20 hover-elevate cursor-pointer"
+            onClick={() => setLocation('/concierge')}
+            data-testid="card-concierge"
+          >
+            <div className="p-6">
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center">
+                  <Sparkles className="w-7 h-7 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className="text-xl font-bold" data-testid="text-concierge-title">
+                      Smart Menu Concierge
+                    </h3>
+                    <Badge variant="secondary" className="text-xs">
+                      AI-Powered
+                    </Badge>
+                  </div>
+                  <p className="text-muted-foreground mb-4" data-testid="text-concierge-description">
+                    Let our AI help you create the perfect menu for your event. Just tell us your preferences, and we'll suggest the ideal platter.
+                  </p>
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    <Badge variant="outline" className="text-xs">
+                      <Users className="w-3 h-3 mr-1" />
+                      Any guest count
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      <Calendar className="w-3 h-3 mr-1" />
+                      All event types
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      <TrendingUp className="w-3 h-3 mr-1" />
+                      Budget-friendly
+                    </Badge>
+                  </div>
+                  <Button 
+                    className="w-full sm:w-auto"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setLocation('/concierge');
+                    }}
+                    data-testid="button-start-concierge"
+                  >
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Get Personalized Recommendations
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
+
         {/* Food Category Section */}
         <div className="mb-8" id="meal-types-section">
           <div className="flex items-center justify-between mb-4">
