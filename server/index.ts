@@ -119,21 +119,28 @@ app.use((req, res, next) => {
   }
 
   // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
+  // Other ports are firewalled. Default to 3000 if not specified.
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || '5000', 10);
+  const port = parseInt(process.env.PORT || '3000', 10);
   const listenOptions: any = {
     port,
-    host: "0.0.0.0",
   };
   
-  // reusePort is not supported on Windows, only enable on Unix-like systems
-  if (process.platform !== 'win32') {
+  // On macOS, use localhost to avoid ENOTSUP errors with 0.0.0.0
+  // On Linux, use 0.0.0.0 to allow external connections
+  // reusePort is only supported on Linux, not macOS or Windows
+  if (process.platform === 'darwin') {
+    listenOptions.host = 'localhost';
+  } else if (process.platform === 'linux') {
+    listenOptions.host = '0.0.0.0';
     listenOptions.reusePort = true;
+  } else {
+    // Windows
+    listenOptions.host = 'localhost';
   }
   
   server.listen(listenOptions, () => {
-    log(`serving on port ${port}`);
+    log(`serving on port ${port} (${listenOptions.host})`);
   });
 })();
