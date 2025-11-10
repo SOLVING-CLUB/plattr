@@ -140,6 +140,59 @@ export default function ConciergeWizardPage() {
   };
 
   // Fetch cuisines from Supabase
+  // const { data: cuisines = [], isLoading: cuisinesLoading } = useQuery<ConciergeCuisine[]>({
+  //   queryKey: ["supabase", "cuisines"],
+  //   queryFn: async () => {
+  //     const normalizeCuisine = (row: SupabaseCuisineRow): ConciergeCuisine => ({
+  //       id: row.id,
+  //       name: row.name,
+  //       displayName: row.displayName ?? row.display_name ?? toTitleCase(row.name),
+  //       icon: row.icon ?? "Utensils",
+  //     });
+
+  //     try {
+  //       const rows = await supabase.select<SupabaseCuisineRow>("cuisines", {
+  //         select: "id,name,display_name,icon,display_order",
+  //         order: "display_order.asc",
+  //       });
+
+  //       if (Array.isArray(rows) && rows.length > 0) {
+  //         return rows.map(normalizeCuisine);
+  //       }
+  //     } catch (error) {
+  //       console.warn("[Supabase] Falling back to derived cuisines", error);
+  //     }
+
+  //     // Fallback: derive cuisine list from dishes table when cuisines table is absent
+  //     try {
+  //       const dishRows = await supabase.select<{ cuisine: string | null }>("dishes", {
+  //         select: "cuisine",
+  //         order: "cuisine.asc",
+  //       });
+
+  //       const seen = new Set<string>();
+  //       const derived: ConciergeCuisine[] = [];
+
+  //       for (const row of dishRows) {
+  //         const cuisineName = row?.cuisine?.trim();
+  //         if (!cuisineName) continue;
+  //         if (seen.has(cuisineName)) continue;
+  //         seen.add(cuisineName);
+  //         derived.push(
+  //           normalizeCuisine({
+  //             name: cuisineName,
+  //           })
+  //         );
+  //       }
+
+  //       return derived;
+  //     } catch (fallbackError) {
+  //       console.error("[Supabase] Failed to derive cuisines from dishes", fallbackError);
+  //       return [] as ConciergeCuisine[];
+  //     }
+  //   },
+  // });
+
   const { data: cuisines = [], isLoading: cuisinesLoading } = useQuery<ConciergeCuisine[]>({
     queryKey: ["supabase", "cuisines"],
     queryFn: async () => {
@@ -149,45 +202,31 @@ export default function ConciergeWizardPage() {
         displayName: row.displayName ?? row.display_name ?? toTitleCase(row.name),
         icon: row.icon ?? "Utensils",
       });
-
-      try {
-        const rows = await supabase.select<SupabaseCuisineRow>("cuisines", {
-          select: "id,name,display_name,icon,display_order",
-          order: "display_order.asc",
-        });
-
-        if (Array.isArray(rows) && rows.length > 0) {
-          return rows.map(normalizeCuisine);
-        }
-      } catch (error) {
-        console.warn("[Supabase] Falling back to derived cuisines", error);
-      }
-
-      // Fallback: derive cuisine list from dishes table when cuisines table is absent
+  
+      // Directly derive cuisines from the dishes table only
       try {
         const dishRows = await supabase.select<{ cuisine: string | null }>("dishes", {
           select: "cuisine",
           order: "cuisine.asc",
         });
-
+  
         const seen = new Set<string>();
         const derived: ConciergeCuisine[] = [];
-
+  
         for (const row of dishRows) {
           const cuisineName = row?.cuisine?.trim();
-          if (!cuisineName) continue;
-          if (seen.has(cuisineName)) continue;
+          if (!cuisineName || seen.has(cuisineName)) continue;
           seen.add(cuisineName);
           derived.push(
             normalizeCuisine({
               name: cuisineName,
-            })
+            }),
           );
         }
-
+  
         return derived;
-      } catch (fallbackError) {
-        console.error("[Supabase] Failed to derive cuisines from dishes", fallbackError);
+      } catch (error) {
+        console.error("[Supabase] Failed to derive cuisines from dishes", error);
         return [] as ConciergeCuisine[];
       }
     },

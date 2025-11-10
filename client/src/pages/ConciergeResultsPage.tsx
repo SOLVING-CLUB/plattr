@@ -193,9 +193,23 @@ export default function ConciergeResultsPage() {
 
         const matchesMealType = (dish: Dish) => {
           if (!preferences.mealType) return true;
-          return dish.mealType.some(
-            (type) => type.toLowerCase() === preferences.mealType.toLowerCase()
-          );
+
+          const preference = preferences.mealType.toLowerCase();
+          const preferenceAliases: Record<string, string[]> = {
+            breakfast: ["breakfast", "tiffins"],
+            lunch: ["lunch", "lunch-dinner", "lunch & dinner", "main course"],
+            dinner: ["dinner", "lunch-dinner", "lunch & dinner", "main course"],
+            snacks: ["snacks", "quick bites", "appetizers"],
+          };
+
+          const allowedValues = preferenceAliases[preference] || [preference];
+
+          return dish.mealType.some((type) => {
+            const normalizedType = type.toLowerCase();
+            return allowedValues.some((allowed) =>
+              normalizedType.includes(allowed)
+            );
+          });
         };
 
         const matchesCuisine = (dish: Dish) => {
