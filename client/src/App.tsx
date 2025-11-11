@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -23,6 +23,16 @@ import AuthPage from "@/pages/AuthPage";
 import OrderConfirmationPage from "@/pages/OrderConfirmationPage";
 import ConciergeWizardPage from "@/pages/ConciergeWizardPage";
 import ConciergeResultsPage from "./pages/ConciergeResultsPage";
+import { useEffect } from "react";
+
+// Redirect component for /cart to /checkout
+function CartRedirect() {
+  const [, setLocation] = useLocation();
+  useEffect(() => {
+    setLocation('/checkout');
+  }, [setLocation]);
+  return null;
+}
 
 function Router() {
   // Handle Android back button globally
@@ -32,6 +42,7 @@ function Router() {
     <Switch>
       <Route path="/" component={HomePage} />
       <Route path="/auth" component={AuthPage} />
+      <Route path="/cart" component={CartRedirect} />
       <Route path="/categories/:mealType" component={CategoryPage} />
       <Route path="/dishes/:mealType/:category" component={DishesPage} />
       <Route path="/planner/:mealType/:planType" component={PlannerDetailPage} />

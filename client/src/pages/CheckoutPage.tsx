@@ -13,6 +13,7 @@ import { getSupabaseImageUrl } from "@/lib/supabase";
 import { apiRequest, queryClient, getQueryFn } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { cartStorage } from "@/lib/cartStorage";
+import { useGoBack } from "@/hooks/useGoBack";
 
 // Generate next 7 days for delivery date selection
 const generateDeliveryDates = () => {
@@ -55,6 +56,7 @@ interface CartItem {
 
 export default function CheckoutPage() {
   const [, setLocation] = useLocation();
+  const goBack = useGoBack();
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [addressLabel, setAddressLabel] = useState('Home');
   const [landmark, setLandmark] = useState('');
@@ -219,12 +221,12 @@ export default function CheckoutPage() {
 
   return (
     <div className="min-h-screen bg-background pb-6">
-      <header className="sticky top-0 z-50 bg-background border-b p-3">
+      <header className="sticky top-0 z-50 bg-background border-b p-3" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         <div className="max-w-7xl mx-auto flex items-center gap-3">
           <Button 
             variant="ghost" 
             size="icon"
-            onClick={() => setLocation('/')}
+            onClick={goBack}
             data-testid="button-back"
           >
             <ArrowLeft className="w-5 h-5" />

@@ -250,7 +250,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-6">
       {/* Header */}
-      <div className="bg-background pt-4 pb-2">
+      <div className="bg-background pt-4 pb-2" style={{ paddingTop: `calc(1rem + env(safe-area-inset-top))` }}>
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">

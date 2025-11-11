@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
+import { useGoBack } from "@/hooks/useGoBack";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -142,6 +143,7 @@ export default function AddOnsPage() {
   const [infoAddOn, setInfoAddOn] = useState<string | null>(null);
   const [serviceType, setServiceType] = useState<ServiceType>('bulk');
   const { toast } = useToast();
+  const goBack = useGoBack('/checkout');
 
   // Get service type from navigation state
   useEffect(() => {
@@ -230,7 +232,7 @@ export default function AddOnsPage() {
       <header className="flex-shrink-0 border-b bg-card">
         <div className="flex items-center justify-between p-3 sm:p-4">
           <button
-            onClick={() => window.history.back()}
+            onClick={goBack}
             className="p-2 -ml-2 hover-elevate active-elevate-2 rounded-lg"
             data-testid="button-back"
             aria-label="Go back"

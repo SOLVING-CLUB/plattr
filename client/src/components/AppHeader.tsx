@@ -13,7 +13,7 @@ interface AppHeaderProps {
 
 export default function AppHeader({ cartItemCount = 0, onCartClick, onBackClick, onSearch, searchQuery }: AppHeaderProps) {
   return (
-    <header className="sticky top-0 z-50 bg-background border-b">
+    <header className="sticky top-0 z-50 bg-background border-b" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       <div className="flex items-center gap-2 p-3 max-w-7xl mx-auto">
         {onBackClick && (
           <Button 
