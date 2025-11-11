@@ -876,7 +876,7 @@ export default function CategoryPage() {
         <div className="flex-1 px-3 md:px-4 py-4 md:py-6 min-w-0 overflow-y-auto overflow-x-hidden pb-20 md:pb-6">
         
         {/* Horizontal Category Tabs - Sticky */}
-        <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm pb-4 mb-2 border-b shadow-md -mx-3 md:-mx-4 px-3 md:px-4">
+        <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm pb-4 mb-2 border-b shadow-md -mx-3 md:-mx-4 px-3 md:px-4" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
           <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide px-1 pt-3">
             {categories.map((cat) => {
               const totalInCategory = getDishCountForCategory(cat.id);

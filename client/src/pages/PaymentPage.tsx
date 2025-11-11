@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, Loader2 } from "lucide-react";
+import { useGoBack } from "@/hooks/useGoBack";
 
 // Make sure to call `loadStripe` outside of a component's render to avoid
 // recreating the `Stripe` object on every render.
@@ -95,6 +96,7 @@ const PaymentForm = ({ amount }: PaymentFormProps) => {
 
 export default function PaymentPage() {
   const [, setLocation] = useLocation();
+  const goBack = useGoBack('/checkout');
   const [clientSecret, setClientSecret] = useState("");
   const [amount, setAmount] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -165,12 +167,12 @@ export default function PaymentPage() {
 
   return (
     <div className="min-h-screen bg-background pb-6">
-      <header className="sticky top-0 z-50 bg-background border-b p-3">
+      <header className="sticky top-0 z-50 bg-background border-b p-3" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         <div className="max-w-7xl mx-auto flex items-center gap-3">
           <Button 
             variant="ghost" 
             size="icon"
-            onClick={() => setLocation('/checkout')}
+            onClick={goBack}
             data-testid="button-back"
           >
             <ArrowLeft className="w-5 h-5" />

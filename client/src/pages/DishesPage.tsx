@@ -6,6 +6,7 @@ import AppHeader from "@/components/AppHeader";
 import BottomNav from "@/components/BottomNav";
 import FloatingCartButton from "@/components/FloatingCartButton";
 import { useState } from "react";
+import { useGoBack } from "@/hooks/useGoBack";
 
 import dishImage from '@assets/stock_images/biryani_rice_dish_fo_8445bdd6.jpg';
 import dishImage2 from '@assets/stock_images/indian_food_platter__fb1fa3f3.jpg';
@@ -23,6 +24,8 @@ const MOCK_DISHES = [
 export default function DishesPage() {
   const [, params] = useRoute("/dishes/:mealType/:category");
   const [, setLocation] = useLocation();
+  const mealType = params?.mealType || 'tiffins';
+  const goBack = useGoBack(`/categories/${mealType}`);
   const [activeTab, setActiveTab] = useState('categories');
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   
@@ -31,7 +34,6 @@ export default function DishesPage() {
     { id: '1', name: 'Masala Dosa', price: 80, quantity: 1, category: 'Tiffins', image: dishImage }
   ]);
 
-  const mealType = params?.mealType || 'tiffins';
   const category = params?.category || 'south-indian-tiffins';
 
   const handleAdd = (id: string) => {
@@ -87,7 +89,7 @@ export default function DishesPage() {
           variant="ghost" 
           size="sm" 
           className="mb-4 -ml-2"
-          onClick={() => setLocation(`/categories/${mealType}`)}
+          onClick={goBack}
           data-testid="button-back"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />

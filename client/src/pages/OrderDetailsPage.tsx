@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, Clock, MapPin, Package, Calendar } from "lucide-react";
 import { getQueryFn } from "@/lib/queryClient";
 import { getSupabaseImageUrl } from "@/lib/supabase";
+import { useGoBack } from "@/hooks/useGoBack";
 
 interface OrderItem {
   id: string;
@@ -55,6 +56,7 @@ export default function OrderDetailsPage() {
   const [, setLocation] = useLocation();
   const [, params] = useRoute("/orders/:orderId");
   const orderId = params?.orderId;
+  const goBack = useGoBack('/orders');
 
   const { data: order, isLoading } = useQuery<OrderDetails>({
     queryKey: ['/api/orders', orderId],
@@ -94,12 +96,12 @@ export default function OrderDetailsPage() {
   return (
     <div className="min-h-screen bg-background pb-6">
       {/* Header */}
-      <div className="bg-card border-b sticky top-0 z-10">
+      <div className="bg-card border-b sticky top-0 z-10" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center gap-3">
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setLocation('/orders')}
+            onClick={goBack}
             data-testid="button-back"
           >
             <ArrowLeft className="w-5 h-5" />

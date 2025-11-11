@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useRoute, useLocation, Link } from "wouter";
+import { useGoBack } from "@/hooks/useGoBack";
 import { ArrowLeft, Edit2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -97,6 +98,7 @@ export default function PlannerDetailPage() {
   const [selectedItems, setSelectedItems] = useState<Record<string, number>>({});
 
   const mealType = params?.mealType || 'tiffins';
+  const goBack = useGoBack(`/categories/${mealType}`);
   const planType = (params?.planType || 'basic') as 'basic' | 'gold' | 'platinum';
   const config = PLANNER_CONFIGS[planType];
   
@@ -134,13 +136,13 @@ export default function PlannerDetailPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-amber-50/30 pb-20">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm">
+      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         <div className="flex items-center justify-between p-4">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setLocation(`/categories/${mealType}`)}
+              onClick={goBack}
               data-testid="button-back"
               className="rounded-full"
             >

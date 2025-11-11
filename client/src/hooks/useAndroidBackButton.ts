@@ -16,7 +16,13 @@ export function useAndroidBackButton() {
             return;
           }
 
-          // For all other pages, navigate back
+          // Try to use browser history first if available
+          if (window.history.length > 1) {
+            window.history.back();
+            return;
+          }
+
+          // Fallback to logical navigation if no history
           // Define the back navigation logic
           const backNavigationMap: Record<string, string> = {
             '/categories/tiffins': '/',
@@ -30,6 +36,8 @@ export function useAndroidBackButton() {
             '/orders': '/profile',
             '/checkout': '/',
             '/add-ons': '/checkout',
+            '/payment': '/checkout',
+            '/order-confirmation': '/orders',
           };
 
           // Check if current path matches any specific route
@@ -45,6 +53,10 @@ export function useAndroidBackButton() {
               navigateTo = `/categories/${mealType}`;
             } else if (location.startsWith('/categories/')) {
               navigateTo = '/';
+            } else if (location.startsWith('/orders/')) {
+              navigateTo = '/orders';
+            } else if (location.startsWith('/concierge/results') || location.startsWith('/concierge-results')) {
+              navigateTo = '/concierge';
             } else {
               // Default: go to home
               navigateTo = '/';
