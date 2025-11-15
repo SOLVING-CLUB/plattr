@@ -32,6 +32,8 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
+    host: '0.0.0.0', // Allow external connections
+    port: 5173, // Default Vite port
     fs: {
       strict: true,
       deny: ["**/.*"],

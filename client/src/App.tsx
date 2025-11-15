@@ -23,6 +23,8 @@ import AuthPage from "@/pages/AuthPage";
 import OrderConfirmationPage from "@/pages/OrderConfirmationPage";
 import ConciergeWizardPage from "@/pages/ConciergeWizardPage";
 import ConciergeResultsPage from "./pages/ConciergeResultsPage";
+import MealBoxPage from "@/pages/MealBoxPage";
+import MealBoxBuilderPage from "@/pages/MealBoxBuilderPage";
 import { useEffect } from "react";
 
 // Redirect component for /cart to /checkout
@@ -60,6 +62,8 @@ function Router() {
       <Route path="/concierge" component={ConciergeWizardPage} />
       <Route path="/concierge/results" component={ConciergeResultsPage} />
       <Route path="/concierge-results" component={ConciergeResultsPage} />
+      <Route path="/mealbox" component={MealBoxPage} />
+      <Route path="/mealbox/builder" component={MealBoxBuilderPage} />
       <Route path="/admin" component={AdminDashboard} />
       <Route component={NotFound} />
     </Switch>

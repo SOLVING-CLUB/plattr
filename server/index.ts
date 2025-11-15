@@ -127,17 +127,13 @@ app.use((req, res, next) => {
     port,
   };
   
-  // On macOS, use localhost to avoid ENOTSUP errors with 0.0.0.0
-  // On Linux, use 0.0.0.0 to allow external connections
-  // reusePort is only supported on Linux, not macOS or Windows
-  if (process.platform === 'darwin') {
-    listenOptions.host = 'localhost';
-  } else if (process.platform === 'linux') {
-    listenOptions.host = '0.0.0.0';
+  // Use 0.0.0.0 to allow external connections (mobile devices on same network)
+  // This works on macOS, Linux, and Windows
+  listenOptions.host = '0.0.0.0';
+  
+  // reusePort is only supported on Linux
+  if (process.platform === 'linux') {
     listenOptions.reusePort = true;
-  } else {
-    // Windows
-    listenOptions.host = 'localhost';
   }
   
   server.listen(listenOptions, () => {
