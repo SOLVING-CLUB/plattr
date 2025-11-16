@@ -38,6 +38,9 @@ export function useAndroidBackButton() {
             '/add-ons': '/checkout',
             '/payment': '/checkout',
             '/order-confirmation': '/orders',
+            '/name': '/verification',
+            '/verification': '/phone',
+            '/phone': '/',
           };
 
           // Check if current path matches any specific route
@@ -57,6 +60,12 @@ export function useAndroidBackButton() {
               navigateTo = '/orders';
             } else if (location.startsWith('/concierge/results') || location.startsWith('/concierge-results')) {
               navigateTo = '/concierge';
+            } else if (location === '/name') {
+              navigateTo = '/verification';
+            } else if (location === '/verification') {
+              navigateTo = '/phone';
+            } else if (location === '/phone') {
+              navigateTo = '/';
             } else {
               // Default: go to home
               navigateTo = '/';
