@@ -1020,6 +1020,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ========== FIGMA ROUTES ==========
+  
+  // Download assets from Figma design
+  app.post("/api/figma/download", async (req, res) => {
+    try {
+      const schema = z.object({
+        figmaUrl: z.string().url("Invalid Figma URL"),
+        outputPrefix: z.string().optional().default("figma"),
+      });
+
+      const { figmaUrl, outputPrefix } = schema.parse(req.body);
+      const accessToken = process.env.FIGMA_ACCESS_TOKEN;
+
+      if (!accessToken) {
+        res.status(500).json({ 
+          error: "FIGMA_ACCESS_TOKEN not configured. Please set it in your .env file." 
+        });
+        return;
+      }
+
+      const { downloadFigmaDesign } = await import("./figma.js");
+      const downloadedFiles = await downloadFigmaDesign(figmaUrl, accessToken, outputPrefix);
+
+      res.json({ 
+        success: true, 
+        message: `Downloaded ${downloadedFiles.length} file(s)`,
+        files: downloadedFiles.map(file => file.split('/').pop())
+      });
+    } catch (error: any) {
+      console.error("Error downloading Figma assets:", error);
+      res.status(500).json({ 
+        error: error.message || "Failed to download Figma assets" 
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

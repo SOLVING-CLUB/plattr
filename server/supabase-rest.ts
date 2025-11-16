@@ -30,7 +30,17 @@ function getSupabaseConfig(): SupabaseConfig {
   return { url: url.replace(/\/$/, ''), anonKey, serviceRoleKey };
 }
 
-const config = getSupabaseConfig();
+// Lazy initialization - only get config when actually needed
+// This allows the server to start even without Supabase credentials
+// (useful for frontend-only development)
+let config: SupabaseConfig | null = null;
+
+function getConfig(): SupabaseConfig {
+  if (!config) {
+    config = getSupabaseConfig();
+  }
+  return config;
+}
 
 export interface SupabaseQueryOptions {
   select?: string;
@@ -50,8 +60,9 @@ async function supabaseRequest(
   body?: any,
   useServiceRole = false
 ): Promise<any> {
-  const baseUrl = `${config.url}/rest/v1/${table}`;
-  const key = useServiceRole && config.serviceRoleKey ? config.serviceRoleKey : config.anonKey;
+  const cfg = getConfig();
+  const baseUrl = `${cfg.url}/rest/v1/${table}`;
+  const key = useServiceRole && cfg.serviceRoleKey ? cfg.serviceRoleKey : cfg.anonKey;
   
   // Build request using PostgREST format (curl --get with -d parameters)
   // For GET: curl --get with -d params become query parameters
@@ -193,12 +204,13 @@ export const supabase = {
   query: async <T = any>(table: string, query: string): Promise<T[]> => {
     // For custom queries, we'll use the select method with filter
     // Format: "column.eq.value" or "column.gte.value" etc.
-    const url = `${config.url}/rest/v1/${table}?${query}`;
+    const cfg = getConfig();
+    const url = `${cfg.url}/rest/v1/${table}?${query}`;
     const response = await fetch(url, {
       method: 'GET',
       headers: {
-        'apikey': config.anonKey,
-        'Authorization': `Bearer ${config.anonKey}`,
+        'apikey': cfg.anonKey,
+        'Authorization': `Bearer ${cfg.anonKey}`,
       },
     });
 
@@ -214,10 +226,10 @@ export const supabase = {
  * Get Supabase configuration
  */
 export function getSupabaseUrl(): string {
-  return config.url;
+  return getConfig().url;
 }
 
 export function getSupabaseAnonKey(): string {
-  return config.anonKey;
+  return getConfig().anonKey;
 }
 
