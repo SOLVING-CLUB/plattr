@@ -8,10 +8,12 @@ import ThemeToggle from "@/components/ThemeToggle";
 import { User, MapPin, CreditCard, Bell, HelpCircle, LogOut, ChevronRight, Package, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { getQueryFn } from "@/lib/queryClient";
+import { getQueryFn, queryClient } from "@/lib/queryClient";
 import { cartStorage } from "@/lib/cartStorage";
 import type { Dish, Category } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { signOutFirebase } from "@/lib/firebase";
 
 interface CartItem {
   id: string;
@@ -23,6 +25,8 @@ interface CartItem {
 export default function ProfilePage() {
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState('profile');
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const { toast } = useToast();
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -52,6 +56,44 @@ export default function ProfilePage() {
       : []; // Loading: empty array
 
   const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+
+  const handleLogout = async () => {
+    if (isLoggingOut) return;
+
+    setIsLoggingOut(true);
+    try {
+      await apiRequest("POST", "/api/auth/logout");
+      try {
+        await signOutFirebase();
+      } catch (firebaseError) {
+        console.warn("⚠️  Firebase sign out failed:", firebaseError);
+      }
+
+      localStorage.removeItem("userId");
+      localStorage.removeItem("username");
+      localStorage.removeItem("phone");
+      localStorage.removeItem("firebaseIdToken");
+      sessionStorage.removeItem("phoneNumber");
+      cartStorage.clearCart();
+      queryClient.clear();
+
+      toast({
+        title: "Logged out",
+        description: "You have been signed out successfully.",
+      });
+
+      setLocation("/phone");
+    } catch (error) {
+      console.error("❌ Logout failed:", error);
+      toast({
+        variant: "destructive",
+        title: "Logout failed",
+        description: "Please try again.",
+      });
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   const menuItems = [
     { 
@@ -155,11 +197,12 @@ export default function ProfilePage() {
         <Button 
           variant="destructive" 
           className="w-full"
-          onClick={() => console.log('Logout')}
+          onClick={handleLogout}
+          disabled={isLoggingOut}
           data-testid="button-logout"
         >
           <LogOut className="w-4 h-4 mr-2" />
-          Logout
+          {isLoggingOut ? 'Logging out...' : 'Logout'}
         </Button>
 
         <div className="h-3" />

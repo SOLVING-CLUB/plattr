@@ -70,13 +70,14 @@ async function supabaseRequest(
   
   const params = new URLSearchParams();
   
-  if (method === 'GET' && options) {
-    // Build query parameters from options (like curl -d flags)
-    if (options.select) {
+  // Build query parameters from options (filters are needed for GET, PATCH, and DELETE)
+  if (options) {
+    if (options.select && (method === 'GET' || method === 'PATCH')) {
       params.append('select', options.select);
     }
     
-    if (options.filter) {
+    // Filters are required for PATCH and DELETE (WHERE clause), and optional for GET
+    if (options.filter && (method === 'GET' || method === 'PATCH' || method === 'DELETE')) {
       // Supabase PostgREST filter syntax (curl -d format)
       // Examples:
       //   column=eq.Equal+to        → params.append('column', 'eq.Equal+to')
@@ -90,7 +91,7 @@ async function supabaseRequest(
       });
     }
     
-    if (options.order) {
+    if (options.order && method === 'GET') {
       // PostgREST order syntax: column.direction
       params.append('order', options.order);
     }
@@ -122,6 +123,14 @@ async function supabaseRequest(
     if (body) {
       requestBody = JSON.stringify(body);
     }
+  }
+
+  // Debug logging for PATCH/DELETE requests
+  if (method === 'PATCH' || method === 'DELETE') {
+    console.log(`🔧 [supabase-request] ${method} ${requestUrl}`);
+    console.log(`🔧 [supabase-request] Query params:`, params.toString());
+    console.log(`🔧 [supabase-request] Body:`, requestBody);
+    console.log(`🔧 [supabase-request] Options filter:`, options?.filter);
   }
 
   // Make request matching curl format

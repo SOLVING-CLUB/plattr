@@ -16,29 +16,50 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  // For direct Supabase, map the URL to Supabase REST API
-  if (USE_DIRECT_SUPABASE) {
-    const route = url.split('/').filter(Boolean);
+  const route = url.split('/').filter(Boolean);
+  
+  // Auth routes and other backend-only routes should always go to backend
+  const backendOnlyRoutes = ['api/auth', 'api/orders', 'api/cart'];
+  const isBackendRoute = backendOnlyRoutes.some(backendRoute => 
+    url.includes(backendRoute)
+  );
+  
+  // For direct Supabase, map the URL to Supabase REST API (only for non-auth routes)
+  if (USE_DIRECT_SUPABASE && !isBackendRoute) {
     // Handle cart locally (no backend/cart API when using direct Supabase)
     if (route[0] === 'api' && route[1] === 'cart') {
       // Emulate success so UI can fall back to localStorage cart
       return new Response(JSON.stringify({ success: true }), { status: 200 });
     }
-    const mapped = mapApiRouteToSupabase(route);
     
-    if (method === 'GET') {
-      const result = await supabase.select(mapped.table, mapped.options);
-      return new Response(JSON.stringify(result), { status: 200 });
-    } else if (method === 'POST') {
-      const result = await supabase.insert(mapped.table, data);
-      return new Response(JSON.stringify(result), { status: 200 });
+    try {
+      const mapped = mapApiRouteToSupabase(route);
+      
+      if (method === 'GET') {
+        const result = await supabase.select(mapped.table, mapped.options);
+        return new Response(JSON.stringify(result), { status: 200 });
+      } else if (method === 'POST') {
+        const result = await supabase.insert(mapped.table, data);
+        return new Response(JSON.stringify(result), { status: 200 });
+      }
+    } catch (error) {
+      // If Supabase mapping fails, fall through to backend
+      console.warn('Supabase mapping failed, falling back to backend:', error);
     }
   }
   
-  // Fallback to backend API if needed
+  // Use backend API for auth routes and fallback
+  const headers: HeadersInit = data ? { "Content-Type": "application/json" } : {};
+  
+  // Include Firebase token if available
+  const firebaseToken = localStorage.getItem("firebaseIdToken");
+  if (firebaseToken) {
+    headers["Authorization"] = `Bearer ${firebaseToken}`;
+  }
+  
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers,
     body: data ? JSON.stringify(data) : undefined,
     credentials: 'include',
   });

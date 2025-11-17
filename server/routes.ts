@@ -8,6 +8,7 @@ import { smsService } from "./sms";
 import { z } from "zod";
 import Stripe from "stripe";
 import "./types/session";
+import admin from "firebase-admin";
 
 // Check if using REST API
 const useRestAPI = !!(process.env.SUPABASE_URL && (process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_KEY));
@@ -18,6 +19,27 @@ if (process.env.STRIPE_SECRET_KEY) {
   stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
     apiVersion: "2025-09-30.clover",
   });
+}
+
+// Initialize Firebase Admin (only if credentials are available)
+if (!admin.apps.length && process.env.FIREBASE_PROJECT_ID) {
+  try {
+    // Try to initialize with service account JSON
+    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+      });
+    } else if (process.env.FIREBASE_PROJECT_ID) {
+      // Initialize with project ID (for emulator or default credentials)
+      admin.initializeApp({
+        projectId: process.env.FIREBASE_PROJECT_ID,
+      });
+    }
+  } catch (error) {
+    console.warn("Firebase Admin initialization failed:", error);
+    console.warn("Firebase phone auth will not work without proper credentials");
+  }
 }
 
 // Helper function to format category names
@@ -56,34 +78,103 @@ function formatCategoryName(categoryId: string): string {
 export async function registerRoutes(app: Express): Promise<Server> {
   // ========== AUTH ROUTES ==========
   
+  // Test endpoint to verify server is running latest code
+  app.get("/api/test", (req, res) => {
+    res.json({ 
+      message: "Server is running", 
+      timestamp: new Date().toISOString(),
+      hasDb: !!db,
+      useRestAPI,
+      hasSupabase: !!supabase
+    });
+  });
+  
   // Send OTP for signup/login
   app.post("/api/auth/send-otp", async (req, res) => {
     try {
+      console.log("📱 [send-otp] Request received:", { body: req.body });
+      
       const schema = z.object({
         phone: z.string().regex(/^[0-9]{10}$/, "Phone must be 10 digits"),
       });
 
       const { phone } = schema.parse(req.body);
+      console.log("📱 [send-otp] Phone validated:", phone);
 
       // Generate OTP
       const otp = smsService.generateOTP();
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+      console.log("🔑 [send-otp] OTP generated:", otp);
 
       // Store OTP in database
-      await db.insert(otpVerifications).values({
-        phone,
-        otp,
-        expiresAt,
-      });
+      console.log("💾 [send-otp] Database check - db:", !!db, "useRestAPI:", useRestAPI, "supabase:", !!supabase);
+      
+      if (db) {
+        // Use direct database connection
+        console.log("💾 [send-otp] Using direct database connection");
+        try {
+          await db.insert(otpVerifications).values({
+            phone,
+            otp,
+            expiresAt,
+          });
+          console.log("✅ [send-otp] OTP stored in database");
+        } catch (dbError: any) {
+          console.error("❌ [send-otp] Database insert error:", dbError);
+          throw new Error(`Database error: ${dbError.message || 'Failed to store OTP'}`);
+        }
+      } else if (useRestAPI) {
+        // Use Supabase REST API
+        console.log("💾 [send-otp] Using Supabase REST API");
+        try {
+          if (!supabase) {
+            throw new Error("Supabase client not initialized. Check SUPABASE_URL and SUPABASE_ANON_KEY environment variables.");
+          }
+          const insertData = {
+            phone,
+            otp,
+            expires_at: expiresAt.toISOString(),
+            is_used: false,
+          };
+          console.log("💾 [send-otp] Inserting OTP data:", JSON.stringify(insertData, null, 2));
+          const result = await supabase.insert("otp_verifications", insertData, true); // Use service role key
+          console.log("✅ [send-otp] OTP stored via Supabase REST API, result:", JSON.stringify(result, null, 2));
+          
+          // Verify it was stored by querying it back
+          const verifyResult = await supabase.select("otp_verifications", {
+            filter: {
+              phone: `eq.${phone}`,
+              otp: `eq.${otp}`,
+            },
+            limit: 1,
+          });
+          console.log("🔍 [send-otp] Verification query result:", JSON.stringify(verifyResult, null, 2));
+        } catch (error: any) {
+          console.error("❌ [send-otp] Supabase insert error:", error);
+          console.error("❌ [send-otp] Error details:", {
+            message: error.message,
+            stack: error.stack,
+            name: error.name
+          });
+          throw new Error(`Database error: ${error.message || 'Failed to store OTP'}`);
+        }
+      } else {
+        const errorMsg = "No database connection available. Please configure SUPABASE_URL and SUPABASE_ANON_KEY, or set up a direct database connection.";
+        console.error("❌ [send-otp]", errorMsg);
+        throw new Error(errorMsg);
+      }
 
       // Send SMS
+      console.log("📤 [send-otp] Sending SMS...");
       const sent = await smsService.sendOTP(phone, otp);
 
       if (!sent) {
+        console.error("❌ [send-otp] SMS service returned false");
         res.status(500).json({ error: "Failed to send OTP. Please try again." });
         return;
       }
 
+      console.log("✅ [send-otp] OTP sent successfully");
       res.json({ 
         success: true, 
         message: "OTP sent successfully",
@@ -91,18 +182,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...(process.env.NODE_ENV === 'development' && { otp })
       });
     } catch (error) {
-      console.error("Error sending OTP:", error);
+      console.error("❌ [send-otp] Error:", error);
       if (error instanceof z.ZodError) {
+        console.error("❌ [send-otp] Validation error:", error.errors);
         res.status(400).json({ error: error.errors[0].message });
         return;
       }
-      res.status(500).json({ error: "Failed to send OTP" });
+      const errorMessage = error instanceof Error ? error.message : "Failed to send OTP";
+      console.error("❌ [send-otp] Returning error:", errorMessage);
+      res.status(500).json({ error: errorMessage });
     }
   });
 
   // Verify OTP and signup/login
   app.post("/api/auth/verify-otp", async (req, res) => {
     try {
+      console.log("🔐 [verify-otp] Request received:", { body: req.body });
+      
       const schema = z.object({
         phone: z.string().regex(/^[0-9]{10}$/, "Phone must be 10 digits"),
         otp: z.string().length(6, "OTP must be 6 digits"),
@@ -110,68 +206,215 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const { phone, otp, username } = schema.parse(req.body);
+      console.log("🔐 [verify-otp] Phone and OTP validated:", { phone, otpLength: otp.length });
 
+      let otpRecord: any[] = [];
+      
       // Find valid OTP
-      const otpRecord = await db
-        .select()
-        .from(otpVerifications)
-        .where(
-          and(
-            eq(otpVerifications.phone, phone),
-            eq(otpVerifications.otp, otp),
-            eq(otpVerifications.isUsed, false),
-            gt(otpVerifications.expiresAt, new Date())
+      if (db) {
+        // Use direct database connection
+        console.log("💾 [verify-otp] Using direct database connection");
+        otpRecord = await db
+          .select()
+          .from(otpVerifications)
+          .where(
+            and(
+              eq(otpVerifications.phone, phone),
+              eq(otpVerifications.otp, otp),
+              eq(otpVerifications.isUsed, false),
+              gt(otpVerifications.expiresAt, new Date())
+            )
           )
-        )
-        .limit(1);
+          .limit(1);
+      } else if (useRestAPI && supabase) {
+        // Use Supabase REST API
+        console.log("💾 [verify-otp] Using Supabase REST API");
+        console.log("🔍 [verify-otp] Querying for OTP:", { phone, otp });
+        try {
+          // First, let's see all OTPs for this phone to debug
+          const allOtps = await supabase.select("otp_verifications", {
+            filter: {
+              phone: `eq.${phone}`,
+            },
+            limit: 10,
+          });
+          console.log("🔍 [verify-otp] All OTPs for phone:", JSON.stringify(allOtps, null, 2));
+          
+          const results = await supabase.select("otp_verifications", {
+            filter: {
+              phone: `eq.${phone}`,
+              otp: `eq.${otp}`,
+              is_used: `eq.false`,
+            },
+            limit: 10,
+          });
+          
+          console.log("🔍 [verify-otp] Filtered results:", JSON.stringify(results, null, 2));
+          
+          // Filter by expiration date in JavaScript since PostgREST date filtering is complex
+          const now = new Date();
+          console.log("🔍 [verify-otp] Current time:", now.toISOString());
+          otpRecord = results.filter((record: any) => {
+            // Parse timestamp as UTC (Supabase returns timestamps without timezone, but they're stored as UTC)
+            // If the timestamp doesn't have 'Z' or timezone, treat it as UTC
+            let expiresAtStr = record.expires_at;
+            if (!expiresAtStr.endsWith('Z') && !expiresAtStr.includes('+') && !expiresAtStr.includes('-', 10)) {
+              expiresAtStr = expiresAtStr + 'Z'; // Append Z to indicate UTC
+            }
+            const expiresAt = new Date(expiresAtStr);
+            console.log("🔍 [verify-otp] Checking expiration:", {
+              expires_at: record.expires_at,
+              expiresAtStr: expiresAtStr,
+              expiresAt: expiresAt.toISOString(),
+              now: now.toISOString(),
+              isValid: expiresAt > now
+            });
+            return expiresAt > now;
+          });
+          
+          console.log("🔍 [verify-otp] Valid OTP records after expiration filter:", otpRecord.length);
+        } catch (error: any) {
+          console.error("❌ [verify-otp] Supabase select error:", error);
+          throw new Error(`Database error: ${error.message || 'Failed to verify OTP'}`);
+        }
+      } else {
+        throw new Error("No database connection available. Please configure SUPABASE_URL and SUPABASE_ANON_KEY, or set up a direct database connection.");
+      }
+
+      console.log("🔐 [verify-otp] OTP record found:", otpRecord.length > 0);
 
       if (otpRecord.length === 0) {
+        console.error("❌ [verify-otp] Invalid or expired OTP");
         res.status(400).json({ error: "Invalid or expired OTP" });
         return;
       }
 
+      const otpId = otpRecord[0].id;
+
       // Mark OTP as used
-      await db
-        .update(otpVerifications)
-        .set({ isUsed: true })
-        .where(eq(otpVerifications.id, otpRecord[0].id));
+      if (db) {
+        await db
+          .update(otpVerifications)
+          .set({ isUsed: true })
+          .where(eq(otpVerifications.id, otpId));
+      } else if (useRestAPI && supabase) {
+        console.log("🔄 [verify-otp] Marking OTP as used, otpId:", otpId);
+        console.log("🔄 [verify-otp] Update filter:", { id: `eq.${otpId}` });
+        console.log("🔄 [verify-otp] Update data:", { is_used: true });
+        await supabase.update("otp_verifications", { id: `eq.${otpId}` }, { is_used: true }, true); // Use service role key
+        console.log("✅ [verify-otp] OTP marked as used successfully");
+      }
+
+      console.log("✅ [verify-otp] OTP marked as used");
 
       // Check if user exists
-      const existingUser = await db
-        .select()
-        .from(users)
-        .where(eq(users.phone, phone))
-        .limit(1);
+      let existingUser: any[] = [];
+      
+      if (db) {
+        existingUser = await db
+          .select()
+          .from(users)
+          .where(eq(users.phone, phone))
+          .limit(1);
+      } else if (useRestAPI && supabase) {
+        const results = await supabase.select("users", {
+          filter: { phone: `eq.${phone}` },
+          limit: 1,
+        });
+        existingUser = results;
+        console.log("🔍 [verify-otp] User lookup results:", JSON.stringify(results, null, 2));
+      }
+
+      console.log("👤 [verify-otp] Existing user found:", existingUser.length > 0);
+      if (existingUser.length > 0) {
+        console.log("👤 [verify-otp] Existing user details:", {
+          id: existingUser[0].id,
+          username: existingUser[0].username,
+          phone: existingUser[0].phone
+        });
+      }
 
       let user;
       if (existingUser.length > 0) {
         // User exists, mark as verified
-        await db
-          .update(users)
-          .set({ isVerified: true })
-          .where(eq(users.id, existingUser[0].id));
+        if (db) {
+          await db
+            .update(users)
+            .set({ isVerified: true })
+            .where(eq(users.id, existingUser[0].id));
+        } else if (useRestAPI && supabase) {
+          await supabase.update("users", { id: `eq.${existingUser[0].id}` }, { is_verified: true }, true); // Use service role key
+        }
         user = existingUser[0];
+        console.log("✅ [verify-otp] Existing user verified");
       } else {
         // Create new user
-        if (!username) {
-          res.status(400).json({ error: "Username is required for new users" });
-          return;
-        }
+        // If username not provided, use temporary username (will be updated on name screen)
+        // Make it unique by adding timestamp to avoid conflicts
+        const baseTempUsername = `user_${phone.slice(-4)}`;
+        const tempUsername = username || `${baseTempUsername}_${Date.now().toString().slice(-6)}`;
+        console.log("👤 [verify-otp] Creating new user with username:", tempUsername);
 
-        const newUserResult = await db
-          .insert(users)
-          .values({
-            username,
-            phone,
-            isVerified: true,
-          })
-          .returning();
-        user = newUserResult[0];
+        if (db) {
+          const newUserResult = await db
+            .insert(users)
+            .values({
+              username: tempUsername,
+              phone,
+              password: "", // Empty password for phone-based auth
+              isVerified: true,
+            })
+            .returning();
+          user = newUserResult[0];
+        } else if (useRestAPI && supabase) {
+          try {
+            const newUserResult = await supabase.insert("users", {
+              username: tempUsername,
+              phone,
+              password: "", // Empty password for phone-based auth
+              is_verified: true,
+            }, true); // Use service role key
+            user = Array.isArray(newUserResult) ? newUserResult[0] : newUserResult;
+            console.log("✅ [verify-otp] New user created:", user?.id);
+          } catch (insertError: any) {
+            // If username already exists, try to find the existing user
+            if (insertError.message?.includes('duplicate key') || insertError.message?.includes('already exists')) {
+              console.warn("⚠️ [verify-otp] Username conflict, trying to find existing user by phone...");
+              // Try to find user by phone again (maybe it was just created)
+              const retryResults = await supabase.select("users", {
+                filter: { phone: `eq.${phone}` },
+                limit: 1,
+              });
+              if (retryResults.length > 0) {
+                console.log("✅ [verify-otp] Found existing user after conflict:", retryResults[0].id);
+                user = retryResults[0];
+                // Update verification status
+                await supabase.update("users", { id: `eq.${user.id}` }, { is_verified: true }, true);
+              } else {
+                // If still not found, try with a different unique username
+                const uniqueUsername = `${baseTempUsername}_${Date.now()}`;
+                console.log("🔄 [verify-otp] Retrying with unique username:", uniqueUsername);
+                const retryResult = await supabase.insert("users", {
+                  username: uniqueUsername,
+                  phone,
+                  password: "",
+                  is_verified: true,
+                }, true);
+                user = Array.isArray(retryResult) ? retryResult[0] : retryResult;
+                console.log("✅ [verify-otp] New user created with unique username:", user?.id);
+              }
+            } else {
+              throw insertError;
+            }
+          }
+        }
       }
 
       // Set session for authenticated user
       req.session.userId = user.id;
       req.session.phone = user.phone || undefined;
+      
+      console.log("✅ [verify-otp] Session set, user authenticated");
       
       res.json({
         success: true,
@@ -183,12 +426,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
       });
     } catch (error) {
-      console.error("Error verifying OTP:", error);
+      console.error("❌ [verify-otp] Error:", error);
       if (error instanceof z.ZodError) {
+        console.error("❌ [verify-otp] Validation error:", error.errors);
         res.status(400).json({ error: error.errors[0].message });
         return;
       }
-      res.status(500).json({ error: "Failed to verify OTP" });
+      const errorMessage = error instanceof Error ? error.message : "Failed to verify OTP";
+      console.error("❌ [verify-otp] Returning error:", errorMessage);
+      res.status(500).json({ error: errorMessage });
     }
   });
 
@@ -218,6 +464,265 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
       res.status(500).json({ error: "Failed to check phone" });
+    }
+  });
+
+  // Sync Firebase authentication with Supabase
+  app.post("/api/auth/firebase-sync", async (req, res) => {
+    try {
+      const schema = z.object({
+        idToken: z.string().min(1, "Firebase ID token is required"),
+        phone: z.string().regex(/^[0-9]{10}$/, "Phone must be 10 digits"),
+        username: z.string().min(2, "Username must be at least 2 characters").optional(),
+        firebaseUid: z.string().min(1, "Firebase UID is required"),
+      });
+
+      const { idToken, phone, username, firebaseUid } = schema.parse(req.body);
+
+      // Verify Firebase ID token
+      let decodedToken;
+      try {
+        if (!admin.apps.length) {
+          res.status(500).json({ error: "Firebase Admin not initialized" });
+          return;
+        }
+        decodedToken = await admin.auth().verifyIdToken(idToken);
+      } catch (error: any) {
+        console.error("Firebase token verification error:", error);
+        res.status(401).json({ error: "Invalid or expired Firebase token" });
+        return;
+      }
+
+      // Verify that the phone number matches
+      const tokenPhone = decodedToken.phone_number?.replace(/^\+91/, '') || '';
+      if (tokenPhone !== phone) {
+        res.status(400).json({ error: "Phone number mismatch" });
+        return;
+      }
+
+      // Check if user exists
+      let existingUser: any[] = [];
+
+      if (db) {
+        existingUser = await db
+          .select()
+          .from(users)
+          .where(eq(users.phone, phone))
+          .limit(1);
+      } else if (useRestAPI && supabase) {
+        existingUser = await supabase.select("users", {
+          filter: { phone: `eq.${phone}` },
+          limit: 1,
+        });
+      } else {
+        res.status(500).json({ error: "Database connection not configured" });
+        return;
+      }
+
+      let user;
+      if (existingUser.length > 0) {
+        // User exists, update verification status
+        if (db) {
+          const updatedUser = await db
+            .update(users)
+            .set({ isVerified: true })
+            .where(eq(users.id, existingUser[0].id))
+            .returning();
+          user = updatedUser[0] || existingUser[0];
+        } else if (useRestAPI && supabase) {
+          const updated = await supabase.update(
+            "users",
+            { id: `eq.${existingUser[0].id}` },
+            { is_verified: true },
+            true
+          );
+          const updatedArray = Array.isArray(updated) ? updated : [updated];
+          user = updatedArray[0] || existingUser[0];
+        }
+      } else {
+        // Create new user - username can be set later on name screen
+        // For now, create with a temporary username based on phone
+        const baseTempUsername = `user_${phone.slice(-4)}`;
+        const tempUsername =
+          username || `${baseTempUsername}_${Date.now().toString().slice(-6)}`;
+
+        if (db) {
+          const newUserResult = await db
+            .insert(users)
+            .values({
+              username: tempUsername,
+              phone,
+              password: "",
+              isVerified: true,
+            })
+            .returning();
+          user = newUserResult[0];
+        } else if (useRestAPI && supabase) {
+          const newUserResult = await supabase.insert(
+            "users",
+            {
+              username: tempUsername,
+              phone,
+              password: "",
+              is_verified: true,
+            },
+            true
+          );
+          user = Array.isArray(newUserResult) ? newUserResult[0] : newUserResult;
+        }
+      }
+
+      // Set session for authenticated user
+      req.session.userId = user.id;
+      req.session.phone = user.phone || undefined;
+
+      res.json({
+        success: true,
+        message: "Authentication successful",
+        user: {
+          id: user.id,
+          username: user.username,
+          phone: user.phone,
+        },
+      });
+    } catch (error) {
+      console.error("Error syncing Firebase auth:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: error.errors[0].message });
+        return;
+      }
+      res.status(500).json({ error: "Failed to sync authentication" });
+    }
+  });
+
+  // Update username
+  app.post("/api/auth/update-username", async (req, res) => {
+    try {
+      console.log("👤 [update-username] Request received:", { body: req.body, userId: req.session.userId });
+      
+      const schema = z.object({
+        username: z.string().min(2, "Username must be at least 2 characters"),
+      });
+
+      const { username } = schema.parse(req.body);
+
+      // Check if user is authenticated
+      if (!req.session.userId) {
+        console.error("❌ [update-username] Not authenticated");
+        res.status(401).json({ error: "Not authenticated" });
+        return;
+      }
+
+      // Check if username is already taken
+      let existingUser: any[] = [];
+      
+      if (db) {
+        existingUser = await db
+          .select()
+          .from(users)
+          .where(eq(users.username, username))
+          .limit(1);
+      } else if (useRestAPI && supabase) {
+        const results = await supabase.select("users", {
+          filter: { username: `eq.${username}` },
+          limit: 1,
+        });
+        existingUser = results;
+      }
+
+      if (existingUser.length > 0 && existingUser[0].id !== req.session.userId) {
+        console.error("❌ [update-username] Username already taken:", username);
+        res.status(400).json({ error: "Username already taken" });
+        return;
+      }
+
+      // Update username
+      let updatedUser: any[] = [];
+      
+      if (db) {
+        updatedUser = await db
+          .update(users)
+          .set({ username })
+          .where(eq(users.id, req.session.userId))
+          .returning();
+      } else if (useRestAPI && supabase) {
+        const result = await supabase.update(
+          "users",
+          { id: `eq.${req.session.userId}` },
+          { username },
+          true // Use service role key
+        );
+        // Supabase update returns the updated record(s)
+        updatedUser = Array.isArray(result) ? result : [result];
+        
+        // If update doesn't return the record, fetch it
+        if (updatedUser.length === 0) {
+          const fetched = await supabase.select("users", {
+            filter: { id: `eq.${req.session.userId}` },
+            limit: 1,
+          });
+          updatedUser = fetched;
+        }
+      }
+
+      if (updatedUser.length === 0) {
+        console.error("❌ [update-username] User not found:", req.session.userId);
+        res.status(404).json({ error: "User not found" });
+        return;
+      }
+
+      console.log("✅ [update-username] Username updated successfully:", updatedUser[0].username);
+
+      res.json({
+        success: true,
+        user: {
+          id: updatedUser[0].id,
+          username: updatedUser[0].username,
+          phone: updatedUser[0].phone,
+        },
+      });
+    } catch (error) {
+      console.error("❌ [update-username] Error:", error);
+      if (error instanceof z.ZodError) {
+        console.error("❌ [update-username] Validation error:", error.errors);
+        res.status(400).json({ error: error.errors[0].message });
+        return;
+      }
+      const errorMessage = error instanceof Error ? error.message : "Failed to update username";
+      console.error("❌ [update-username] Returning error:", errorMessage);
+      res.status(500).json({ error: errorMessage });
+    }
+  });
+
+  // Logout
+  app.post("/api/auth/logout", async (req, res) => {
+    const userId = req.session?.userId;
+    console.log("🚪 [logout] Request received:", { userId });
+
+    try {
+      if (!req.session) {
+        console.log("ℹ️ [logout] No active session");
+        res.clearCookie("connect.sid");
+        res.json({ success: true });
+        return;
+      }
+
+      await new Promise<void>((resolve, reject) => {
+        req.session.destroy((err) => {
+          if (err) {
+            console.error("❌ [logout] Session destroy error:", err);
+            return reject(err);
+          }
+          resolve();
+        });
+      });
+
+      res.clearCookie("connect.sid");
+      console.log("✅ [logout] Session cleared successfully");
+      res.json({ success: true });
+    } catch (error) {
+      console.error("❌ [logout] Error:", error);
+      res.status(500).json({ error: "Failed to logout" });
     }
   });
 

@@ -1,11 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import plattrLogoImage from "@assets/plattr_logo.png";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { useMutation } from "@tanstack/react-query";
 
 export default function NameScreen() {
   const [fullName, setFullName] = useState('');
   const [currentTime, setCurrentTime] = useState('9:41');
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  const tempUsernamePattern = /^user_\d{4}(?:_\d+)?$/;
 
   // Update time every minute
   useEffect(() => {
@@ -22,17 +27,64 @@ export default function NameScreen() {
     return () => clearInterval(interval);
   }, []);
 
+  // Guard route - only allow access right after verification
+  useEffect(() => {
+    const needsName = sessionStorage.getItem('needsName');
+    const storedUsername = localStorage.getItem('username') || '';
+
+    if (needsName || tempUsernamePattern.test(storedUsername)) {
+      return;
+    }
+
+    if (storedUsername) {
+      setLocation('/', { replace: true });
+    } else {
+      setLocation('/phone', { replace: true });
+    }
+  }, [setLocation]);
+
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFullName(e.target.value);
   };
 
-  const isValid = fullName.trim().length > 0;
+  const isValid = fullName.trim().length >= 2;
+
+  // Update username mutation
+  const updateUsernameMutation = useMutation({
+    mutationFn: async (username: string) => {
+      const response = await apiRequest("POST", `/api/auth/update-username`, {
+        username: username.trim(),
+      });
+      const data = await response.json();
+      return data;
+    },
+    onSuccess: (data: any) => {
+      // Store updated username
+      localStorage.setItem("username", data.user.username);
+      sessionStorage.removeItem('needsName');
+      toast({
+        title: "Welcome!",
+        description: `Welcome to Plattr, ${data.user.username}!`,
+      });
+      // Navigate to home page after entering name using replace to prevent going back
+      // This replaces name in history, so user can't go back to onboarding screens
+      setTimeout(() => {
+        setLocation('/', { replace: true });
+      }, 500);
+    },
+    onError: (error: any) => {
+      console.error('Username update error:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to update username. Please try again.",
+      });
+    },
+  });
 
   const handleContinue = () => {
     if (isValid) {
-      // Navigate to home page after entering name using replace to prevent going back
-      // This replaces name in history, so user can't go back to onboarding screens
-      setLocation('/', { replace: true });
+      updateUsernameMutation.mutate(fullName);
     }
   };
 
@@ -121,13 +173,13 @@ export default function NameScreen() {
           onClick={handleContinue}
           className="w-full py-3 rounded-md text-white font-semibold text-sm sm:text-base flex items-center justify-center gap-2 transition-all mb-4 sm:mb-6"
           style={{ 
-            backgroundColor: isValid ? '#1A9952' : '#A5D6A7',
-            cursor: isValid ? 'pointer' : 'not-allowed',
+            backgroundColor: (isValid && !updateUsernameMutation.isPending) ? '#1A9952' : '#A5D6A7',
+            cursor: (isValid && !updateUsernameMutation.isPending) ? 'pointer' : 'not-allowed',
             fontFamily: "Sweet Sans Pro, -apple-system, sans-serif"
           }}
-          disabled={!isValid}
+          disabled={!isValid || updateUsernameMutation.isPending}
         >
-          Ready to Plattr
+          {updateUsernameMutation.isPending ? 'Saving...' : 'Ready to Plattr'}
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="mt-0.5">
             <path d="M6 12L10 8L6 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>

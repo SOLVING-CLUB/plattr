@@ -48,14 +48,31 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Setup session management with PostgreSQL store
+// Setup session management with PostgreSQL store (fallback to memory store if connection fails)
 const PgSession = connectPgSimple(session);
+const databaseUrl = process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL;
+
+let sessionStore: any = undefined;
+
+if (databaseUrl) {
+  try {
+    sessionStore = new PgSession({
+      conString: databaseUrl,
+      createTableIfMissing: true,
+      tableName: 'session', // Optional: specify table name
+    });
+    console.log("✅ Session store: Using PostgreSQL");
+  } catch (error) {
+    console.warn("⚠️  Failed to initialize PostgreSQL session store, using memory store:", error);
+    sessionStore = undefined; // Will use memory store
+  }
+} else {
+  console.warn("⚠️  No database URL for session store, using memory store");
+}
+
 app.use(
   session({
-    store: new PgSession({
-      conString: process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL,
-      createTableIfMissing: true,
-    }),
+    store: sessionStore, // undefined = memory store
     secret: process.env.SESSION_SECRET || 'feast-express-secret-key-change-in-production',
     resave: false,
     saveUninitialized: false,
@@ -102,11 +119,17 @@ app.use((req, res, next) => {
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    // Don't send response if headers were already sent
+    if (res.headersSent) {
+      console.error("❌ Error after response sent:", err);
+      return;
+    }
+
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
 
+    console.error("❌ Express error handler:", { status, message, error: err });
     res.status(status).json({ message });
-    throw err;
   });
 
   // importantly only setup vite in development and after

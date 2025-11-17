@@ -29,7 +29,7 @@ import VerificationScreen from "@/pages/VerificationScreen";
 import PhoneScreen from "@/pages/PhoneScreen";
 import NameScreen from "@/pages/NameScreen";
 import SplashScreen from "@/components/SplashScreen";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, type ComponentType, type ReactNode } from "react";
 
 // Redirect component for /cart to /checkout
 function CartRedirect() {
@@ -40,38 +40,133 @@ function CartRedirect() {
   return null;
 }
 
+const getIsAuthenticated = () => {
+  if (typeof window === "undefined") return false;
+  return Boolean(localStorage.getItem("userId"));
+};
+
+function RequireAuth({
+  children,
+  redirectTo = "/phone",
+}: {
+  children: ReactNode;
+  redirectTo?: string;
+}) {
+  const [, setLocation] = useLocation();
+  const [isAllowed] = useState(() => getIsAuthenticated());
+
+  useEffect(() => {
+    if (!isAllowed) {
+      setLocation(redirectTo, { replace: true });
+    }
+  }, [isAllowed, redirectTo, setLocation]);
+
+  if (!isAllowed) {
+    return null;
+  }
+
+  return <>{children}</>;
+}
+
+function PublicOnly({
+  children,
+  redirectTo = "/",
+}: {
+  children: ReactNode;
+  redirectTo?: string;
+}) {
+  const [, setLocation] = useLocation();
+  const [canRender] = useState(() => !getIsAuthenticated());
+
+  useEffect(() => {
+    if (!canRender) {
+      setLocation(redirectTo, { replace: true });
+    }
+  }, [canRender, redirectTo, setLocation]);
+
+  if (!canRender) {
+    return null;
+  }
+
+  return <>{children}</>;
+}
+
+const withAuthGuard =
+  <P extends object>(Component: ComponentType<P>) =>
+  (props: P) =>
+    (
+      <RequireAuth>
+        <Component {...props} />
+      </RequireAuth>
+    );
+
+const withPublicOnly =
+  <P extends object>(Component: ComponentType<P>, redirectTo = "/") =>
+  (props: P) =>
+    (
+      <PublicOnly redirectTo={redirectTo}>
+        <Component {...props} />
+      </PublicOnly>
+    );
+
 function Router() {
   // Handle Android back button globally
   useAndroidBackButton();
 
+  const GuardedHomePage = withAuthGuard(HomePage);
+  const GuardedAdminDashboard = withAuthGuard(AdminDashboard);
+  const GuardedCategoryPage = withAuthGuard(CategoryPage);
+  const GuardedDishesPage = withAuthGuard(DishesPage);
+  const GuardedCheckoutPage = withAuthGuard(CheckoutPage);
+  const GuardedPaymentPage = withAuthGuard(PaymentPage);
+  const GuardedAddOnsPage = withAuthGuard(AddOnsPage);
+  const GuardedOrdersPage = withAuthGuard(OrdersPage);
+  const GuardedOrderDetailsPage = withAuthGuard(OrderDetailsPage);
+  const GuardedProfilePage = withAuthGuard(ProfilePage);
+  const GuardedHelpPage = withAuthGuard(HelpPage);
+  const GuardedAboutPage = withAuthGuard(AboutPage);
+  const GuardedReferralPage = withAuthGuard(ReferralPage);
+  const GuardedCorporatePage = withAuthGuard(CorporatePage);
+  const GuardedPlannerDetailPage = withAuthGuard(PlannerDetailPage);
+  const GuardedOrderConfirmationPage = withAuthGuard(OrderConfirmationPage);
+  const GuardedConciergeWizardPage = withAuthGuard(ConciergeWizardPage);
+  const GuardedConciergeResultsPage = withAuthGuard(ConciergeResultsPage);
+  const GuardedMealBoxPage = withAuthGuard(MealBoxPage);
+  const GuardedMealBoxBuilderPage = withAuthGuard(MealBoxBuilderPage);
+  const GuardedCartRedirect = withAuthGuard(CartRedirect);
+  const GuardedNameScreen = withAuthGuard(NameScreen);
+  const PublicAuthPage = withPublicOnly(AuthPage);
+  const PublicPhoneScreen = withPublicOnly(PhoneScreen);
+  const PublicVerificationScreen = withPublicOnly(VerificationScreen);
+
   return (
     <Switch>
-      <Route path="/" component={HomePage} />
-      <Route path="/auth" component={AuthPage} />
-      <Route path="/phone" component={PhoneScreen} />
-      <Route path="/verification" component={VerificationScreen} />
-      <Route path="/name" component={NameScreen} />
-      <Route path="/cart" component={CartRedirect} />
-      <Route path="/categories/:mealType" component={CategoryPage} />
-      <Route path="/dishes/:mealType/:category" component={DishesPage} />
-      <Route path="/planner/:mealType/:planType" component={PlannerDetailPage} />
-      <Route path="/add-ons" component={AddOnsPage} />
-      <Route path="/checkout" component={CheckoutPage} />
-      <Route path="/payment" component={PaymentPage} />
-      <Route path="/order-confirmation" component={OrderConfirmationPage} />
-      <Route path="/orders" component={OrdersPage} />
-      <Route path="/orders/:orderId" component={OrderDetailsPage} />
-      <Route path="/profile" component={ProfilePage} />
-      <Route path="/help" component={HelpPage} />
-      <Route path="/about" component={AboutPage} />
-      <Route path="/referral" component={ReferralPage} />
-      <Route path="/corporate" component={CorporatePage} />
-      <Route path="/concierge" component={ConciergeWizardPage} />
-      <Route path="/concierge/results" component={ConciergeResultsPage} />
-      <Route path="/concierge-results" component={ConciergeResultsPage} />
-      <Route path="/mealbox" component={MealBoxPage} />
-      <Route path="/mealbox/builder" component={MealBoxBuilderPage} />
-      <Route path="/admin" component={AdminDashboard} />
+      <Route path="/" component={GuardedHomePage} />
+      <Route path="/auth" component={PublicAuthPage} />
+      <Route path="/phone" component={PublicPhoneScreen} />
+      <Route path="/verification" component={PublicVerificationScreen} />
+      <Route path="/name" component={GuardedNameScreen} />
+      <Route path="/cart" component={GuardedCartRedirect} />
+      <Route path="/categories/:mealType" component={GuardedCategoryPage} />
+      <Route path="/dishes/:mealType/:category" component={GuardedDishesPage} />
+      <Route path="/planner/:mealType/:planType" component={GuardedPlannerDetailPage} />
+      <Route path="/add-ons" component={GuardedAddOnsPage} />
+      <Route path="/checkout" component={GuardedCheckoutPage} />
+      <Route path="/payment" component={GuardedPaymentPage} />
+      <Route path="/order-confirmation" component={GuardedOrderConfirmationPage} />
+      <Route path="/orders" component={GuardedOrdersPage} />
+      <Route path="/orders/:orderId" component={GuardedOrderDetailsPage} />
+      <Route path="/profile" component={GuardedProfilePage} />
+      <Route path="/help" component={GuardedHelpPage} />
+      <Route path="/about" component={GuardedAboutPage} />
+      <Route path="/referral" component={GuardedReferralPage} />
+      <Route path="/corporate" component={GuardedCorporatePage} />
+      <Route path="/concierge" component={GuardedConciergeWizardPage} />
+      <Route path="/concierge/results" component={GuardedConciergeResultsPage} />
+      <Route path="/concierge-results" component={GuardedConciergeResultsPage} />
+      <Route path="/mealbox" component={GuardedMealBoxPage} />
+      <Route path="/mealbox/builder" component={GuardedMealBoxBuilderPage} />
+      <Route path="/admin" component={GuardedAdminDashboard} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -1,11 +1,26 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'wouter';
 import plattrLogoImage from "@assets/plattr_logo.png";
+import { useToast } from "@/hooks/use-toast";
+import { useMutation } from "@tanstack/react-query";
+import type { RecaptchaVerifier } from "firebase/auth";
+import {
+  initializeRecaptcha,
+  sendFirebaseOTP,
+  storeConfirmationResult,
+  clearStoredConfirmationResult,
+  clearRecaptcha,
+} from "@/lib/firebase";
 
 export default function PhoneScreen() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [currentTime, setCurrentTime] = useState('9:41');
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  const isSendingOtp = useRef(false);
+  const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
+  const recaptchaInitPromiseRef = useRef<Promise<RecaptchaVerifier> | null>(null);
+  const recaptchaContainerId = "recaptcha-container";
 
   // Update time every minutex
   useEffect(() => {
@@ -22,31 +37,110 @@ export default function PhoneScreen() {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    return () => {
+      clearRecaptcha();
+      clearStoredConfirmationResult();
+      recaptchaVerifierRef.current = null;
+      recaptchaInitPromiseRef.current = null;
+    };
+  }, []);
+
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Allow only numbers and basic phone formatting characters
-    const value = e.target.value.replace(/[^\d+\-() ]/g, '');
+    // Only allow digits, limit to 10 digits
+    const value = e.target.value.replace(/\D/g, '').slice(0, 10);
     setPhoneNumber(value);
   };
 
-  const isValid = phoneNumber.trim().length > 0;
+  const isValid = phoneNumber.length === 10;
+
+  const getRecaptchaVerifier = async () => {
+    if (recaptchaVerifierRef.current) {
+      return recaptchaVerifierRef.current;
+    }
+
+    if (!recaptchaInitPromiseRef.current) {
+      recaptchaInitPromiseRef.current = initializeRecaptcha(recaptchaContainerId);
+    }
+
+    try {
+      const verifier = await recaptchaInitPromiseRef.current;
+      recaptchaVerifierRef.current = verifier;
+      return verifier;
+    } finally {
+      recaptchaInitPromiseRef.current = null;
+    }
+  };
+
+  // Send OTP using Firebase Phone Authentication
+  const sendOtpMutation = useMutation({
+    mutationFn: async (phone: string) => {
+      if (isSendingOtp.current) {
+        throw new Error('OTP request already in progress. Please wait.');
+      }
+
+      if (phone.length !== 10) {
+        throw new Error('Please enter a valid 10-digit phone number');
+      }
+
+      isSendingOtp.current = true;
+
+      try {
+        console.log('📱 Sending OTP to:', phone);
+
+        clearStoredConfirmationResult();
+        const recaptcha = await getRecaptchaVerifier();
+        const confirmationResult = await sendFirebaseOTP(phone, recaptcha);
+
+        storeConfirmationResult(confirmationResult);
+        sessionStorage.setItem('phoneNumber', phone);
+
+        console.log('✅ Firebase OTP sent successfully!');
+        return { success: true };
+      } catch (error: any) {
+        console.error('❌ OTP send failed:', error);
+        clearStoredConfirmationResult();
+        recaptchaVerifierRef.current = null;
+        clearRecaptcha();
+        throw error;
+      } finally {
+        isSendingOtp.current = false;
+      }
+    },
+    onSuccess: () => {
+      toast({
+        title: "OTP Sent!",
+        description: "Please check your phone for the verification code.",
+      });
+      // Navigate to verification screen
+      setLocation('/verification', { replace: true });
+    },
+    onError: (error: any) => {
+      console.error('OTP send error:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to send OTP. Please try again.",
+      });
+    },
+  });
 
   const handleContinue = () => {
     if (isValid) {
-      // Navigate to verification screen using replace to prevent history issues
-      // This replaces the current history entry instead of adding a new one
-      setLocation('/verification', { replace: true });
+      sendOtpMutation.mutate(phoneNumber);
     }
   };
 
   return (
-    <div 
-      className="h-screen flex flex-col overflow-hidden"
-      style={{
-        background: 'linear-gradient(180deg, #FFFFFF 0%, #FFF5A4 100%)',
-        position: 'relative',
-        zIndex: 100
-      }}
-    >
+    <>
+      <div 
+        className="h-screen flex flex-col overflow-hidden"
+        style={{
+          background: 'linear-gradient(180deg, #FFFFFF 0%, #FFF5A4 100%)',
+          position: 'relative',
+          zIndex: 100
+        }}
+      >
       {/* Status Bar */}
       <div 
         className="flex justify-between items-center px-6"
@@ -123,19 +217,33 @@ export default function PhoneScreen() {
           onClick={handleContinue}
           className="w-full py-3 rounded-md text-white font-semibold text-sm sm:text-base flex items-center justify-center gap-2 transition-all mb-4 sm:mb-6"
           style={{ 
-            backgroundColor: isValid ? '#1A9952' : '#A5D6A7',
-            cursor: isValid ? 'pointer' : 'not-allowed',
+            backgroundColor: (isValid && !sendOtpMutation.isPending) ? '#1A9952' : '#A5D6A7',
+            cursor: (isValid && !sendOtpMutation.isPending) ? 'pointer' : 'not-allowed',
             fontFamily: "Sweet Sans Pro, -apple-system, sans-serif"
           }}
-          disabled={!isValid}
+          disabled={!isValid || sendOtpMutation.isPending}
         >
-          Continue
+          {sendOtpMutation.isPending ? 'Sending OTP...' : 'Continue'}
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="mt-0.5">
             <path d="M6 12L10 8L6 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </button>
       </div>
-    </div>
+      </div>
+      <div
+        id={recaptchaContainerId}
+        style={{
+          position: 'fixed',
+          opacity: 0,
+          pointerEvents: 'none',
+          zIndex: -1,
+          bottom: 0,
+          right: 0,
+          width: '100%',
+          height: '100%',
+        }}
+      />
+    </>
   );
 }
 
