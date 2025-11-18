@@ -23,6 +23,11 @@ Key environment variables (root .env):
 - Optional: SUPABASE_SERVICE_ROLE_KEY (server-only admin operations)
 - Optional DB strings for sessions: SUPABASE_DATABASE_URL or DATABASE_URL
 - Stripe: STRIPE_SECRET_KEY (server), Stripe publishable key (client) when wiring payments
+- Demo bypass (optional, for local demos without OTP backend). Defaults to ON when `NODE_ENV`/`VITE_DEVMODE` indicate development:
+  - Server: set `BYPASS_AUTH=true` (default for non-production) and optionally override `BYPASS_AUTH_PHONE` / `BYPASS_AUTH_USERNAME`
+  - Client: set `VITE_BYPASS_AUTH=true` (default for `vite --dev`) plus optional `VITE_BYPASS_AUTH_PHONE`, `VITE_BYPASS_AUTH_USER_ID`, `VITE_BYPASS_AUTH_USERNAME`
+  - Override either side with `BYPASS_AUTH=false` / `VITE_BYPASS_AUTH=false` to force the real OTP flow
+  - When enabled, the server auto-creates a demo user and all routes treat requests as authenticated
 
 Running locally:
 - Development (server + Vite client via dev middleware):
@@ -150,6 +155,7 @@ Storage
 - On OTP verification, user is created (if not exists) and marked verified, then session is established
 - Sessions are cookie-based, stored in Postgres via `connect-pg-simple`
 - Frontend detects guest via 401 on `/api/cart` and falls back to localStorage cart
+- Development bypass: when `NODE_ENV !== "production"` the server automatically sets a demo user session (no OTP/API calls required). Override with `BYPASS_AUTH=false` to disable or `BYPASS_AUTH=true` plus `BYPASS_AUTH_PHONE` / `BYPASS_AUTH_USERNAME` to customize the seeded user.
 
 ### 7. Payments (Stripe)
 

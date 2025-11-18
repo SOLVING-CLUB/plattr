@@ -13,6 +13,13 @@ import admin from "firebase-admin";
 // Check if using REST API
 const useRestAPI = !!(process.env.SUPABASE_URL && (process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_KEY));
 
+const bypassAuthEnv = process.env.BYPASS_AUTH;
+const bypassAuth =
+  bypassAuthEnv === "true" ||
+  (!bypassAuthEnv && process.env.NODE_ENV !== "production");
+const bypassAuthPhone = process.env.BYPASS_AUTH_PHONE ?? "9999999999";
+const bypassAuthUsername = process.env.BYPASS_AUTH_USERNAME ?? "Demo User";
+
 // Initialize Stripe (only if keys are available)
 let stripe: Stripe | null = null;
 if (process.env.STRIPE_SECRET_KEY) {
@@ -76,6 +83,104 @@ function formatCategoryName(categoryId: string): string {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  type BypassUser = {
+    id: number;
+    username?: string | null;
+    phone?: string | null;
+  };
+
+  let cachedBypassUser: BypassUser | null = null;
+
+  const getOrCreateBypassUser = async (): Promise<BypassUser> => {
+    if (cachedBypassUser) {
+      return cachedBypassUser;
+    }
+
+    if (!db && !(useRestAPI && supabase)) {
+      throw new Error("BYPASS_AUTH requires either a direct database connection or Supabase REST.");
+    }
+
+    const lookupPhone = bypassAuthPhone;
+    const fallbackUsername = bypassAuthUsername;
+
+    if (db) {
+      const existingUser = await db
+        .select()
+        .from(users)
+        .where(eq(users.phone, lookupPhone))
+        .limit(1);
+
+      if (existingUser.length > 0) {
+        cachedBypassUser = existingUser[0];
+        return cachedBypassUser;
+      }
+
+      const [newUser] = await db
+        .insert(users)
+        .values({
+          username: fallbackUsername,
+          phone: lookupPhone,
+          password: "",
+          isVerified: true,
+        })
+        .returning();
+
+      cachedBypassUser = newUser;
+      return newUser;
+    }
+
+    if (useRestAPI && supabase) {
+      const existingUser = await supabase.select("users", {
+        filter: { phone: `eq.${lookupPhone}` },
+        limit: 1,
+      });
+
+      if (existingUser.length > 0) {
+        cachedBypassUser = existingUser[0];
+        return cachedBypassUser;
+      }
+
+      const insertedUser = await supabase.insert(
+        "users",
+        {
+          username: fallbackUsername,
+          phone: lookupPhone,
+          password: "",
+          is_verified: true,
+        },
+        true
+      );
+
+      const normalizedUser = Array.isArray(insertedUser) ? insertedUser[0] : insertedUser;
+      cachedBypassUser = normalizedUser;
+      return normalizedUser;
+    }
+
+    throw new Error("Unable to provision bypass auth user.");
+  };
+
+  if (bypassAuth) {
+    try {
+      const demoUser = await getOrCreateBypassUser();
+      console.warn(
+        `[auth] BYPASS_AUTH enabled. All requests will use demo user ${demoUser.username ?? demoUser.id}.`
+      );
+    } catch (error) {
+      console.error("Failed to initialize bypass auth user:", error);
+      throw error;
+    }
+
+    app.use((req, _res, next) => {
+      getOrCreateBypassUser()
+        .then((demoUser) => {
+          req.session.userId = demoUser.id;
+          req.session.phone = demoUser.phone ?? undefined;
+          next();
+        })
+        .catch(next);
+    });
+  }
+
   // ========== AUTH ROUTES ==========
   
   // Test endpoint to verify server is running latest code
@@ -91,6 +196,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Send OTP for signup/login
   app.post("/api/auth/send-otp", async (req, res) => {
+    if (bypassAuth) {
+      res.json({
+        success: true,
+        message: "BYPASS_AUTH enabled. OTP flow skipped.",
+      });
+      return;
+    }
+
     try {
       console.log("📱 [send-otp] Request received:", { body: req.body });
       
@@ -196,6 +309,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Verify OTP and signup/login
   app.post("/api/auth/verify-otp", async (req, res) => {
+    if (bypassAuth) {
+      try {
+        const demoUser = await getOrCreateBypassUser();
+        req.session.userId = demoUser.id;
+        req.session.phone = demoUser.phone ?? undefined;
+
+        res.json({
+          success: true,
+          message: "BYPASS_AUTH enabled. OTP verification skipped.",
+          user: {
+            id: demoUser.id,
+            username: demoUser.username,
+            phone: demoUser.phone,
+          },
+        });
+      } catch (error) {
+        console.error("❌ [verify-otp] Bypass auth failed:", error);
+        res.status(500).json({ error: "Failed to initialize bypass auth user" });
+      }
+      return;
+    }
+
     try {
       console.log("🔐 [verify-otp] Request received:", { body: req.body });
       
@@ -440,6 +575,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Check if phone number exists
   app.post("/api/auth/check-phone", async (req, res) => {
+    if (bypassAuth) {
+      res.json({
+        exists: true,
+        username: bypassAuthUsername,
+      });
+      return;
+    }
+
     try {
       const schema = z.object({
         phone: z.string().regex(/^[0-9]{10}$/, "Phone must be 10 digits"),
@@ -469,6 +612,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Sync Firebase authentication with Supabase
   app.post("/api/auth/firebase-sync", async (req, res) => {
+    if (bypassAuth) {
+      try {
+        const demoUser = await getOrCreateBypassUser();
+        req.session.userId = demoUser.id;
+        req.session.phone = demoUser.phone ?? undefined;
+
+        res.json({
+          success: true,
+          message: "BYPASS_AUTH enabled. Firebase sync skipped.",
+          user: {
+            id: demoUser.id,
+            username: demoUser.username,
+            phone: demoUser.phone,
+          },
+        });
+      } catch (error) {
+        console.error("❌ [firebase-sync] Bypass auth failed:", error);
+        res.status(500).json({ error: "Failed to initialize bypass auth user" });
+      }
+      return;
+    }
+
     try {
       const schema = z.object({
         idToken: z.string().min(1, "Firebase ID token is required"),

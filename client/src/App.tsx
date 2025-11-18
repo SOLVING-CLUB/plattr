@@ -31,6 +31,14 @@ import NameScreen from "@/pages/NameScreen";
 import SplashScreen from "@/components/SplashScreen";
 import { useEffect, useState, useRef, type ComponentType, type ReactNode } from "react";
 
+const bypassAuthEnv = import.meta.env.VITE_BYPASS_AUTH;
+const BYPASS_AUTH =
+  bypassAuthEnv === "true" ||
+  (!bypassAuthEnv && import.meta.env.DEV);
+const BYPASS_AUTH_USER_ID = import.meta.env.VITE_BYPASS_AUTH_USER_ID ?? "demo-user";
+const BYPASS_AUTH_PHONE = import.meta.env.VITE_BYPASS_AUTH_PHONE ?? "9999999999";
+const BYPASS_AUTH_USERNAME = import.meta.env.VITE_BYPASS_AUTH_USERNAME ?? "Demo User";
+
 // Redirect component for /cart to /checkout
 function CartRedirect() {
   const [, setLocation] = useLocation();
@@ -41,6 +49,7 @@ function CartRedirect() {
 }
 
 const getIsAuthenticated = () => {
+  if (BYPASS_AUTH) return true;
   if (typeof window === "undefined") return false;
   return Boolean(localStorage.getItem("userId"));
 };
@@ -178,6 +187,33 @@ function App() {
   const [location, setLocation] = useLocation();
   const hasNavigatedFromSplash = useRef(false);
 
+  useEffect(() => {
+    if (!BYPASS_AUTH || typeof window === "undefined") return;
+
+    if (!localStorage.getItem("userId")) {
+      localStorage.setItem("userId", BYPASS_AUTH_USER_ID);
+    }
+
+    if (!localStorage.getItem("username")) {
+      localStorage.setItem("username", BYPASS_AUTH_USERNAME);
+    }
+
+    if (!localStorage.getItem("phone")) {
+      localStorage.setItem("phone", BYPASS_AUTH_PHONE);
+    }
+  }, [BYPASS_AUTH, BYPASS_AUTH_USER_ID, BYPASS_AUTH_USERNAME, BYPASS_AUTH_PHONE]);
+
+  useEffect(() => {
+    if (!BYPASS_AUTH) return;
+
+    setShowSplash(false);
+    hasNavigatedFromSplash.current = true;
+
+    if (location && ["/phone", "/verification", "/name", "/auth"].includes(location)) {
+      setLocation("/", { replace: true });
+    }
+  }, [BYPASS_AUTH, location, setLocation]);
+
   // Development mode - set to true to keep splash open for development
   // Set to false when you want normal splash behavior (2 seconds then fade)
   const DEV_MODE_SPLASH = true;
@@ -187,6 +223,8 @@ function App() {
   const isDev = DEV_MODE_SPLASH || import.meta.env.DEV || window.location.hostname === '10.0.2.2' || window.location.hostname === 'localhost' || window.location.hostname.includes('192.168') || window.location.hostname.includes('10.');
 
   useEffect(() => {
+    if (BYPASS_AUTH) return;
+
     // Only set up navigation if splash is still showing
     if (!showSplash) return;
     
@@ -262,7 +300,7 @@ function App() {
 
       return () => clearTimeout(timer);
     }
-  }, [DEV_MODE_SPLASH, setLocation, showSplash, location]);
+  }, [BYPASS_AUTH, DEV_MODE_SPLASH, setLocation, showSplash, location]);
 
   return (
     <QueryClientProvider client={queryClient}>
