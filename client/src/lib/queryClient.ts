@@ -51,12 +51,6 @@ export async function apiRequest(
   // Use backend API for auth routes and fallback
   const headers: HeadersInit = data ? { "Content-Type": "application/json" } : {};
   
-  // Include Firebase token if available
-  const firebaseToken = localStorage.getItem("firebaseIdToken");
-  if (firebaseToken) {
-    headers["Authorization"] = `Bearer ${firebaseToken}`;
-  }
-  
   const res = await fetch(url, {
     method,
     headers,

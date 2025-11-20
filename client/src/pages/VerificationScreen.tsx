@@ -4,11 +4,6 @@ import plattrLogoImage from "@assets/plattr_logo.png";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
-import {
-  getStoredConfirmationResult,
-  verifyFirebaseOTP,
-  clearStoredConfirmationResult,
-} from "@/lib/firebase";
 
 export default function VerificationScreen() {
   const [code, setCode] = useState(['', '', '', '', '', '']);
@@ -17,7 +12,6 @@ export default function VerificationScreen() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [phoneNumber, setPhoneNumber] = useState('');
-  const confirmationResultRef = useRef(getStoredConfirmationResult());
 
   // Update time every minute
   useEffect(() => {
@@ -34,18 +28,6 @@ export default function VerificationScreen() {
     return () => clearInterval(interval);
   }, []);
 
-  useEffect(() => {
-    if (!confirmationResultRef.current) {
-      toast({
-        variant: "destructive",
-        title: "Session expired",
-        description: "Please request a new verification code.",
-      });
-      setTimeout(() => {
-        setLocation('/phone', { replace: true });
-      }, 1500);
-    }
-  }, [setLocation, toast]);
 
   // Get phone number from sessionStorage
   useEffect(() => {
@@ -105,42 +87,28 @@ export default function VerificationScreen() {
 
   const isComplete = code.every(digit => digit !== '');
 
-  // Verify OTP via Firebase and sync with backend
+  // Verify OTP via standard API
   const verifyOtpMutation = useMutation({
     mutationFn: async (otpCode: string) => {
       if (!phoneNumber) {
         throw new Error("Phone number not found. Please start over.");
       }
 
-      if (!confirmationResultRef.current) {
-        throw new Error("Verification session expired. Please request a new code.");
-      }
-
       try {
-        console.log('🔐 Verifying OTP with Firebase...');
-        const firebaseUser = await verifyFirebaseOTP(confirmationResultRef.current, otpCode);
-        const idToken = await firebaseUser.getIdToken();
-        const formattedPhone = firebaseUser.phoneNumber?.replace(/^\+91/, '').replace(/\D/g, '') || phoneNumber;
-
-        if (!formattedPhone) {
-          throw new Error("Could not determine phone number from Firebase user.");
-        }
-
-        const response = await apiRequest("POST", "/api/auth/firebase-sync", {
-          idToken,
-          phone: formattedPhone,
-          firebaseUid: firebaseUser.uid,
+        console.log('🔐 Verifying OTP...');
+        const response = await apiRequest("POST", "/api/auth/verify-otp", {
+          phone: phoneNumber,
+          otp: otpCode,
         });
 
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(data.error || "Failed to sync authentication");
+          throw new Error(data.error || "Failed to verify OTP");
         }
 
-        console.log('✅ OTP verified & synced successfully');
+        console.log('✅ OTP verified successfully');
 
-        localStorage.setItem("firebaseIdToken", idToken);
         localStorage.setItem("userId", data.user.id);
         if (data.user.username) {
           localStorage.setItem("username", data.user.username);
@@ -150,8 +118,6 @@ export default function VerificationScreen() {
         }
 
         sessionStorage.removeItem('phoneNumber');
-        confirmationResultRef.current = null;
-        clearStoredConfirmationResult();
 
         return data;
       } catch (error: any) {
@@ -198,8 +164,6 @@ export default function VerificationScreen() {
   };
 
   const handleResendOtp = () => {
-    clearStoredConfirmationResult();
-    confirmationResultRef.current = null;
     setLocation('/phone', { replace: true });
   };
 

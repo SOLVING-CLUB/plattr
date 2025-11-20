@@ -80,20 +80,22 @@ function RequireAuth({
 function PublicOnly({
   children,
   redirectTo = "/",
+  allowWhenAuthenticated = false,
 }: {
   children: ReactNode;
   redirectTo?: string;
+  allowWhenAuthenticated?: boolean;
 }) {
   const [, setLocation] = useLocation();
-  const [canRender] = useState(() => !getIsAuthenticated());
+  const [canRender] = useState(() => allowWhenAuthenticated || !getIsAuthenticated());
 
   useEffect(() => {
-    if (!canRender) {
+    if (!canRender && !allowWhenAuthenticated) {
       setLocation(redirectTo, { replace: true });
     }
-  }, [canRender, redirectTo, setLocation]);
+  }, [canRender, redirectTo, setLocation, allowWhenAuthenticated]);
 
-  if (!canRender) {
+  if (!canRender && !allowWhenAuthenticated) {
     return null;
   }
 
@@ -110,10 +112,10 @@ const withAuthGuard =
     );
 
 const withPublicOnly =
-  <P extends object>(Component: ComponentType<P>, redirectTo = "/") =>
+  <P extends object>(Component: ComponentType<P>, redirectTo = "/", allowWhenAuthenticated = false) =>
   (props: P) =>
     (
-      <PublicOnly redirectTo={redirectTo}>
+      <PublicOnly redirectTo={redirectTo} allowWhenAuthenticated={allowWhenAuthenticated}>
         <Component {...props} />
       </PublicOnly>
     );
@@ -144,9 +146,10 @@ function Router() {
   const GuardedMealBoxBuilderPage = withAuthGuard(MealBoxBuilderPage);
   const GuardedCartRedirect = withAuthGuard(CartRedirect);
   const GuardedNameScreen = withAuthGuard(NameScreen);
-  const PublicAuthPage = withPublicOnly(AuthPage);
-  const PublicPhoneScreen = withPublicOnly(PhoneScreen);
-  const PublicVerificationScreen = withPublicOnly(VerificationScreen);
+  // Allow auth pages to be accessed even when authenticated (for testing)
+  const PublicAuthPage = withPublicOnly(AuthPage, "/", true);
+  const PublicPhoneScreen = withPublicOnly(PhoneScreen, "/", true);
+  const PublicVerificationScreen = withPublicOnly(VerificationScreen, "/", true);
 
   return (
     <Switch>
@@ -206,13 +209,10 @@ function App() {
   useEffect(() => {
     if (!BYPASS_AUTH) return;
 
-    setShowSplash(false);
-    hasNavigatedFromSplash.current = true;
-
-    if (location && ["/phone", "/verification", "/name", "/auth"].includes(location)) {
-      setLocation("/", { replace: true });
-    }
-  }, [BYPASS_AUTH, location, setLocation]);
+    // Only auto-set localStorage items, but don't hide splash or redirect
+    // This allows users to see splash and auth pages even with BYPASS_AUTH enabled
+    // The splash screen logic below will handle navigation
+  }, [BYPASS_AUTH]);
 
   // Development mode - set to true to keep splash open for development
   // Set to false when you want normal splash behavior (2 seconds then fade)
@@ -223,8 +223,6 @@ function App() {
   const isDev = DEV_MODE_SPLASH || import.meta.env.DEV || window.location.hostname === '10.0.2.2' || window.location.hostname === 'localhost' || window.location.hostname.includes('192.168') || window.location.hostname.includes('10.');
 
   useEffect(() => {
-    if (BYPASS_AUTH) return;
-
     // Only set up navigation if splash is still showing
     if (!showSplash) return;
     
@@ -235,13 +233,19 @@ function App() {
       return;
     }
     
-    // If user is on other pages (not onboarding routes), hide splash
-    if (location !== '/' && location !== '/phone' && location !== '/verification' && location !== '/name') {
+    // If user is authenticated and on home page, hide splash
+    if (location === '/' && getIsAuthenticated() && hasNavigatedFromSplash.current) {
       setShowSplash(false);
       return;
     }
     
-    // At this point, we're on '/', '/phone', '/verification', or '/name' route
+    // If user is on other pages (not onboarding routes), hide splash
+    if (location !== '/' && location !== '/phone' && location !== '/verification' && location !== '/name' && location !== '/auth') {
+      setShowSplash(false);
+      return;
+    }
+    
+    // At this point, we're on '/', '/phone', '/verification', '/name', or '/auth' route
     // This means user is in the onboarding flow or initial load - allow splash navigation
 
     // In dev mode, keep splash open so you can develop on it
@@ -300,7 +304,7 @@ function App() {
 
       return () => clearTimeout(timer);
     }
-  }, [BYPASS_AUTH, DEV_MODE_SPLASH, setLocation, showSplash, location]);
+  }, [DEV_MODE_SPLASH, setLocation, showSplash, location]);
 
   return (
     <QueryClientProvider client={queryClient}>

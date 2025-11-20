@@ -8,7 +8,6 @@ import { smsService } from "./sms";
 import { z } from "zod";
 import Stripe from "stripe";
 import "./types/session";
-import admin from "firebase-admin";
 
 // Check if using REST API
 const useRestAPI = !!(process.env.SUPABASE_URL && (process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_KEY));
@@ -24,29 +23,8 @@ const bypassAuthUsername = process.env.BYPASS_AUTH_USERNAME ?? "Demo User";
 let stripe: Stripe | null = null;
 if (process.env.STRIPE_SECRET_KEY) {
   stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-    apiVersion: "2025-09-30.clover",
+    apiVersion: "2025-10-29.clover",
   });
-}
-
-// Initialize Firebase Admin (only if credentials are available)
-if (!admin.apps.length && process.env.FIREBASE_PROJECT_ID) {
-  try {
-    // Try to initialize with service account JSON
-    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
-      });
-    } else if (process.env.FIREBASE_PROJECT_ID) {
-      // Initialize with project ID (for emulator or default credentials)
-      admin.initializeApp({
-        projectId: process.env.FIREBASE_PROJECT_ID,
-      });
-    }
-  } catch (error) {
-    console.warn("Firebase Admin initialization failed:", error);
-    console.warn("Firebase phone auth will not work without proper credentials");
-  }
 }
 
 // Helper function to format category names
@@ -84,7 +62,7 @@ function formatCategoryName(categoryId: string): string {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   type BypassUser = {
-    id: number;
+    id: string;
     username?: string | null;
     phone?: string | null;
   };
@@ -111,7 +89,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .limit(1);
 
       if (existingUser.length > 0) {
-        cachedBypassUser = existingUser[0];
+        const user = existingUser[0];
+        cachedBypassUser = {
+          id: String(user.id),
+          username: user.username,
+          phone: user.phone,
+        };
         return cachedBypassUser;
       }
 
@@ -125,8 +108,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
         .returning();
 
-      cachedBypassUser = newUser;
-      return newUser;
+      cachedBypassUser = {
+        id: String(newUser.id),
+        username: newUser.username,
+        phone: newUser.phone,
+      };
+      return cachedBypassUser;
     }
 
     if (useRestAPI && supabase) {
@@ -136,8 +123,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       if (existingUser.length > 0) {
-        cachedBypassUser = existingUser[0];
+        const user = existingUser[0];
+        cachedBypassUser = {
+          id: String(user.id),
+          username: user.username,
+          phone: user.phone,
+        };
         return cachedBypassUser;
+      }
+
+      // Check if service role key is available for bypassing RLS
+      const hasServiceRoleKey = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
+      
+      if (!hasServiceRoleKey) {
+        throw new Error(
+          "BYPASS_AUTH requires SUPABASE_SERVICE_ROLE_KEY to create users.\n" +
+          "Set SUPABASE_SERVICE_ROLE_KEY in your .env file.\n" +
+          "Get it from: Supabase Dashboard → Settings → API → service_role key\n\n" +
+          "Alternatively, manually create a user with phone: " + lookupPhone + " in your Supabase database."
+        );
       }
 
       const insertedUser = await supabase.insert(
@@ -152,8 +156,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
 
       const normalizedUser = Array.isArray(insertedUser) ? insertedUser[0] : insertedUser;
-      cachedBypassUser = normalizedUser;
-      return normalizedUser;
+      cachedBypassUser = {
+        id: String(normalizedUser.id),
+        username: normalizedUser.username,
+        phone: normalizedUser.phone,
+      };
+      return cachedBypassUser;
     }
 
     throw new Error("Unable to provision bypass auth user.");
@@ -166,8 +174,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         `[auth] BYPASS_AUTH enabled. All requests will use demo user ${demoUser.username ?? demoUser.id}.`
       );
     } catch (error) {
-      console.error("Failed to initialize bypass auth user:", error);
-      throw error;
+      console.error("⚠️  Failed to initialize bypass auth user:", error);
+      console.error("⚠️  BYPASS_AUTH will not work until this is fixed.");
+      console.error("⚠️  To fix: Set SUPABASE_SERVICE_ROLE_KEY in your .env file, or manually create a user with phone:", bypassAuthPhone);
+      // Don't throw - allow server to start, but bypass auth won't work
     }
 
     app.use((req, _res, next) => {
@@ -177,7 +187,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           req.session.phone = demoUser.phone ?? undefined;
           next();
         })
-        .catch(next);
+        .catch((err) => {
+          // If bypass auth fails, log but don't block the request
+          console.error("⚠️  Bypass auth failed for request:", err.message);
+          // Continue without setting session - request will be unauthenticated
+          next();
+        });
     });
   }
 
@@ -590,6 +605,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { phone } = schema.parse(req.body);
 
+      if (!db) {
+        return res.status(500).json({ error: "Database connection not available" });
+      }
+
       const existingUser = await db
         .select()
         .from(users)
@@ -607,156 +626,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
       res.status(500).json({ error: "Failed to check phone" });
-    }
-  });
-
-  // Sync Firebase authentication with Supabase
-  app.post("/api/auth/firebase-sync", async (req, res) => {
-    if (bypassAuth) {
-      try {
-        const demoUser = await getOrCreateBypassUser();
-        req.session.userId = demoUser.id;
-        req.session.phone = demoUser.phone ?? undefined;
-
-        res.json({
-          success: true,
-          message: "BYPASS_AUTH enabled. Firebase sync skipped.",
-          user: {
-            id: demoUser.id,
-            username: demoUser.username,
-            phone: demoUser.phone,
-          },
-        });
-      } catch (error) {
-        console.error("❌ [firebase-sync] Bypass auth failed:", error);
-        res.status(500).json({ error: "Failed to initialize bypass auth user" });
-      }
-      return;
-    }
-
-    try {
-      const schema = z.object({
-        idToken: z.string().min(1, "Firebase ID token is required"),
-        phone: z.string().regex(/^[0-9]{10}$/, "Phone must be 10 digits"),
-        username: z.string().min(2, "Username must be at least 2 characters").optional(),
-        firebaseUid: z.string().min(1, "Firebase UID is required"),
-      });
-
-      const { idToken, phone, username, firebaseUid } = schema.parse(req.body);
-
-      // Verify Firebase ID token
-      let decodedToken;
-      try {
-        if (!admin.apps.length) {
-          res.status(500).json({ error: "Firebase Admin not initialized" });
-          return;
-        }
-        decodedToken = await admin.auth().verifyIdToken(idToken);
-      } catch (error: any) {
-        console.error("Firebase token verification error:", error);
-        res.status(401).json({ error: "Invalid or expired Firebase token" });
-        return;
-      }
-
-      // Verify that the phone number matches
-      const tokenPhone = decodedToken.phone_number?.replace(/^\+91/, '') || '';
-      if (tokenPhone !== phone) {
-        res.status(400).json({ error: "Phone number mismatch" });
-        return;
-      }
-
-      // Check if user exists
-      let existingUser: any[] = [];
-
-      if (db) {
-        existingUser = await db
-          .select()
-          .from(users)
-          .where(eq(users.phone, phone))
-          .limit(1);
-      } else if (useRestAPI && supabase) {
-        existingUser = await supabase.select("users", {
-          filter: { phone: `eq.${phone}` },
-          limit: 1,
-        });
-      } else {
-        res.status(500).json({ error: "Database connection not configured" });
-        return;
-      }
-
-      let user;
-      if (existingUser.length > 0) {
-        // User exists, update verification status
-        if (db) {
-          const updatedUser = await db
-            .update(users)
-            .set({ isVerified: true })
-            .where(eq(users.id, existingUser[0].id))
-            .returning();
-          user = updatedUser[0] || existingUser[0];
-        } else if (useRestAPI && supabase) {
-          const updated = await supabase.update(
-            "users",
-            { id: `eq.${existingUser[0].id}` },
-            { is_verified: true },
-            true
-          );
-          const updatedArray = Array.isArray(updated) ? updated : [updated];
-          user = updatedArray[0] || existingUser[0];
-        }
-      } else {
-        // Create new user - username can be set later on name screen
-        // For now, create with a temporary username based on phone
-        const baseTempUsername = `user_${phone.slice(-4)}`;
-        const tempUsername =
-          username || `${baseTempUsername}_${Date.now().toString().slice(-6)}`;
-
-        if (db) {
-          const newUserResult = await db
-            .insert(users)
-            .values({
-              username: tempUsername,
-              phone,
-              password: "",
-              isVerified: true,
-            })
-            .returning();
-          user = newUserResult[0];
-        } else if (useRestAPI && supabase) {
-          const newUserResult = await supabase.insert(
-            "users",
-            {
-              username: tempUsername,
-              phone,
-              password: "",
-              is_verified: true,
-            },
-            true
-          );
-          user = Array.isArray(newUserResult) ? newUserResult[0] : newUserResult;
-        }
-      }
-
-      // Set session for authenticated user
-      req.session.userId = user.id;
-      req.session.phone = user.phone || undefined;
-
-      res.json({
-        success: true,
-        message: "Authentication successful",
-        user: {
-          id: user.id,
-          username: user.username,
-          phone: user.phone,
-        },
-      });
-    } catch (error) {
-      console.error("Error syncing Firebase auth:", error);
-      if (error instanceof z.ZodError) {
-        res.status(400).json({ error: error.errors[0].message });
-        return;
-      }
-      res.status(500).json({ error: "Failed to sync authentication" });
     }
   });
 
@@ -1006,11 +875,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         // Extract unique non-null dish_type values
-        const dishTypes = [...new Set(
+        const dishTypes = Array.from(new Set(
           dishes
             .map((d: any) => d.dish_type)
             .filter((type: any) => type !== null && type !== undefined)
-        )];
+        ));
         
         res.json(dishTypes.sort());
       } else {
@@ -1150,6 +1019,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "Not authenticated" });
       }
 
+      if (!db) {
+        return res.status(500).json({ error: "Database connection not available" });
+      }
+
       const result = await db
         .select({
           id: cartItems.id,
@@ -1196,6 +1069,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({ success: true, message: "Item added to cart" });
       }
       
+      if (!db) {
+        return res.status(500).json({ error: "Database connection not available" });
+      }
+      
       // Check if item already exists in cart
       const existing = await db
         .select()
@@ -1240,6 +1117,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({ success: true, message: "Item updated" });
       }
       
+      if (!db) {
+        return res.status(500).json({ error: "Database connection not available" });
+      }
+      
       // Verify cart item belongs to authenticated user
       const cartItem = await db
         .select()
@@ -1280,6 +1161,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // If not authenticated, return success (frontend handles localStorage)
       if (!userId) {
         return res.json({ success: true, message: "Item removed" });
+      }
+      
+      if (!db) {
+        return res.status(500).json({ error: "Database connection not available" });
       }
       
       // Verify cart item belongs to authenticated user
@@ -1341,6 +1226,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "Not authenticated. Please log in to add an address." });
       }
 
+      if (!db) {
+        return res.status(500).json({ error: "Database connection not available" });
+      }
+
       const schema = z.object({
         label: z.string().min(1, "Label is required"),
         address: z.string().min(10, "Please enter a complete address"),
@@ -1351,7 +1240,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const data = schema.parse(req.body);
 
       // If this is set as default, unset other defaults
-      if (data.isDefault) {
+      if (data.isDefault && db) {
         await db
           .update(addresses)
           .set({ isDefault: false })
@@ -1390,6 +1279,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { orderId } = req.params;
+
+      if (!db) {
+        return res.status(500).json({ error: "Database connection not available" });
+      }
 
       // Fetch order with address
       const orderData = await db
@@ -1484,6 +1377,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!userId) {
         return res.status(401).json({ error: "Not authenticated. Please log in to place an order." });
+      }
+
+      if (!db) {
+        return res.status(500).json({ error: "Database connection not available" });
       }
 
       const schema = z.object({
@@ -1590,6 +1487,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "Not authenticated. Please log in." });
       }
 
+      if (!db) {
+        return res.status(500).json({ error: "Database connection not available" });
+      }
+
       // Fetch user's cart items to calculate the total amount server-side
       const cart = await db
         .select({
@@ -1649,6 +1550,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!userId) {
         return res.status(401).json({ error: "Not authenticated." });
+      }
+
+      if (!db) {
+        return res.status(500).json({ error: "Database connection not available" });
       }
 
       // Delete dependent data in a safe order

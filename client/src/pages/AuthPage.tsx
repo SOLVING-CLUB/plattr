@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Phone, User, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,14 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { 
-  initializeRecaptcha, 
-  clearRecaptcha, 
-  sendFirebaseOTP, 
-  verifyFirebaseOTP,
-  getFirebaseIdToken,
-  type ConfirmationResult 
-} from "@/lib/firebase";
 
 export default function AuthPage() {
   const [, setLocation] = useLocation();
@@ -25,9 +17,6 @@ export default function AuthPage() {
   const [username, setUsername] = useState("");
   const [otp, setOtp] = useState("");
   const [isExistingUser, setIsExistingUser] = useState(false);
-  const confirmationResultRef = useRef<ConfirmationResult | null>(null);
-  const recaptchaInitialized = useRef(false);
-  const isSendingOtp = useRef(false);
 
   // Log when component mounts
   useEffect(() => {
@@ -54,16 +43,10 @@ export default function AuthPage() {
     },
   });
 
-  // Send OTP using Firebase
+  // Send OTP using standard API
   const sendOtpMutation = useMutation({
     mutationFn: async (phoneNumber: string) => {
       console.log('🎯 sendOtpMutation.mutationFn called with:', phoneNumber);
-      
-      // Prevent multiple simultaneous requests
-      if (isSendingOtp.current) {
-        console.log('⚠️ OTP request already in progress');
-        throw new Error('OTP request already in progress. Please wait.');
-      }
 
       // Validate phone number
       if (!phoneNumber || phoneNumber.length !== 10) {
@@ -72,47 +55,17 @@ export default function AuthPage() {
       }
 
       console.log('✅ Starting OTP send process...');
-      isSendingOtp.current = true;
 
-      try {
-        // Clear previous reCAPTCHA if exists
-        if (recaptchaInitialized.current) {
-          clearRecaptcha();
-          recaptchaInitialized.current = false;
-        }
-
-        // Initialize and render reCAPTCHA
-        console.log('🔐 Initializing reCAPTCHA...');
-        let recaptcha: RecaptchaVerifier;
-        try {
-          recaptcha = await initializeRecaptcha('recaptcha-container');
-          recaptchaInitialized.current = true;
-          console.log('✅ reCAPTCHA initialized successfully');
-        } catch (recaptchaError: any) {
-          console.error('❌ reCAPTCHA initialization failed:', recaptchaError);
-          throw new Error(`reCAPTCHA failed: ${recaptchaError.message || 'Please refresh the page and try again'}`);
-        }
-
-        // Small delay to ensure reCAPTCHA is fully ready
-        console.log('⏳ Waiting for reCAPTCHA to be ready...');
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        // Send OTP
-        console.log('📱 Sending OTP to:', `+91${phoneNumber}`);
-        const confirmation = await sendFirebaseOTP(phoneNumber, recaptcha);
-        confirmationResultRef.current = confirmation;
-        console.log('✅ OTP sent successfully!');
-        
-        return { success: true };
-      } catch (error: any) {
-        console.error('❌ OTP send failed:', error);
-        // Clear reCAPTCHA on error so it can be re-initialized
-        clearRecaptcha();
-        recaptchaInitialized.current = false;
-        throw error;
-      } finally {
-        isSendingOtp.current = false;
-      }
+      // Send OTP via API
+      console.log('📱 Sending OTP to:', phoneNumber);
+      const response = await apiRequest("POST", `/api/auth/send-otp`, {
+        phone: phoneNumber,
+      });
+      
+      const data = await response.json();
+      console.log('✅ OTP sent successfully!', data);
+      
+      return data;
     },
     onSuccess: () => {
       setStep("otp");
@@ -131,45 +84,24 @@ export default function AuthPage() {
     },
   });
 
-  // Verify OTP using Firebase and sync with Supabase
+  // Verify OTP using standard API
   const verifyOtpMutation = useMutation({
     mutationFn: async () => {
-      if (!confirmationResultRef.current) {
-        throw new Error("No OTP confirmation found. Please request a new OTP.");
-      }
-
       try {
-        // Verify OTP with Firebase
         console.log('Verifying OTP...');
-        const firebaseUser = await verifyFirebaseOTP(confirmationResultRef.current, otp);
-        console.log('OTP verified successfully');
-        
-        // Get Firebase ID token
-        const idToken = await firebaseUser.getIdToken();
-        
-        // Get phone number from Firebase user
-        const phoneNumber = firebaseUser.phoneNumber?.replace('+91', '') || phone;
-
-        // Sync with Supabase - create/update user
-        console.log('Syncing with Supabase...');
-        const response = await apiRequest("POST", `/api/auth/firebase-sync`, {
-          idToken,
-          phone: phoneNumber,
+        const response = await apiRequest("POST", `/api/auth/verify-otp`, {
+          phone,
+          otp,
           username: isExistingUser ? undefined : username,
-          firebaseUid: firebaseUser.uid,
         });
 
         // apiRequest throws on error, so if we get here, response is ok
         const data = await response.json();
+        console.log('OTP verified successfully', data);
         
-        // Store Firebase token and user info
-        localStorage.setItem("firebaseIdToken", idToken);
+        // Store user info
         localStorage.setItem("userId", data.user.id);
         localStorage.setItem("username", data.user.username);
-        
-        // Clear reCAPTCHA after successful verification
-        clearRecaptcha();
-        recaptchaInitialized.current = false;
         
         return data;
       } catch (error: any) {
@@ -179,12 +111,8 @@ export default function AuthPage() {
         let errorMessage = 'Invalid OTP. Please try again.';
         
         if (error.message) {
-          if (error.message.includes('invalid-verification-code')) {
-            errorMessage = 'Invalid OTP code. Please check and try again.';
-          } else if (error.message.includes('expired')) {
-            errorMessage = 'OTP has expired. Please request a new one.';
-          } else if (error.message.includes('session-expired')) {
-            errorMessage = 'Session expired. Please request a new OTP.';
+          if (error.message.includes('Invalid or expired')) {
+            errorMessage = 'Invalid or expired OTP. Please request a new one.';
           } else {
             errorMessage = error.message;
           }
@@ -273,34 +201,13 @@ export default function AuthPage() {
   };
 
   const handleResendOtp = () => {
-    // Clear previous confirmation
-    confirmationResultRef.current = null;
     setOtp("");
-    
-    // Clear and reset reCAPTCHA
-    clearRecaptcha();
-    recaptchaInitialized.current = false;
-    
     // Resend OTP
     sendOtpMutation.mutate(phone);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-50 flex items-center justify-center p-4">
-      {/* reCAPTCHA container - must exist in DOM for Firebase */}
-      <div 
-        id="recaptcha-container"
-        style={{ 
-          position: 'fixed',
-          bottom: '0',
-          right: '0',
-          width: '1px',
-          height: '1px',
-          opacity: 0,
-          pointerEvents: 'none',
-          zIndex: -1
-        }}
-      ></div>
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="text-center space-y-2">
           <CardTitle className="text-3xl font-bold text-orange-600">
@@ -446,10 +353,6 @@ export default function AuthPage() {
                   onClick={() => {
                     setStep("phone");
                     setOtp("");
-                    // Clear confirmation and reCAPTCHA when going back
-                    confirmationResultRef.current = null;
-                    clearRecaptcha();
-                    recaptchaInitialized.current = false;
                   }}
                   disabled={verifyOtpMutation.isPending}
                 >

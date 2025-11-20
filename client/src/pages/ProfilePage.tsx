@@ -13,7 +13,6 @@ import { cartStorage } from "@/lib/cartStorage";
 import type { Dish, Category } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { signOutFirebase } from "@/lib/firebase";
 
 interface CartItem {
   id: string;
@@ -63,16 +62,10 @@ export default function ProfilePage() {
     setIsLoggingOut(true);
     try {
       await apiRequest("POST", "/api/auth/logout");
-      try {
-        await signOutFirebase();
-      } catch (firebaseError) {
-        console.warn("⚠️  Firebase sign out failed:", firebaseError);
-      }
 
       localStorage.removeItem("userId");
       localStorage.removeItem("username");
       localStorage.removeItem("phone");
-      localStorage.removeItem("firebaseIdToken");
       sessionStorage.removeItem("phoneNumber");
       cartStorage.clearCart();
       queryClient.clear();

@@ -3,14 +3,7 @@ import { useLocation } from 'wouter';
 import plattrLogoImage from "@assets/plattr_logo.png";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
-import type { RecaptchaVerifier } from "firebase/auth";
-import {
-  initializeRecaptcha,
-  sendFirebaseOTP,
-  storeConfirmationResult,
-  clearStoredConfirmationResult,
-  clearRecaptcha,
-} from "@/lib/firebase";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function PhoneScreen() {
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -18,9 +11,6 @@ export default function PhoneScreen() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const isSendingOtp = useRef(false);
-  const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
-  const recaptchaInitPromiseRef = useRef<Promise<RecaptchaVerifier> | null>(null);
-  const recaptchaContainerId = "recaptcha-container";
 
   // Update time every minutex
   useEffect(() => {
@@ -37,14 +27,6 @@ export default function PhoneScreen() {
     return () => clearInterval(interval);
   }, []);
 
-  useEffect(() => {
-    return () => {
-      clearRecaptcha();
-      clearStoredConfirmationResult();
-      recaptchaVerifierRef.current = null;
-      recaptchaInitPromiseRef.current = null;
-    };
-  }, []);
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Only allow digits, limit to 10 digits
@@ -54,25 +36,7 @@ export default function PhoneScreen() {
 
   const isValid = phoneNumber.length === 10;
 
-  const getRecaptchaVerifier = async () => {
-    if (recaptchaVerifierRef.current) {
-      return recaptchaVerifierRef.current;
-    }
-
-    if (!recaptchaInitPromiseRef.current) {
-      recaptchaInitPromiseRef.current = initializeRecaptcha(recaptchaContainerId);
-    }
-
-    try {
-      const verifier = await recaptchaInitPromiseRef.current;
-      recaptchaVerifierRef.current = verifier;
-      return verifier;
-    } finally {
-      recaptchaInitPromiseRef.current = null;
-    }
-  };
-
-  // Send OTP using Firebase Phone Authentication
+  // Send OTP using standard API
   const sendOtpMutation = useMutation({
     mutationFn: async (phone: string) => {
       if (isSendingOtp.current) {
@@ -87,21 +51,17 @@ export default function PhoneScreen() {
 
       try {
         console.log('📱 Sending OTP to:', phone);
-
-        clearStoredConfirmationResult();
-        const recaptcha = await getRecaptchaVerifier();
-        const confirmationResult = await sendFirebaseOTP(phone, recaptcha);
-
-        storeConfirmationResult(confirmationResult);
+        const response = await apiRequest("POST", `/api/auth/send-otp`, {
+          phone: phone,
+        });
+        
+        const data = await response.json();
         sessionStorage.setItem('phoneNumber', phone);
 
-        console.log('✅ Firebase OTP sent successfully!');
-        return { success: true };
+        console.log('✅ OTP sent successfully!');
+        return data;
       } catch (error: any) {
         console.error('❌ OTP send failed:', error);
-        clearStoredConfirmationResult();
-        recaptchaVerifierRef.current = null;
-        clearRecaptcha();
         throw error;
       } finally {
         isSendingOtp.current = false;
@@ -230,19 +190,6 @@ export default function PhoneScreen() {
         </button>
       </div>
       </div>
-      <div
-        id={recaptchaContainerId}
-        style={{
-          position: 'fixed',
-          opacity: 0,
-          pointerEvents: 'none',
-          zIndex: -1,
-          bottom: 0,
-          right: 0,
-          width: '100%',
-          height: '100%',
-        }}
-      />
     </>
   );
 }
