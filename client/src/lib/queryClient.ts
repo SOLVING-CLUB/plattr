@@ -1,5 +1,6 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 import { supabase, mapApiRouteToSupabase } from "@/lib/supabase-client";
+import { getApiUrl } from "@/config/api";
 
 // Use direct Supabase REST API
 const USE_DIRECT_SUPABASE = true;
@@ -19,7 +20,7 @@ export async function apiRequest(
   const route = url.split('/').filter(Boolean);
   
   // Auth routes and other backend-only routes should always go to backend
-  const backendOnlyRoutes = ['api/auth', 'api/orders', 'api/cart'];
+  const backendOnlyRoutes = ['api/auth', 'api/orders', 'api/cart', 'api/corporate', 'api/figma', 'api/catering-orders'];
   const isBackendRoute = backendOnlyRoutes.some(backendRoute => 
     url.includes(backendRoute)
   );
@@ -51,7 +52,11 @@ export async function apiRequest(
   // Use backend API for auth routes and fallback
   const headers: HeadersInit = data ? { "Content-Type": "application/json" } : {};
   
-  const res = await fetch(url, {
+  // Use getApiUrl to construct the proper backend URL
+  const apiUrl = getApiUrl(url);
+  console.log('[apiRequest] Original URL:', url, '→ Constructed URL:', apiUrl);
+  
+  const res = await fetch(apiUrl, {
     method,
     headers,
     body: data ? JSON.stringify(data) : undefined,
@@ -63,11 +68,11 @@ export async function apiRequest(
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
-export const getQueryFn: <T>(options: {
+export const getQueryFn = <T>(options: {
   on401: UnauthorizedBehavior;
-}) => QueryFunction<T> =
-  ({ on401: unauthorizedBehavior }) =>
-  async ({ queryKey }) => {
+}): QueryFunction<T> => {
+  const { on401: unauthorizedBehavior } = options;
+  return async ({ queryKey }) => {
     try {
       // Use direct Supabase REST API
       if (USE_DIRECT_SUPABASE) {
@@ -90,11 +95,11 @@ export const getQueryFn: <T>(options: {
               select: 'dish_type',
               filter: { 'category_id': `eq.${categoryId}` }
             });
-            result = [...new Set(
+            result = Array.from(new Set(
               dishes
                 .map((d: any) => d.dish_type)
                 .filter((type: any) => type !== null && type !== undefined)
-            )].sort();
+            )).sort();
           } else {
             result = [];
           }
@@ -138,7 +143,7 @@ export const getQueryFn: <T>(options: {
       console.log('[API Response]', url, 'Status:', res.status, 'OK:', res.ok);
 
       if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-        return null;
+        return null as T;
       }
 
       await throwIfResNotOk(res);
@@ -159,6 +164,7 @@ export const getQueryFn: <T>(options: {
       throw error;
     }
   };
+};
 
 export const queryClient = new QueryClient({
   defaultOptions: {

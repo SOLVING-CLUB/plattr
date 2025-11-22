@@ -18,6 +18,7 @@ import HelpPage from "@/pages/HelpPage";
 import AboutPage from "@/pages/AboutPage";
 import ReferralPage from "@/pages/ReferralPage";
 import CorporatePage from "@/pages/CorporatePage";
+import CateringThankYouPage from "@/pages/CateringThankYouPage";
 import PlannerDetailPage from "@/pages/PlannerDetailPage";
 import AuthPage from "@/pages/AuthPage";
 import OrderConfirmationPage from "@/pages/OrderConfirmationPage";
@@ -173,6 +174,7 @@ function Router() {
       <Route path="/about" component={GuardedAboutPage} />
       <Route path="/referral" component={GuardedReferralPage} />
       <Route path="/corporate" component={GuardedCorporatePage} />
+      <Route path="/catering-thank-you" component={CateringThankYouPage} />
       <Route path="/concierge" component={GuardedConciergeWizardPage} />
       <Route path="/concierge/results" component={GuardedConciergeResultsPage} />
       <Route path="/concierge-results" component={GuardedConciergeResultsPage} />
@@ -185,7 +187,9 @@ function Router() {
 }
 
 function App() {
-  const [showSplash, setShowSplash] = useState(true);
+  // Skip splash and auth screens for testing - go directly to home
+  const SKIP_SPLASH_AND_AUTH = true;
+  const [showSplash, setShowSplash] = useState(false);
   const [fadeOut, setFadeOut] = useState(false);
   const [location, setLocation] = useLocation();
   const hasNavigatedFromSplash = useRef(false);
@@ -204,7 +208,15 @@ function App() {
     if (!localStorage.getItem("phone")) {
       localStorage.setItem("phone", BYPASS_AUTH_PHONE);
     }
-  }, [BYPASS_AUTH, BYPASS_AUTH_USER_ID, BYPASS_AUTH_USERNAME, BYPASS_AUTH_PHONE]);
+
+    // Skip splash and auth - go directly to home page
+    if (SKIP_SPLASH_AND_AUTH) {
+      setShowSplash(false);
+      if (location === '/' || location === '/phone' || location === '/verification' || location === '/name' || location === '/auth') {
+        setLocation('/', { replace: true });
+      }
+    }
+  }, [BYPASS_AUTH, BYPASS_AUTH_USER_ID, BYPASS_AUTH_USERNAME, BYPASS_AUTH_PHONE, SKIP_SPLASH_AND_AUTH, location, setLocation]);
 
   useEffect(() => {
     if (!BYPASS_AUTH) return;
@@ -216,7 +228,7 @@ function App() {
 
   // Development mode - set to true to keep splash open for development
   // Set to false when you want normal splash behavior (2 seconds then fade)
-  const DEV_MODE_SPLASH = true;
+  const DEV_MODE_SPLASH = false;
   
   // Check if we're in development mode (works in browser and Android emulator)
   // When DEV_MODE_SPLASH is true, always keep splash open regardless of environment

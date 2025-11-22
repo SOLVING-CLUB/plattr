@@ -4,6 +4,7 @@ import {
   ShoppingCart,
   MapPin,
   ChevronRight,
+  ArrowRight,
   Home as HomeIcon,
   Menu as MenuIcon,
   User,
@@ -16,6 +17,13 @@ import { Badge } from "@/components/ui/badge";
 import homepageBackgroundImage from "@assets/homepage_background.png";
 import mealBoxCardImage from "@assets/mealBoxCard.svg";
 import bulkMealImage from "@assets/bulk_meal.svg";
+// TODO: Add the catering image file to attached_assets folder as catering_chef_indian.png
+// import cateringImage from "@assets/catering_chef_indian.png";
+// Corporate Order images
+// Note: File name is "coorporate.png" (with double 'o')
+import corporateImage1661 from "@assets/coorporate.png";
+import corporateImage1693 from "@assets/stock_images/image 1693.png";
+import corporateImage1696 from "@assets/coorporate.png";
 
 // Checker pattern - using CSS pattern if image doesn't exist
 // If you have the image, replace this with: import checkerPattern from "@assets/Group 2087328978_1763131515041.png";
@@ -40,16 +48,15 @@ const SERVICES = [
     id: "catering",
     title: "Catering",
     subtitle: "End-to-end service",
-    image:
-      "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&h=300&fit=crop",
+    // TODO: Replace with: image: cateringImage, once the image file is added
+    image: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&h=300&fit=crop",
     bgColor: "bg-gradient-to-br from-purple-50 to-purple-100",
   },
   {
     id: "corporate",
     title: "Corporate Order",
     subtitle: "Customizations & more",
-    image:
-      "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=300&fit=crop",
+    image: corporateImage1661, // Main composite image with man, cityscape, and text overlays
     bgColor: "bg-gradient-to-br from-green-50 to-green-100",
   },
 ];
@@ -62,6 +69,25 @@ export default function HomePage() {
 
   // Only render bottom nav when we're actually on the home route
   const showBottomNav = location === "/";
+
+  const handleServicePress = (serviceId: string) => {
+    switch (serviceId) {
+      case "mealbox":
+        setLocation("/mealbox");
+        break;
+      case "bulk":
+        setLocation("/catering");
+        break;
+      case "catering":
+        setLocation("/catering");
+        break;
+      case "corporate":
+        setLocation("/corporate");
+        break;
+      default:
+        break;
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -187,56 +213,240 @@ export default function HomePage() {
       </div>
 
       {/* Services Section */}
-      <div className="max-w-[393px] mx-auto relative" style={{ minHeight: "500px" }}>
-        {/* MealBox Card - Left side */}
-        <div
+      <div className="max-w-[393px] mx-auto px-4 pt-6 pb-20">
+        {/* Services We Offer Title */}
+        <h2
+          className="text-2xl font-bold mb-6"
           style={{
-            position: "absolute",
-            width: "175px",
-            height: "145px",
-            top: "80px",
-            left: "15px",
-            borderRadius: "15px",
-            cursor: "pointer",
-            overflow: "hidden",
+            fontFamily: "Sweet Sans Pro, -apple-system, sans-serif",
+            color: "#000",
           }}
-          onClick={() => setLocation("/mealbox")}
-          data-testid="card-service-mealbox"
+          data-testid="text-services-title"
         >
-          <img
-            src={mealBoxCardImage}
-            alt="MealBox"
-            className="w-full h-full object-cover"
-            style={{ borderRadius: "15px" }}
-            data-testid="img-service-mealbox"
-          />
-        </div>
+          Services We Offer
+        </h2>
 
-        {/* Bulk Meal Delivery Card - Right side, same row */}
-        <div
-          style={{
-            position: "absolute",
-            width: "179px",
-            height: "300px",
-            top: "80px",
-            left: "200px",
-            borderRadius: "15px",
-            borderWidth: "0.5px",
-            borderStyle: "solid",
-            borderColor: "#e5e7eb",
-            cursor: "pointer",
-            overflow: "hidden",
-          }}
-          onClick={() => setLocation("/catering")}
-          data-testid="card-service-bulk"
-        >
-          <img
-            src={bulkMealImage}
-            alt="Bulk Meal Delivery"
-            className="w-full h-full object-cover"
-            style={{ borderRadius: "15px" }}
-            data-testid="img-service-bulk"
-          />
+        {/* Service Cards Grid */}
+        <div className="space-y-4">
+          {/* Top Row - MealBox and Bulk Meal Delivery */}
+          <div className="flex gap-4">
+            {/* Left Column - MealBox and Catering stacked */}
+            <div className="flex flex-col gap-4">
+              {/* MealBox Card */}
+              <div
+                style={{
+                  width: "175px",
+                  height: "145px",
+                  borderRadius: "15px",
+                  cursor: "pointer",
+                  overflow: "hidden",
+                }}
+                onClick={() => handleServicePress(SERVICES[0].id)}
+                data-testid="card-service-mealbox"
+              >
+                <img
+                  src={mealBoxCardImage}
+                  alt="MealBox"
+                  className="w-full h-full object-cover"
+                  style={{ borderRadius: "15px" }}
+                  data-testid="img-service-mealbox"
+                />
+              </div>
+
+              {/* Catering Card - Directly below MealBox */}
+              <div
+                style={{
+                  width: "175px",
+                  height: "145px",
+                  borderRadius: "15px",
+                  cursor: "pointer",
+                  overflow: "hidden",
+                  backgroundImage: `url(${SERVICES[2].image})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                }}
+                onClick={() => handleServicePress(SERVICES[2].id)}
+                data-testid="card-service-catering"
+              >
+                <div className="w-full h-full bg-black bg-opacity-20 flex flex-col justify-between p-3">
+                  <div>
+                    <h3
+                      className="text-white font-bold text-lg"
+                      style={{
+                        fontFamily: "Sweet Sans Pro, -apple-system, sans-serif",
+                      }}
+                    >
+                      {SERVICES[2].title}
+                    </h3>
+                    <p
+                      className="text-white text-sm"
+                      style={{
+                        fontFamily: "Sweet Sans Pro, -apple-system, sans-serif",
+                      }}
+                    >
+                      {SERVICES[2].subtitle}
+                    </p>
+                  </div>
+                  <div
+                    className="w-8 h-8 rounded-full flex items-center justify-center"
+                    style={{ backgroundColor: "#1a4d2e" }}
+                  >
+                    <ArrowRight className="w-5 h-5 text-white" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column - Bulk Meal Delivery Card (tall, spans both rows) */}
+            <div
+              style={{
+                width: "179px",
+                height: "300px",
+                borderRadius: "15px",
+                borderWidth: "0.5px",
+                borderStyle: "solid",
+                borderColor: "#e5e7eb",
+                cursor: "pointer",
+                overflow: "hidden",
+              }}
+              onClick={() => handleServicePress(SERVICES[1].id)}
+              data-testid="card-service-bulk"
+            >
+              <img
+                src={bulkMealImage}
+                alt="Bulk Meal Delivery"
+                className="w-full h-full object-cover"
+                style={{ borderRadius: "15px" }}
+                data-testid="img-service-bulk"
+              />
+            </div>
+          </div>
+
+          {/* Corporate Order Card - Full Image with Overlay Text */}
+          <div
+            className="relative mx-auto"
+            style={{
+              width: "364px",
+              height: "175px",
+              borderRadius: "15px",
+              cursor: "pointer",
+              overflow: "hidden",
+            }}
+            onClick={() => handleServicePress(SERVICES[3].id)}
+            data-testid="card-service-corporate-wide"
+          >
+            {/* Full Background Image - coorporate.png */}
+            <img
+              src={corporateImage1661}
+              alt="Corporate background"
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                objectPosition: "center",
+                zIndex: 1,
+                display: "block",
+              }}
+            />
+            
+            {/* Overlay Image 1 - Text Graphic "CRISP & COPORATE-READY" (1693) */}
+            <img
+              src={corporateImage1693}
+              alt="Text graphic overlay"
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                objectPosition: "center",
+                zIndex: 2,
+                pointerEvents: "none",
+                display: "block",
+              }}
+            />
+            
+            {/* Overlay Image 2 - Man in Suit (1696) */}
+            <img
+              src={corporateImage1696}
+              alt="Man in suit"
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                objectPosition: "center",
+                zIndex: 3,
+                pointerEvents: "none",
+                display: "block",
+              }}
+            />
+
+            {/* Overlay Text - Left Section Style */}
+            <div
+              className="absolute"
+              style={{
+                top: "20px",
+                left: "20px",
+                zIndex: 4,
+                width: "33%",
+              }}
+            >
+              {/* Corporate Order Title */}
+              <h3
+                className="font-bold mb-2"
+                style={{
+                  fontFamily: "Sweet Sans Pro, -apple-system, sans-serif",
+                  color: "#1a4d2e",
+                  fontSize: "12px",
+                  fontWeight: "bold",
+                  width: "87px",
+                  height: "14px",
+                  lineHeight: "14px",
+                }}
+              >
+                {SERVICES[3].title}
+              </h3>
+              {/* Customizations & more Subtitle */}
+              <p
+                style={{
+                  fontFamily: "Sweet Sans Pro, -apple-system, sans-serif",
+                  color: "#000000",
+                  textShadow: "0 1px 2px rgba(255, 255, 255, 0.8)",
+                  fontSize: "10px",
+                  fontWeight: "500",
+                  width: "100px",
+                  height: "14px",
+                  lineHeight: "14px",
+                }}
+              >
+                {SERVICES[3].subtitle}
+              </p>
+            </div>
+
+            {/* Arrow Button - Bottom Right */}
+            <div
+              className="absolute"
+              style={{
+                bottom: "20px",
+                right: "20px",
+                zIndex: 4,
+              }}
+            >
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center"
+                style={{ backgroundColor: "#1a4d2e" }}
+              >
+                <ArrowRight className="w-5 h-5 text-white" />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     

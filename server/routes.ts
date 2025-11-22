@@ -1631,6 +1631,125 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Corporate page data endpoint
+  const getCorporateData = () => {
+    return {
+      carouselItems: [
+        {
+          id: '1',
+          title: 'Corporate Lunch',
+          description: 'Delicious meals for your team',
+          image: '/attached_assets/Catering (5).png'
+        },
+        {
+          id: '2',
+          title: 'Business Meetings',
+          description: 'Impress your clients',
+          image: '/attached_assets/Catering (6).png'
+        },
+        {
+          id: '3',
+          title: 'Team Events',
+          description: 'Celebrate with your team',
+          image: '/attached_assets/MealBox (2).png'
+        },
+        {
+          id: '4',
+          title: 'Conferences',
+          description: 'Catering for all events',
+          image: '/attached_assets/MealBox (3).png'
+        },
+        {
+          id: '5',
+          title: 'Office Parties',
+          description: 'Make celebrations special',
+          image: '/attached_assets/MealBox (4).png'
+        },
+        {
+          id: '6',
+          title: 'Daily Meals',
+          description: 'Healthy options every day',
+          image: '/attached_assets/image 1661.png'
+        }
+      ],
+      success: true
+    };
+  };
+
+  app.get("/api/corporate", async (req, res) => {
+    try {
+      const data = getCorporateData();
+      res.json(data);
+    } catch (error: any) {
+      console.error("Error fetching corporate data:", error);
+      res.status(500).json({ 
+        error: error.message || "Failed to fetch corporate data" 
+      });
+    }
+  });
+
+  // Also serve at /corporate for direct access
+  app.get("/corporate", async (req, res) => {
+    try {
+      const data = getCorporateData();
+      res.json(data);
+    } catch (error: any) {
+      console.error("Error fetching corporate data:", error);
+      res.status(500).json({ 
+        error: error.message || "Failed to fetch corporate data" 
+      });
+    }
+  });
+
+  // Catering Orders Endpoint
+  app.post("/api/catering-orders", async (req, res) => {
+    try {
+      const schema = z.object({
+        event_type: z.string(),
+        guest_count: z.number().int().positive(),
+        event_date: z.string(),
+        meal_times: z.array(z.string()),
+        dietary_types: z.array(z.string()),
+        cuisines: z.array(z.string()),
+        add_on_ids: z.array(z.string()).nullable().or(z.null()),
+        name: z.string(),
+        email: z.string().email(),
+        phone: z.string(),
+        message: z.string().nullable().or(z.null()),
+        status: z.string().default('pending'),
+      });
+
+      const data = schema.parse(req.body);
+
+      if (useRestAPI && supabase) {
+        // Use service role key to bypass RLS
+        const result = await supabase.insert("catering_orders", data, true);
+        return res.status(201).json({ success: true, data: result });
+      } else if (db) {
+        // Direct database insert (if using Drizzle)
+        // Note: You'll need to add catering_orders to the schema if using Drizzle
+        return res.status(500).json({ 
+          error: "Direct database insert for catering_orders not yet implemented. Please use Supabase REST API." 
+        });
+      } else {
+        return res.status(500).json({ 
+          error: "Database connection not available" 
+        });
+      }
+    } catch (error) {
+      console.error("Error creating catering order:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          error: "Invalid request data", 
+          details: error.errors 
+        });
+      }
+      return res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to create catering order" 
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

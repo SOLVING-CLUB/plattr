@@ -5,9 +5,21 @@
 const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 // Detect if running in Capacitor (mobile app)
-// Proper detection: check for Capacitor object, not just hostname
+// Proper detection: check for Capacitor object AND ensure we're not in a web browser
 function isCapacitor(): boolean {
-  return !!(window as any).Capacitor;
+  // If we're on localhost in a browser, we're definitely not in a mobile app
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    // In development, always use web mode (relative URLs) to avoid CORS
+    return false;
+  }
+  
+  // Check for Capacitor, but also verify we're not in a standard web browser
+  const hasCapacitor = !!(window as any).Capacitor;
+  const isWebProtocol = window.location.protocol === 'http:' || window.location.protocol === 'https:';
+  const isCapacitorProtocol = window.location.protocol === 'capacitor:' || window.location.protocol === 'ionic:';
+  
+  // Only return true if Capacitor exists AND we're using a Capacitor protocol
+  return hasCapacitor && (isCapacitorProtocol || !isWebProtocol);
 }
 
 export function getApiUrl(path: string): string {
@@ -16,24 +28,23 @@ export function getApiUrl(path: string): string {
   
   // Determine base URL:
   // - For mobile apps (Capacitor), use full backend URL
-  // - For web development (localhost in browser), use localhost:5000
-  // - For web production (other domains), use relative URLs (same origin)
+  // - For web development and production, use relative URLs (same origin)
+  //   This works because the server serves both API and client on the same port
   const isMobile = isCapacitor();
-  const isLocalDev = window.location.hostname === 'localhost' && !isMobile;
   
   let baseUrl = '';
   if (isMobile) {
     // Mobile: use full backend URL (must be HTTPS in production)
     baseUrl = BACKEND_URL;
-  } else if (isLocalDev) {
-    // Web development: use localhost:5000 (same as server port)
-    baseUrl = 'http://localhost:5000';
+  } else {
+    // Web (dev and prod): baseUrl stays empty (relative URLs - same origin)
+    // This avoids CORS issues since API and client are on the same origin
+    baseUrl = '';
   }
-  // Web production: baseUrl stays empty (relative URLs)
   
   const fullUrl = `${baseUrl}${cleanPath}`;
   
-  console.log('[Plattr API]', fullUrl, 'isMobile:', isMobile, 'isLocalDev:', isLocalDev);
+  console.log('[Plattr API] Path:', path, '→ Full URL:', fullUrl, 'isMobile:', isMobile, 'window.location:', window.location.origin);
   
   return fullUrl;
 }
