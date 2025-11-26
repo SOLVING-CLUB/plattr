@@ -1,36 +1,22 @@
-// import { useState, useEffect } from 'react';
+// import { useState } from 'react';
 // import { useLocation } from 'wouter';
 // import { Button } from '@/components/ui/button';
 // import { Input } from '@/components/ui/input';
 // import { Label } from '@/components/ui/label';
-// import { Textarea } from '@/components/ui/textarea';
-// import { Checkbox } from '@/components/ui/checkbox';
 // import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-// import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-// import { Carousel, CarouselContent, CarouselItem as CarouselItemComponent, type CarouselApi } from '@/components/ui/carousel';
+// import { Checkbox } from '@/components/ui/checkbox';
+// import { Textarea } from '@/components/ui/textarea';
 // import { useToast } from '@/hooks/use-toast';
-// import AppHeader from '@/components/AppHeader';
 // import BottomNav from '@/components/BottomNav';
 // import { apiRequest } from '@/lib/queryClient';
 // import { getApiUrl } from '@/config/api';
 // import { 
-//   Building2, 
-//   Users, 
-//   Calendar, 
-//   Truck, 
-//   Sparkles, 
-//   Camera,
-//   CheckCircle,
-//   Clock,
-//   Phone,
-//   Mail,
 //   MapPin,
 //   ArrowLeft,
-//   Search,
-//   Mic,
-//   ShoppingCart
+//   Calendar,
+//   Clock
 // } from 'lucide-react';
-// import corporateBackground from '@assets/CorporateBackground.png';
+// import heroBackground from '@assets/Hero (5).png';
 // import mealBoxImage4 from '@assets/Catering (5).png';
 // import mealBoxImage2 from '@assets/MealBox (4).png';
 // import cateringImage5 from '@assets/MealBox (2).png';
@@ -39,96 +25,38 @@
 // import micIcon from '@assets/lets-icons_mic-fill.png';
 // import searchIcon from '@assets/lucide_search.png';
 // import cartIcon from '@assets/Cart (1).png';
-// import corporateManImage from '@assets/image 1661 (1).png';
-// import bulkOrderImage from '@assets/stock_images/Bulk Order.png';
-// import deliveryImage from '@assets/Delivery.png';
-// import priorityServiceImage from '@assets/stock_images/Priority Service.png';
-// import eventDecorImage from '@assets/stock_images/Event Decor.png';
-// import photographyImage from '@assets/stock_images/Photography.png';
-// import menuImage from '@assets/stock_images/Menu (1).png';
-// import eventDecorIcon from '@assets/streamline-ultimate_party-decoration-bold.png';
-// import photographyIcon from '@assets/mdi_camera.png';
-// import customMenuIcon from '@assets/ep_menu.png';
+// import hiTeaImage from '@assets/Image (1).png';
+// import breakfastImage from '@assets/Image (2).png';
+// import lunchImage from '@assets/Rectangle 34625261.png';
+// import dinnerImage from '@assets/9.png';
 
-// interface CarouselItem {
-//   id: string;
-//   title: string;
-//   description: string;
-//   image: string;
-// }
 
-// interface CorporateData {
-//   carouselItems: CarouselItem[];
-//   success: boolean;
-// }
-
-// export default function CorporatePage(): JSX.Element {
+// export default function CateringPage(): JSX.Element {
 //   const [, setLocation] = useLocation();
 //   const { toast } = useToast();
 //   const [activeTab, setActiveTab] = useState('home');
-//   const [carouselItems, setCarouselItems] = useState<CarouselItem[]>([]);
-//   const [loading, setLoading] = useState(true);
-//   const [api, setApi] = useState<CarouselApi>();
-//   const [current, setCurrent] = useState(0);
+
+//   // Debug: Log the image URL
+//   console.log('Hero background image URL:', heroBackground);
 
 //   const [formData, setFormData] = useState({
-//     companyName: '',
-//     contactPerson: '',
-//     email: '',
-//     phone: '',
+//     eventType: '',
 //     numberOfPeople: '',
 //     vegCount: '',
 //     nonVegCount: '',
 //     eggCount: '',
 //     totalPeople: '',
-//     eventType: '',
+//     cuisine: '',
 //     budgetMin: '',
 //     budgetMax: '',
+//     mealTimes: [] as string[],
 //     eventDate: '',
 //     eventTime: '',
-//     additionalServices: [] as string[],
+//     phone: '',
+//     email: '',
 //     message: ''
 //   });
 
-//   // Fetch corporate data from API
-//   useEffect(() => {
-//     const fetchCorporateData = async () => {
-//       try {
-//         setLoading(true);
-//         const response = await apiRequest('GET', '/api/corporate');
-//         const data: CorporateData = await response.json();
-        
-//         if (data.success && data.carouselItems) {
-//           setCarouselItems(data.carouselItems);
-//           console.log('Corporate data loaded:', data.carouselItems);
-//         }
-//       } catch (error) {
-//         console.error('Error fetching corporate data:', error);
-//         toast({
-//           title: "Error",
-//           description: "Failed to load corporate data. Please try again later.",
-//           variant: "destructive"
-//         });
-//       } finally {
-//         setLoading(false);
-//       }
-//     };
-
-//     fetchCorporateData();
-//   }, [toast]);
-
-//   // Track carousel slide changes
-//   useEffect(() => {
-//     if (!api) {
-//       return;
-//     }
-
-//     setCurrent(api.selectedScrollSnap());
-
-//     api.on("select", () => {
-//       setCurrent(api.selectedScrollSnap());
-//     });
-//   }, [api]);
 
 //   const handleTabChange = (tab: string) => {
 //     setActiveTab(tab);
@@ -141,14 +69,6 @@
 //     }
 //   };
 
-//   const handleServiceToggle = (service: string) => {
-//     setFormData(prev => ({
-//       ...prev,
-//       additionalServices: prev.additionalServices.includes(service)
-//         ? prev.additionalServices.filter(s => s !== service)
-//         : [...prev.additionalServices, service]
-//     }));
-//   };
 
 //   const handleSubmit = async (e: React.FormEvent) => {
 //     e.preventDefault();
@@ -163,19 +83,28 @@
 //       return;
 //     }
     
-//     if (!formData.eventDate) {
+//     if (!formData.numberOfPeople) {
 //       toast({
 //         title: "Missing Information",
-//         description: "Please select an event date.",
+//         description: "Please enter the number of people.",
 //         variant: "destructive"
 //       });
 //       return;
 //     }
     
-//     if (!formData.contactPerson || !formData.phone) {
-//     toast({
+//     if (!formData.cuisine) {
+//       toast({
 //         title: "Missing Information",
-//         description: "Please fill in all required contact fields.",
+//         description: "Please select a cuisine preference.",
+//         variant: "destructive"
+//       });
+//       return;
+//     }
+    
+//     if (!formData.budgetMin || !formData.budgetMax) {
+//       toast({
+//         title: "Missing Information",
+//         description: "Please enter budget range.",
 //         variant: "destructive"
 //       });
 //       return;
@@ -187,10 +116,10 @@
 //       const nonVegCount = parseInt(formData.nonVegCount) || 0;
 //       const eggCount = parseInt(formData.eggCount) || 0;
       
-//       // Calculate total people - use totalPeople if provided, otherwise sum individual counts
-//       let guestCount = parseInt(formData.totalPeople) || 0;
+//       // Use numberOfPeople or totalPeople, whichever is provided
+//       let guestCount = parseInt(formData.numberOfPeople) || parseInt(formData.totalPeople) || 0;
 //       if (guestCount === 0) {
-//         // If totalPeople is not provided, calculate from individual counts
+//         // If neither is provided, calculate from individual counts
 //         guestCount = vegCount + nonVegCount + eggCount;
 //       }
       
@@ -210,37 +139,22 @@
 //       if (eggCount > 0) {
 //         dietaryTypes.push('egg');
 //       }
-      
-//       // If no dietary types specified, default to empty array (or you can default to ['veg'])
-//       // The database requires this field, so we'll use empty array if none specified
-//       // You may want to adjust this based on your business logic
-
-//       // Map additional services to add_on_ids
-//       // Since we don't have actual add-on IDs, we'll use the service names as IDs
-//       // You may need to adjust this based on your actual add-ons table
-//       const addOnIds = formData.additionalServices.map(service => {
-//         // Map service names to potential add-on IDs
-//         const serviceMap: Record<string, string> = {
-//           'decor': 'event-decor',
-//           'photography': 'photography',
-//           'custom-menu': 'custom-menu'
-//         };
-//         return serviceMap[service] || service;
-//       });
 
 //       // Prepare data for API - matching database schema exactly
 //       const cateringOrderData = {
 //         event_type: formData.eventType,
 //         guest_count: guestCount,
-//         event_date: formData.eventDate, // Stored as text
-//         meal_times: [] as string[], // Required field - empty array if not specified
+//         event_date: formData.eventDate || new Date().toISOString().split('T')[0], // Use provided date or current date
+//         meal_times: formData.mealTimes.length > 0 ? formData.mealTimes : [], // Use selected meal times
 //         dietary_types: dietaryTypes.length > 0 ? dietaryTypes : [], // Empty array if none specified
-//         cuisines: [] as string[], // Required field - empty array if not specified
-//         add_on_ids: addOnIds.length > 0 ? addOnIds : null, // text[] null in DB
-//         name: formData.companyName || formData.contactPerson, // Use company name or email as name
-//         email: formData.contactPerson, // Company Email Address is stored in contactPerson
-//         phone: formData.phone,
-//         message: formData.message || null, // text null in DB
+//         cuisines: formData.cuisine ? [formData.cuisine] : [], // Use selected cuisine
+//         add_on_ids: null, // No additional services in this form
+//         name: 'Catering Inquiry', // Default name
+//         email: formData.email || '', // Use provided email
+//         phone: formData.phone || '', // Use provided phone
+//         message: formData.message 
+//           ? `Budget: ${formData.budgetMin}-${formData.budgetMax} INR per person. ${formData.message}`
+//           : `Budget: ${formData.budgetMin}-${formData.budgetMax} INR per person${formData.eventTime ? `. Time: ${formData.eventTime}` : ''}`, // Include budget and additional requests
 //         status: 'pending'
 //       };
 
@@ -269,11 +183,11 @@
 
 //   return (
 //     <div className="min-h-screen pb-20 relative" style={{ fontFamily: "Sweet Sans Pro, -apple-system, sans-serif" }}>
-//       {/* Blue Geometric Background */}
+//       {/* Purple Gradient Background */}
 //       <div
 //         className="absolute -z-10"
 //         style={{
-//           backgroundImage: `url(${corporateBackground})`,
+//           backgroundImage: `url("${heroBackground}")`,
 //           backgroundSize: "100% auto",
 //           backgroundPosition: "center top",
 //           backgroundRepeat: "repeat-x",
@@ -281,7 +195,19 @@
 //           left: 0,
 //           right: 0,
 //           width: "100%",
-//           minHeight: "300px",
+//           height: "500px",
+//         }}
+//       />
+      
+//       {/* White background for form section */}
+//       <div
+//         className="absolute -z-10"
+//         style={{
+//           backgroundColor: "#ffffff",
+//           top: "500px",
+//           left: 0,
+//           right: 0,
+//           bottom: 0,
 //         }}
 //       />
 
@@ -388,7 +314,7 @@
 //             </span>
 //           </div>
 
-//           {/* Catering Card */}
+//           {/* Catering Card - Active */}
 //           <div
 //             className="cursor-pointer flex-shrink-0"
 //             onClick={() => setLocation('/catering')}
@@ -417,7 +343,7 @@
 //             </span>
 //           </div>
 
-//           {/* Corporate Card - Dark Green */}
+//           {/* Corporate Card */}
 //           <div
 //             className="cursor-pointer flex-shrink-0"            
 //             onClick={() => setLocation('/corporate')}
@@ -446,241 +372,50 @@
 //             </span>
 //           </div>
 //             </div>
-
-
-//         {/* Corporate Catering Section - Without Card */}
-//         <div className="relative z-10 px-4 mb-0 max-w-[400px] mx-auto" style={{ marginTop: "8px", marginBottom: "-20px" }}>
-//           <div className="flex flex-row items-center justify-between gap-4">
-//             <div className="flex-1">
-//               <h2 
-//                 className="font-bold mb-2 whitespace-nowrap" 
-//                 style={{ 
-//                   color: "#1a4d2e", 
-//                   fontFamily: "Sweet Sans Pro, -apple-system, sans-serif", 
-//                   fontSize: "24px",
-//                   lineHeight: "1.2" 
-//                 }}
-//               >
-//                 Corporate Catering
-//               </h2>
-//               <p 
-//                 className="text-gray-900 leading-relaxed" 
-//                 style={{ 
-//                   fontFamily: "Sweet Sans Pro, -apple-system, sans-serif",
-//                   fontSize: "12px",
-//                   fontWeight: "500",
-//                   lineHeight: "1.4"
-//                 }}
-//               >
-//                 Elevate your workspace experience<br />
-//                 with authentic Indian Cuisine
-//               </p>
-//             </div>
-//             <div className="flex-shrink-0" style={{ width: "153px", height: "173.86px" }}>
-//               <img
-//                 src={corporateManImage}
-//                 alt="Corporate Catering"
-//                 className="w-full h-full object-contain"
-//               />
-//             </div>
-//           </div>
-//         </div>
-
-//         {/* Carousel Section - All Cards */}
-//         <div className="relative z-20 mb-6 max-w-full mx-auto" style={{ marginTop: "-20px" }}>
-//           <Carousel
-//             setApi={setApi}
-//             opts={{
-//               align: "start",
-//               loop: false,
-//             }}
-//             className="w-full"
-//           >
-//             <CarouselContent className="-ml-0">
-//               {[
-//                 { id: 'bulk-order', image: bulkOrderImage },
-//                 { id: 'delivery', image: deliveryImage },
-//                 { id: 'priority-service', image: priorityServiceImage },
-//                 { id: 'event-decor', image: eventDecorImage },
-//                 { id: 'photography', image: photographyImage },
-//                 { id: 'menu', image: menuImage },
-//               ].map((item, index) => (
-//                 <CarouselItemComponent 
-//                   key={item.id} 
-//                   className="pl-0 basis-full"
-//                 >
-//                   <div
-//                     style={{
-//                       width: "100%",
-//                       height: "150px",
-//                       borderRadius: "15px",
-//                       overflow: "hidden",
-//                       cursor: "pointer",
-//                     }}
-//                   >
-//                     <img
-//                       src={item.image}
-//                       alt={item.id}
-//                       className="w-full h-full object-cover"
-//                     />
-//                   </div>
-//                 </CarouselItemComponent>
-//               ))}
-//             </CarouselContent>
-//           </Carousel>
-          
-//           {/* Carousel Indicators */}
-//           <div className="flex justify-center gap-2 mt-4 px-4">
-//             {[
-//               { id: 'bulk-order', image: bulkOrderImage },
-//               { id: 'delivery', image: deliveryImage },
-//               { id: 'priority-service', image: priorityServiceImage },
-//               { id: 'event-decor', image: eventDecorImage },
-//               { id: 'photography', image: photographyImage },
-//               { id: 'menu', image: menuImage },
-//             ].map((_, index) => (
-//               <button
-//                 key={index}
-//                 onClick={() => api?.scrollTo(index)}
-//                 className={`transition-all duration-200 rounded-full ${
-//                   current === index
-//                     ? 'bg-gray-800 w-2 h-2'
-//                     : 'bg-gray-300 w-2 h-2'
-//                 }`}
-//                 aria-label={`Go to slide ${index + 1}`}
-//               />
-//             ))}
-//           </div>
-//         </div>
 //       </div>
 
-//       <div className="max-w-7xl mx-auto px-4 py-6 relative z-10">
+//       <div className="max-w-7xl mx-auto px-4 pt-12 pb-6 relative z-10">
 
-//         {/* Benefits Grid */}
-//         {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-12">
-//           <Card className="hover-elevate" data-testid="card-bulk-orders">
-//             <CardHeader className="pb-3">
-//               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
-//                 <Users className="w-6 h-6 text-primary" />
-//               </div>
-//               <CardTitle className="text-lg">Bulk Order Discounts</CardTitle>
-//               <CardDescription>
-//                 Special pricing for large orders. The more you order, the more you save.
-//               </CardDescription>
-//             </CardHeader>
-//           </Card>
-
-//           <Card className="hover-elevate" data-testid="card-scheduled-delivery">
-//             <CardHeader className="pb-3">
-//               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
-//                 <Calendar className="w-6 h-6 text-primary" />
-//               </div>
-//               <CardTitle className="text-lg">Scheduled Delivery</CardTitle>
-//               <CardDescription>
-//                 Plan your meals in advance with our flexible scheduling options.
-//               </CardDescription>
-//             </CardHeader>
-//           </Card>
-
-//           <Card className="hover-elevate" data-testid="card-dedicated-support">
-//             <CardHeader className="pb-3">
-//               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
-//                 <Truck className="w-6 h-6 text-primary" />
-//               </div>
-//               <CardTitle className="text-lg">Priority Service</CardTitle>
-//               <CardDescription>
-//                 Dedicated account manager and priority delivery for your orders.
-//               </CardDescription>
-//             </CardHeader>
-//           </Card>
-
-//           <Card className="hover-elevate" data-testid="card-event-decor">
-//             <CardHeader className="pb-3">
-//               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
-//                 <Sparkles className="w-6 h-6 text-primary" />
-//               </div>
-//               <CardTitle className="text-lg">Event Decoration</CardTitle>
-//               <CardDescription>
-//                 Beautiful, professional decor to make your events memorable.
-//               </CardDescription>
-//             </CardHeader>
-//           </Card>
-
-//           <Card className="hover-elevate" data-testid="card-photography">
-//             <CardHeader className="pb-3">
-//               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
-//                 <Camera className="w-6 h-6 text-primary" />
-//               </div>
-//               <CardTitle className="text-lg">Photography Services</CardTitle>
-//               <CardDescription>
-//                 Professional photography to capture your special moments.
-//               </CardDescription>
-//             </CardHeader>
-//           </Card>
-
-//           <Card className="hover-elevate" data-testid="card-custom-menu">
-//             <CardHeader className="pb-3">
-//               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
-//                 <CheckCircle className="w-6 h-6 text-primary" />
-//               </div>
-//               <CardTitle className="text-lg">Customized Menus</CardTitle>
-//               <CardDescription>
-//                 Tailored menu options to match your event requirements and budget.
-//               </CardDescription>
-//             </CardHeader>
-//           </Card>
-//         </div> */}
-
-//         {/* Quote Request Form */}
-//         <Card className="mb-8" data-testid="card-quote-form">
-//           <CardHeader>
-//             <CardTitle className="text-2xl">Request a Quote</CardTitle>
-//             <CardDescription>
-//               Fill out the form below and our team will get<br />
-//               back to you within 24 hours
-//             </CardDescription>
-//           </CardHeader>
-//           <CardContent>
-//             <form onSubmit={handleSubmit} className="space-y-6">
-//               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-//                 <div className="space-y-2">
-//                   <Label htmlFor="companyName">Company Name *</Label>
-//                   <Input
-//                     id="companyName"
-//                     data-testid="input-company-name"
-//                     required
-//                     value={formData.companyName}
-//                     onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-//                     placeholder="Enter Your company name"
-//                   />
-//                 </div>
-
-//                 <div className="space-y-2">
-//                   <Label htmlFor="contactPerson">Company Email Address *</Label>
-//                   <Input
-//                     id="contactPerson"
-//                     data-testid="input-contact-person"
-//                     required
-//                     value={formData.contactPerson}
-//                     onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
-//                     placeholder="your.email@company.com"
-//                   />
-//                 </div>
+//         {/* Plan Your Perfect Event Form */}
+//         <div className="mb-8" data-testid="card-quote-form">
+//           <div className="mb-4 mt-20">
+//             <h2 className="text-2xl font-bold mb-3" style={{ fontFamily: "Sweet Sans Pro, -apple-system, sans-serif", color: "#1a4d2e" }}>
+//               Plan Your Perfect Event
+//             </h2>
+//             <p className="text-gray-700 mb-3" style={{ fontFamily: "Sweet Sans Pro, -apple-system, sans-serif" }}>
+//               From small gatherings to grand celebrations, we'll tailor a menu and service experience that matches your event perfectly.
+//             </p>
+//             <p className="text-sm mb-4" style={{ color: "#1A9952", fontFamily: "Sweet Sans Pro, -apple-system, sans-serif" }}>
+//               All fields are required.
+//             </p>
+//           </div>
+//           <form onSubmit={handleSubmit} className="space-y-6">
+//               {/* Event Type */}
+//               <div className="space-y-2">
+//                 <Label htmlFor="eventType">Event Type *</Label>
+//                 <Input
+//                   id="eventType"
+//                   type="text"
+//                   data-testid="input-event-type"
+//                   required
+//                   value={formData.eventType}
+//                   onChange={(e) => setFormData({ ...formData, eventType: e.target.value })}
+//                   placeholder="Ex. Marriage, Engagement, Reception....."
+//                 />
 //               </div>
 
-//               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-//                 <div className="space-y-2">
-//                   <Label htmlFor="phone">Phone Number *</Label>
-//                   <Input
-//                     id="phone"
-//                     type="tel"
-//                     data-testid="input-phone"
-//                     required
-//                     value={formData.phone}
-//                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-//                     placeholder="+91 98765 43210"
-//                   />
-//                 </div>
+//               {/* Number of People */}
+//               <div className="space-y-2">
+//                 <Label htmlFor="numberOfPeople">Number of People *</Label>
+//                 <Input
+//                   id="numberOfPeople"
+//                   type="number"
+//                   data-testid="input-number-of-people"
+//                   required
+//                   value={formData.numberOfPeople}
+//                   onChange={(e) => setFormData({ ...formData, numberOfPeople: e.target.value })}
+//                   placeholder="Ex. 100"
+//                 />
 //               </div>
 
 //               {/* Number of People & Dietary Preferences */}
@@ -841,29 +576,38 @@
 //                 </div>
 //                 </div>
 
-//               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-//                 <div className="space-y-2">
-//                   <Label htmlFor="eventType">Event Type *</Label>
-//                   <Input
-//                     id="eventType"
-//                     type="text"
-//                     data-testid="input-event-type"
-//                     required
-//                     value={formData.eventType}
-//                     onChange={(e) => setFormData({ ...formData, eventType: e.target.value })}
-//                     placeholder="Example: shareholder meeting, business meeting.."
-//                   />
-//                 </div>
+//               {/* Cuisine preferences */}
+//               <div className="space-y-2">
+//                 <Label htmlFor="cuisine">Cuisine preferences *</Label>
+//                 <Select
+//                   value={formData.cuisine}
+//                   onValueChange={(value) => setFormData({ ...formData, cuisine: value })}
+//                   required
+//                 >
+//                   <SelectTrigger id="cuisine" data-testid="select-cuisine">
+//                     <SelectValue placeholder="Select Preferred Cuisines" />
+//                   </SelectTrigger>
+//                   <SelectContent>
+//                     <SelectItem value="north-indian">North Indian</SelectItem>
+//                     <SelectItem value="south-indian">South Indian</SelectItem>
+//                     <SelectItem value="chinese">Chinese</SelectItem>
+//                     <SelectItem value="continental">Continental</SelectItem>
+//                     <SelectItem value="italian">Italian</SelectItem>
+//                     <SelectItem value="mexican">Mexican</SelectItem>
+//                     <SelectItem value="multi-cuisine">Multi-Cuisine</SelectItem>
+//                   </SelectContent>
+//                 </Select>
 //               </div>
 
 //               {/* Budget per person */}
 //               <div className="space-y-2">
-//                 <Label className="text-base font-semibold">Budget per person (INR)</Label>
+//                 <Label className="text-base font-semibold">Budget per person (INR) *</Label>
 //                 <div className="flex items-center gap-3">
 //                   <Input
 //                     id="budgetMin"
 //                     type="number"
 //                     data-testid="input-budget-min"
+//                     required
 //                     value={formData.budgetMin}
 //                     onChange={(e) => setFormData({ ...formData, budgetMin: e.target.value })}
 //                     placeholder="Min"
@@ -873,11 +617,188 @@
 //                     id="budgetMax"
 //                     type="number"
 //                     data-testid="input-budget-max"
+//                     required
 //                     value={formData.budgetMax}
 //                     onChange={(e) => setFormData({ ...formData, budgetMax: e.target.value })}
 //                     placeholder="Max"
 //                     style={{ width: "120px" }}
 //                   />
+//                 </div>
+//               </div>
+
+//               {/* Select your meal time */}
+//               <div className="space-y-2">
+//                 <div className="flex items-center justify-between">
+//                   <Label className="text-base font-semibold">Select your meal time</Label>
+//                   <span className="text-sm" style={{ color: "#1A9952", fontFamily: "Sweet Sans Pro, -apple-system, sans-serif" }}>
+//                     Multi Select
+//                   </span>
+//                 </div>
+//                 <div className="grid grid-cols-2 gap-3">
+//                   <div className="flex items-center gap-3">
+//                     <Checkbox
+//                       checked={formData.mealTimes.includes('hi-tea')}
+//                       onCheckedChange={(checked) => {
+//                         const mealTimes = checked
+//                           ? [...formData.mealTimes, 'hi-tea']
+//                           : formData.mealTimes.filter(m => m !== 'hi-tea');
+//                         setFormData({ ...formData, mealTimes });
+//                       }}
+//                     />
+//                     <div
+//                       className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-gray-50"
+//                       style={{ 
+//                         borderColor: "#e5e7eb",
+//                         width: "94.47px",
+//                         height: "36.42px"
+//                       }}
+//                       onClick={() => {
+//                         const mealTimes = formData.mealTimes.includes('hi-tea')
+//                           ? formData.mealTimes.filter(m => m !== 'hi-tea')
+//                           : [...formData.mealTimes, 'hi-tea'];
+//                         setFormData({ ...formData, mealTimes });
+//                       }}
+//                     >
+//                       <img
+//                         src={hiTeaImage}
+//                         alt="Hi-Tea"
+//                         className="rounded-full object-cover"
+//                         style={{ width: "27.13px", height: "27.13px" }}
+//                       />
+//                       <span
+//                         className="text-sm font-medium"
+//                         style={{
+//                           fontFamily: "Sweet Sans Pro, -apple-system, sans-serif",
+//                           color: "#000000"
+//                         }}
+//                       >
+//                         Hi-Tea
+//                       </span>
+//                     </div>
+//                   </div>
+//                   <div className="flex items-center gap-3">
+//                     <Checkbox
+//                       checked={formData.mealTimes.includes('breakfast')}
+//                       onCheckedChange={(checked) => {
+//                         const mealTimes = checked
+//                           ? [...formData.mealTimes, 'breakfast']
+//                           : formData.mealTimes.filter(m => m !== 'breakfast');
+//                         setFormData({ ...formData, mealTimes });
+//                       }}
+//                     />
+//                     <div
+//                       className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-gray-50"
+//                       style={{ 
+//                         borderColor: "#e5e7eb",
+//                         width: "94.47px",
+//                         height: "36.42px"
+//                       }}
+//                       onClick={() => {
+//                         const mealTimes = formData.mealTimes.includes('breakfast')
+//                           ? formData.mealTimes.filter(m => m !== 'breakfast')
+//                           : [...formData.mealTimes, 'breakfast'];
+//                         setFormData({ ...formData, mealTimes });
+//                       }}
+//                     >
+//                       <img
+//                         src={breakfastImage}
+//                         alt="Breakfast"
+//                         className="rounded-full object-cover"
+//                         style={{ width: "27.13px", height: "27.13px" }}
+//                       />
+//                       <span
+//                         className="text-sm font-medium"
+//                         style={{
+//                           fontFamily: "Sweet Sans Pro, -apple-system, sans-serif",
+//                           color: "#000000"
+//                         }}
+//                       >
+//                         Breakfast
+//                       </span>
+//                     </div>
+//                   </div>
+//                   <div className="flex items-center gap-3">
+//                     <Checkbox
+//                       checked={formData.mealTimes.includes('lunch')}
+//                       onCheckedChange={(checked) => {
+//                         const mealTimes = checked
+//                           ? [...formData.mealTimes, 'lunch']
+//                           : formData.mealTimes.filter(m => m !== 'lunch');
+//                         setFormData({ ...formData, mealTimes });
+//                       }}
+//                     />
+//                     <div
+//                       className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-gray-50"
+//                       style={{ 
+//                         borderColor: "#e5e7eb",
+//                         width: "94.47px",
+//                         height: "36.42px"
+//                       }}
+//                       onClick={() => {
+//                         const mealTimes = formData.mealTimes.includes('lunch')
+//                           ? formData.mealTimes.filter(m => m !== 'lunch')
+//                           : [...formData.mealTimes, 'lunch'];
+//                         setFormData({ ...formData, mealTimes });
+//                       }}
+//                     >
+//                       <img
+//                         src={lunchImage}
+//                         alt="Lunch"
+//                         className="rounded-full object-cover"
+//                         style={{ width: "27.13px", height: "27.13px" }}
+//                       />
+//                       <span
+//                         className="text-sm font-medium"
+//                         style={{
+//                           fontFamily: "Sweet Sans Pro, -apple-system, sans-serif",
+//                           color: "#000000"
+//                         }}
+//                       >
+//                         Lunch
+//                       </span>
+//                     </div>
+//                   </div>
+//                   <div className="flex items-center gap-3">
+//                     <Checkbox
+//                       checked={formData.mealTimes.includes('dinner')}
+//                       onCheckedChange={(checked) => {
+//                         const mealTimes = checked
+//                           ? [...formData.mealTimes, 'dinner']
+//                           : formData.mealTimes.filter(m => m !== 'dinner');
+//                         setFormData({ ...formData, mealTimes });
+//                       }}
+//                     />
+//                     <div
+//                       className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-gray-50"
+//                       style={{ 
+//                         borderColor: "#e5e7eb",
+//                         width: "94.47px",
+//                         height: "36.42px"
+//                       }}
+//                       onClick={() => {
+//                         const mealTimes = formData.mealTimes.includes('dinner')
+//                           ? formData.mealTimes.filter(m => m !== 'dinner')
+//                           : [...formData.mealTimes, 'dinner'];
+//                         setFormData({ ...formData, mealTimes });
+//                       }}
+//                     >
+//                       <img
+//                         src={dinnerImage}
+//                         alt="Dinner"
+//                         className="rounded-full object-cover"
+//                         style={{ width: "27.13px", height: "27.13px" }}
+//                       />
+//                       <span
+//                         className="text-sm font-medium"
+//                         style={{
+//                           fontFamily: "Sweet Sans Pro, -apple-system, sans-serif",
+//                           color: "#000000"
+//                         }}
+//                       >
+//                         Dinner
+//                       </span>
+//                     </div>
+//                   </div>
 //                 </div>
 //               </div>
 
@@ -887,14 +808,13 @@
 //                 <div className="flex items-center gap-3">
 //                   <div className="relative flex-1">
 //                     <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
-//                 <Input
-//                   id="eventDate"
-//                   type="date"
-//                   data-testid="input-event-date"
-//                   required
-//                   value={formData.eventDate}
-//                   onChange={(e) => setFormData({ ...formData, eventDate: e.target.value })}
-//                   min={new Date().toISOString().split('T')[0]}
+//                     <Input
+//                       id="eventDate"
+//                       type="date"
+//                       data-testid="input-event-date"
+//                       value={formData.eventDate}
+//                       onChange={(e) => setFormData({ ...formData, eventDate: e.target.value })}
+//                       min={new Date().toISOString().split('T')[0]}
 //                       className="pl-10"
 //                       placeholder="10/05/2025"
 //                     />
@@ -914,104 +834,48 @@
 //                 </div>
 //               </div>
 
-//               <div className="space-y-3">
-//                 <Label>Additional Services (Optional)</Label>
-//                 <div className="space-y-3">
-//                   {/* Event Decor */}
-//                   <div
-//                     className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-gray-50"
-//                     style={{ borderColor: "#e5e7eb" }}
-//                     onClick={() => handleServiceToggle('decor')}
-//                     data-testid="button-service-decor"
-//                   >
-//                     <Checkbox
-//                       checked={formData.additionalServices.includes('decor')}
-//                     />
-//                     <img
-//                       src={eventDecorIcon}
-//                       alt="Event Decor"
-//                       className="w-5 h-5"
-//                     />
-//                     <span
-//                       className="text-sm font-medium"
-//                       style={{
-//                         fontFamily: "Sweet Sans Pro, -apple-system, sans-serif",
-//                         color: "#000000"
-//                       }}
-//                     >
-//                     Event Decor
-//                     </span>
-//                   </div>
-
-//                   {/* Photography */}
-//                   <div
-//                     className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-gray-50"
-//                     style={{ borderColor: "#e5e7eb" }}
-//                     onClick={() => handleServiceToggle('photography')}
-//                     data-testid="button-service-photography"
-//                   >
-//                     <Checkbox
-//                       checked={formData.additionalServices.includes('photography')}
-//                     />
-//                     <img
-//                       src={photographyIcon}
-//                       alt="Photography"
-//                       className="w-5 h-5"
-//                     />
-//                     <span
-//                       className="text-sm font-medium"
-//                       style={{
-//                         fontFamily: "Sweet Sans Pro, -apple-system, sans-serif",
-//                         color: "#000000"
-//                       }}
-//                     >
-//                     Photography
-//                     </span>
-//                   </div>
-
-//                   {/* Custom Menu */}
-//                   <div
-//                     className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-gray-50"
-//                     style={{ borderColor: "#e5e7eb" }}
-//                     onClick={() => handleServiceToggle('custom-menu')}
-//                     data-testid="button-service-custom-menu"
-//                   >
-//                     <Checkbox
-//                       checked={formData.additionalServices.includes('custom-menu')}
-//                     />
-//                     <img
-//                       src={customMenuIcon}
-//                       alt="Custom Menu"
-//                       className="w-5 h-5"
-//                     />
-//                     <span
-//                       className="text-sm font-medium"
-//                       style={{
-//                         fontFamily: "Sweet Sans Pro, -apple-system, sans-serif",
-//                         color: "#000000"
-//                       }}
-//                     >
-//                     Custom Menu
-//                     </span>
-//                   </div>
-//                 </div>
+//               {/* Enter Your Phone Number */}
+//               <div className="space-y-2">
+//                 <Label htmlFor="phone">Enter Your Phone Number</Label>
+//                 <Input
+//                   id="phone"
+//                   type="tel"
+//                   data-testid="input-phone"
+//                   value={formData.phone}
+//                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+//                   placeholder="+91 98552 12375"
+//                 />
 //               </div>
 
+//               {/* Enter Your Email Address */}
 //               <div className="space-y-2">
-//                   <Label htmlFor="message">Additional Requests (if any)</Label>
+//                 <Label htmlFor="email">Enter Your Email Address</Label>
+//                 <Input
+//                   id="email"
+//                   type="email"
+//                   data-testid="input-email"
+//                   value={formData.email}
+//                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+//                   placeholder="example@email.com"
+//                 />
+//               </div>
+
+//               {/* Additional Requests */}
+//               <div className="space-y-2">
+//                 <Label htmlFor="message">Additional Requests (if any)</Label>
 //                 <Textarea
 //                   id="message"
 //                   data-testid="textarea-message"
 //                   value={formData.message}
 //                   onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-//                     placeholder="Please add any additional requests here"
-//                     style={{
-//                       fontFamily: "Sweet Sans Pro, -apple-system, sans-serif",
-//                       fontSize: "16px",
-//                       fontWeight: "560",
-//                       color: "#B6B6B6",
-//                     }}
-//                     className="placeholder:text-[#B6B6B6]"
+//                   placeholder="Please add any additional requests you might have."
+//                   style={{
+//                     fontFamily: "Sweet Sans Pro, -apple-system, sans-serif",
+//                     fontSize: "16px",
+//                     fontWeight: "560",
+//                     color: "#B6B6B6",
+//                   }}
+//                   className="placeholder:text-[#B6B6B6]"
 //                 />
 //               </div>
 
@@ -1025,60 +889,10 @@
 //                   color: "#FFFFFF",
 //                 }}
 //               >
-//                 SEND ENQUIRY
+//                 SEND ENQUIRY &gt;
 //               </Button>
 //             </form>
-//           </CardContent>
-//         </Card>
-
-//         {/* Contact Information */}
-//         {/* <Card data-testid="card-contact-info">
-//           <CardHeader>
-//             <CardTitle>Need Immediate Assistance?</CardTitle>
-//             <CardDescription>Our corporate catering team is here to help</CardDescription>
-//           </CardHeader>
-//           <CardContent className="space-y-4">
-//             <div className="flex items-center gap-3">
-//               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-//                 <Phone className="w-5 h-5 text-primary" />
-//               </div>
-//               <div>
-//                 <p className="font-medium">Phone</p>
-//                 <p className="text-sm text-muted-foreground">+91 80 1234 5678</p>
-//               </div>
-//             </div>
-
-//             <div className="flex items-center gap-3">
-//               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-//                 <Mail className="w-5 h-5 text-primary" />
-//               </div>
-//               <div>
-//                 <p className="font-medium">Email</p>
-//                 <p className="text-sm text-muted-foreground">corporate@feastexpress.com</p>
-//               </div>
-//             </div>
-
-//             <div className="flex items-center gap-3">
-//               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-//                 <Clock className="w-5 h-5 text-primary" />
-//               </div>
-//               <div>
-//                 <p className="font-medium">Business Hours</p>
-//                 <p className="text-sm text-muted-foreground">Monday - Saturday: 9:00 AM - 8:00 PM</p>
-//               </div>
-//             </div>
-
-//             <div className="flex items-center gap-3">
-//               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-//                 <MapPin className="w-5 h-5 text-primary" />
-//               </div>
-//               <div>
-//                 <p className="font-medium">Location</p>
-//                 <p className="text-sm text-muted-foreground">Bangalore, Karnataka</p>
-//               </div>
-//             </div>
-//           </CardContent>
-//         </Card> */}
+//         </div>
 //       </div>
 
 //       <BottomNav 
@@ -1090,16 +904,23 @@
 //   );
 // }
 
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Building2, Users, Calendar, Mail, Phone, MapPin, ShoppingCart, UtensilsCrossed, Package, Truck, Clock } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Building2, Users, Calendar, Mail, Phone, MapPin, ShoppingCart, UtensilsCrossed, Package, Truck, Clock, X, ChevronDown } from "lucide-react";
 import FloatingNav from "@/pages/FloatingNav";
 import {
   Carousel,
@@ -1107,42 +928,47 @@ import {
   CarouselItem,
   type CarouselApi,
 } from "@/components/ui/carousel";
-import corporateHeroPattern from "@assets/CorporateBackground.png";
-import corporateManImage from "@assets/image 1661 (1).png";
-import customizedMenuImg from "@assets/Menu (2).png"; 
-import photographyImg from "@assets/Photography (2).png";
-import eventDecorImg from "@assets/Event Decor (2).png";
-import bulkOrderImg from "@assets/Bulk Order (1).png";
-import deliveryImg from "@assets/Delivery (1).png";
-import priorityServiceImg from "@assets/Priority Service (1).png";
+import cateringHeroPattern from "@assets/Hero (5).png";
+import customizedMenuImg from "@assets/stock_images/Menu (1).png";
+import photographyImg from "@assets/stock_images/Photography.png";
+import eventDecorImg from "@assets/stock_images/Event Decor.png";
+import bulkOrderImg from "@assets/stock_images/Bulk Order.png";
+import deliveryImg from "@assets/Delivery.png";
+import priorityServiceImg from "@assets/stock_images/Priority Service.png";
+import hiTeaIcon from "@assets/Image (1).png";
+import breakfastIcon from "@assets/Image (2).png";
+import lunchIcon from "@assets/9.png";
+import dinnerIcon from "@assets/Rectangle 34625261.png";
 
 type ServiceType = "bulk-meals" | "mealbox" | "catering" | "corporate";
 
-export default function CorporateOrder() {
+export default function CateringOrder() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<"home" | "menu" | "profile">("home");
-  const [selectedService, setSelectedService] = useState<ServiceType>("corporate");
+  const [selectedService, setSelectedService] = useState<ServiceType>("catering");
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [slideCount, setSlideCount] = useState(0);
   
   const [formData, setFormData] = useState({
-    companyName: "",
-    contactPerson: "",
-    email: "",
-    phone: "",
+    eventType: "",
+    numberOfPeople: "",
     veg: "",
     nonVeg: "",
     egg: "",
-    numberOfPeople: "",
-    eventType: "",
+    cuisinePreferences: [] as string[],
     budgetMin: "",
     budgetMax: "",
+    mealTimes: [] as string[],
     eventDate: "",
     eventTime: "",
-    message: "",
+    phone: "",
+    email: "",
   });
+
+  const [cuisineDropdownOpen, setCuisineDropdownOpen] = useState(false);
+  const cuisineDropdownRef = useRef<HTMLDivElement>(null);
 
   // Calculate total people from dietary preferences
   const totalPeople = (parseInt(formData.veg) || 0) + (parseInt(formData.nonVeg) || 0) + (parseInt(formData.egg) || 0);
@@ -1160,17 +986,74 @@ export default function CorporateOrder() {
     });
   }, [carouselApi]);
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (cuisineDropdownRef.current && !cuisineDropdownRef.current.contains(event.target as Node)) {
+        setCuisineDropdownOpen(false);
+      }
+    };
+
+    if (cuisineDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [cuisineDropdownOpen]);
+
   const handleTabChange = (tab: "home" | "menu" | "profile") => {
     setActiveTab(tab);
     if (tab === "home") {
       setLocation("/");
+    } else if (tab === "menu") {
+      setLocation("/categories/lunch-dinner");
+    } else if (tab === "profile") {
+      setLocation("/profile");
     }
   };
+
+  const handleMealTimeToggle = (mealTime: string) => {
+    setFormData(prev => ({
+      ...prev,
+      mealTimes: prev.mealTimes.includes(mealTime)
+        ? prev.mealTimes.filter(m => m !== mealTime)
+        : [...prev.mealTimes, mealTime]
+    }));
+  };
+
+  const handleCuisineToggle = (cuisine: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setFormData(prev => ({
+      ...prev,
+      cuisinePreferences: prev.cuisinePreferences.includes(cuisine)
+        ? prev.cuisinePreferences.filter(c => c !== cuisine)
+        : [...prev.cuisinePreferences, cuisine]
+    }));
+  };
+
+  const removeCuisine = (cuisine: string) => {
+    setFormData(prev => ({
+      ...prev,
+      cuisinePreferences: prev.cuisinePreferences.filter(c => c !== cuisine)
+    }));
+  };
+
+  const cuisineOptions = [
+    { value: "north-indian", label: "North Indian" },
+    { value: "south-indian", label: "South Indian" },
+    { value: "chinese", label: "Chinese" },
+    { value: "continental", label: "Continental" },
+    { value: "italian", label: "Italian" },
+    { value: "mexican", label: "Mexican" },
+    { value: "multi-cuisine", label: "Multi-Cuisine" }
+  ];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.companyName || !formData.contactPerson || !formData.phone || !formData.eventDate) {
+    if (!formData.eventType || !formData.phone || !formData.eventDate) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields.",
@@ -1180,20 +1063,33 @@ export default function CorporateOrder() {
     }
 
     // Navigate to thank you page
-    setLocation("/corporate-thank-you");
+    setLocation("/catering-thank-you");
   };
 
   return (
-    <div className="min-h-screen pb-24 relative">
-      {/* Blue Geometric Background Header */}
+    <div className="min-h-screen pb-24 relative" style={{ fontFamily: "Sweet Sans Pro, -apple-system, sans-serif" }}>
+      {/* Purple Geometric Background Header */}
       <div
         className="absolute top-0 left-0 right-0 z-0"
         style={{
-          backgroundImage: `url(${corporateHeroPattern})`,
-          backgroundSize: "cover",
+          backgroundImage: `url("${cateringHeroPattern}")`,
+          backgroundSize: "100% auto",
           backgroundPosition: "center top",
-          backgroundRepeat: "no-repeat",
-          height: "300px",
+          backgroundRepeat: "repeat-x",
+          height: "500px",
+          width: "100%",
+        }}
+      />
+      
+      {/* White background for form section */}
+      <div
+        className="absolute z-0"
+        style={{
+          backgroundColor: "#ffffff",
+          top: "500px",
+          left: 0,
+          right: 0,
+          bottom: 0,
         }}
       />
 
@@ -1269,7 +1165,7 @@ export default function CorporateOrder() {
           </button>
 
           <button
-            onClick={() => setLocation("/catering")}
+            onClick={() => setSelectedService("catering")}
             data-testid="service-tab-catering"
             className="flex flex-col items-center justify-center p-3 transition-all hover-elevate active-elevate-2 aspect-square"
             style={{
@@ -1288,7 +1184,7 @@ export default function CorporateOrder() {
           </button>
 
           <button
-            onClick={() => setSelectedService("corporate")}
+            onClick={() => setLocation("/corporate")}
             data-testid="service-tab-corporate"
             className="flex flex-col items-center justify-center p-3 transition-all hover-elevate active-elevate-2 aspect-square"
             style={{
@@ -1309,51 +1205,7 @@ export default function CorporateOrder() {
       </div>
 
       {/* Content below blue background */}
-      <div className="relative z-10 px-4" style={{ marginTop: "0px", paddingTop: "16px" }}>
-
-        {/* Corporate Catering Header Section with Background Image */}
-        <div 
-          className="relative mb-8 overflow-hidden"
-          style={{
-            borderRadius: "10px",
-            background: "transparent",
-          }}
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex-1 py-6 pl-4 pr-4 z-10">
-              <h1
-                className="text-[#06352A] mb-2 whitespace-nowrap"
-                style={{
-                  fontFamily: "Sweet Sans Pro",
-                  fontSize: "24px",
-                  fontWeight: 700,
-                  textAlign: "left",
-                }}
-              >
-                Corporate Catering
-              </h1>
-              <p
-                className="text-gray-700"
-                style={{
-                  fontFamily: "Sweet Sans Pro",
-                  fontSize: "13px",
-                  fontWeight: 400,
-                  textAlign: "left",
-                }}
-              >
-                For your every need, we are there at every step
-              </p>
-            </div>
-            <div className="flex-shrink-0 relative" style={{ width: "160px", height: "160px" }}>
-              <img
-                src={corporateManImage}
-                alt="Corporate Professional"
-                className="absolute bottom-0 h-full w-auto object-contain"
-                style={{ right: "20px" }}
-              />
-            </div>
-          </div>
-        </div>
+      <div className="relative z-10 px-4" style={{ marginTop: "80px", paddingTop: "16px" }}>
 
         {/* Services Carousel */}
         <div className="mb-8">
@@ -1437,78 +1289,43 @@ export default function CorporateOrder() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Event Type */}
               <div className="space-y-2">
-                <Label htmlFor="companyName">Company Name *</Label>
+                <Label htmlFor="eventType">Event Type</Label>
                 <Input
-                  id="companyName"
-                  data-testid="input-company-name"
-                  value={formData.companyName}
+                  id="eventType"
+                  data-testid="input-event-type"
+                  value={formData.eventType}
                   onChange={(e) =>
-                    setFormData({ ...formData, companyName: e.target.value })
+                    setFormData({ ...formData, eventType: e.target.value })
                   }
-                  placeholder="Enter your company name"
+                  placeholder="Ex: Marriage, Engagement, Reception..."
                   required
                   className="border-[#1A9952] focus-visible:ring-[#1A9952]"
                   style={{ fontFamily: "Sweet Sans Pro" }}
                 />
               </div>
 
+              {/* Number of People */}
               <div className="space-y-2">
-                <Label htmlFor="contactPerson">Contact Person *</Label>
+                <Label htmlFor="numberOfPeople">Number of People</Label>
                 <Input
-                  id="contactPerson"
-                  data-testid="input-contact-person"
-                  value={formData.contactPerson}
+                  id="numberOfPeople"
+                  type="number"
+                  data-testid="input-number-of-people"
+                  value={formData.numberOfPeople}
                   onChange={(e) =>
-                    setFormData({ ...formData, contactPerson: e.target.value })
+                    setFormData({ ...formData, numberOfPeople: e.target.value })
                   }
-                  placeholder="Your name"
-                  required
+                  placeholder="Ex: 100"
+                  min="0"
                   className="border-[#1A9952] focus-visible:ring-[#1A9952]"
                   style={{ fontFamily: "Sweet Sans Pro" }}
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                  <Input
-                    id="email"
-                    type="email"
-                    data-testid="input-email"
-                    value={formData.email}
-                    onChange={(e) =>
-                      setFormData({ ...formData, email: e.target.value })
-                    }
-                    placeholder="your.email@company.com"
-                    className="pl-10 border-[#1A9952] focus-visible:ring-[#1A9952]"
-                    style={{ fontFamily: "Sweet Sans Pro" }}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number *</Label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                  <Input
-                    id="phone"
-                    type="tel"
-                    data-testid="input-phone"
-                    value={formData.phone}
-                    onChange={(e) =>
-                      setFormData({ ...formData, phone: e.target.value })
-                    }
-                    placeholder="+91 XXXXX XXXXX"
-                    className="pl-10 border-[#1A9952] focus-visible:ring-[#1A9952]"
-                    required
-                    style={{ fontFamily: "Sweet Sans Pro" }}
-                  />
-                </div>
-              </div>
-
+              {/* Dietary Preferences */}
               <div className="space-y-3">
                 <Label style={{ fontFamily: "Sweet Sans Pro", fontWeight: 600 }}>
                   Number of People & Dietary Preferences
@@ -1523,16 +1340,16 @@ export default function CorporateOrder() {
                     onChange={(e) =>
                       setFormData({ ...formData, veg: e.target.value })
                     }
-                    placeholder="0"
+                    placeholder="00"
                     min="0"
                     className="w-20 text-center border-[#1A9952] focus-visible:ring-[#1A9952]"
                     style={{ fontFamily: "Sweet Sans Pro" }}
                   />
                   <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 rounded-full bg-[#1A9952] flex items-center justify-center">
-                      <div className="w-2 h-2 rounded-full bg-white" />
+                    <div className="w-5 h-5 rounded-full border-2 border-[#1A9952] flex items-center justify-center">
+                      <div className="w-2.5 h-2.5 rounded-full bg-[#1A9952]" />
                     </div>
-                    <span style={{ fontFamily: "Sweet Sans Pro", fontSize: "14px" }}>VEG</span>
+                    <span style={{ fontFamily: "Sweet Sans Pro", fontSize: "14px", fontWeight: 500 }}>VEG</span>
                   </div>
                 </div>
 
@@ -1545,16 +1362,16 @@ export default function CorporateOrder() {
                     onChange={(e) =>
                       setFormData({ ...formData, nonVeg: e.target.value })
                     }
-                    placeholder="0"
+                    placeholder="00"
                     min="0"
                     className="w-20 text-center border-[#1A9952] focus-visible:ring-[#1A9952]"
                     style={{ fontFamily: "Sweet Sans Pro" }}
                   />
                   <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 rounded-full bg-[#DC2626] flex items-center justify-center">
-                      <div className="w-2 h-2 rounded-full bg-white" />
+                    <div className="w-5 h-5 rounded-full border-2 border-[#DC2626] flex items-center justify-center">
+                      <div className="w-2.5 h-2.5 rounded-full bg-[#DC2626]" />
                     </div>
-                    <span style={{ fontFamily: "Sweet Sans Pro", fontSize: "14px" }}>NON-VEG</span>
+                    <span style={{ fontFamily: "Sweet Sans Pro", fontSize: "14px", fontWeight: 500 }}>NON-VEG</span>
                   </div>
                 </div>
 
@@ -1567,26 +1384,26 @@ export default function CorporateOrder() {
                     onChange={(e) =>
                       setFormData({ ...formData, egg: e.target.value })
                     }
-                    placeholder="0"
+                    placeholder="00"
                     min="0"
                     className="w-20 text-center border-[#1A9952] focus-visible:ring-[#1A9952]"
                     style={{ fontFamily: "Sweet Sans Pro" }}
                   />
                   <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 rounded-full bg-[#92400E] flex items-center justify-center">
-                      <div className="w-2 h-2 rounded-full bg-white" />
+                    <div className="w-5 h-5 rounded-full border-2 border-[#92400E] flex items-center justify-center">
+                      <div className="w-2.5 h-2.5 rounded-full bg-[#92400E]" />
                     </div>
-                    <span style={{ fontFamily: "Sweet Sans Pro", fontSize: "14px" }}>EGG</span>
+                    <span style={{ fontFamily: "Sweet Sans Pro", fontSize: "14px", fontWeight: 500 }}>EGG</span>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 pt-2 border-t">
+                <div className="flex items-center gap-3 pt-2">
                   <div 
-                    className="w-20 h-10 flex items-center justify-center bg-gray-100 rounded-md text-center font-semibold"
+                    className="w-20 h-10 flex items-center justify-center bg-gray-100 rounded-md text-center font-semibold border border-gray-300"
                     style={{ fontFamily: "Sweet Sans Pro" }}
                     data-testid="text-total-people"
                   >
-                    {totalPeople}
+                    {totalPeople || "00"}
                   </div>
                   <span style={{ fontFamily: "Sweet Sans Pro", fontSize: "14px", fontWeight: 600 }}>
                     Total People
@@ -1594,21 +1411,86 @@ export default function CorporateOrder() {
                 </div>
               </div>
 
+              {/* Cuisine Preferences */}
               <div className="space-y-2">
-                <Label htmlFor="eventType">Event Type</Label>
-                <Input
-                  id="eventType"
-                  data-testid="input-event-type"
-                  value={formData.eventType}
-                  onChange={(e) =>
-                    setFormData({ ...formData, eventType: e.target.value })
-                  }
-                  placeholder="e.g., Team Lunch, Conference, Meeting"
-                  className="border-[#1A9952] focus-visible:ring-[#1A9952]"
-                  style={{ fontFamily: "Sweet Sans Pro" }}
-                />
+                <Label htmlFor="cuisinePreferences">Cuisine preferences</Label>
+                <div className="relative" ref={cuisineDropdownRef}>
+                  <button
+                    type="button"
+                    onClick={() => setCuisineDropdownOpen(!cuisineDropdownOpen)}
+                    className="w-full flex items-center justify-between h-10 px-3 py-2 text-sm border-2 border-[#1A9952] rounded-md bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#1A9952]"
+                    style={{ fontFamily: "Sweet Sans Pro" }}
+                    data-testid="select-cuisine"
+                  >
+                    <span className="text-gray-500">
+                      {formData.cuisinePreferences.length > 0 
+                        ? `${formData.cuisinePreferences.length} selected`
+                        : "Select Preferred Cuisines"}
+                    </span>
+                    <ChevronDown className="w-4 h-4 text-gray-500" />
+                  </button>
+                  
+                  {cuisineDropdownOpen && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border-2 border-[#1A9952] rounded-md shadow-lg max-h-60 overflow-auto">
+                      {cuisineOptions.map((cuisine) => (
+                        <div
+                          key={cuisine.value}
+                          onClick={(e) => handleCuisineToggle(cuisine.value, e)}
+                          className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                          data-testid={`cuisine-option-${cuisine.value}`}
+                        >
+                          <div 
+                            className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
+                              formData.cuisinePreferences.includes(cuisine.value)
+                                ? 'bg-[#1A9952] border-[#1A9952]'
+                                : 'border-gray-400'
+                            }`}
+                          >
+                            {formData.cuisinePreferences.includes(cuisine.value) && (
+                              <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
+                                <path d="M2 6L5 9L10 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
+                            )}
+                          </div>
+                          <span style={{ fontFamily: "Sweet Sans Pro", fontSize: "14px" }}>
+                            {cuisine.label}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Selected Cuisines Chips */}
+                {formData.cuisinePreferences.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {formData.cuisinePreferences.map((cuisineValue) => {
+                      const cuisine = cuisineOptions.find(c => c.value === cuisineValue);
+                      return (
+                        <Badge
+                          key={cuisineValue}
+                          variant="secondary"
+                          className="bg-[#1A9952]/10 text-[#1A9952] border border-[#1A9952] hover:bg-[#1A9952]/20 pl-3 pr-2 py-1"
+                          style={{ fontFamily: "Sweet Sans Pro" }}
+                          data-testid={`cuisine-chip-${cuisineValue}`}
+                        >
+                          <span className="mr-1">{cuisine?.label}</span>
+                          <button
+                            type="button"
+                            onClick={() => removeCuisine(cuisineValue)}
+                            className="hover:bg-[#1A9952]/30 rounded-full p-0.5"
+                            data-testid={`remove-cuisine-${cuisineValue}`}
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
+              {/* Budget */}
               <div className="space-y-2">
                 <Label style={{ fontFamily: "Sweet Sans Pro", fontWeight: 600 }}>
                   Budget per person (INR)
@@ -1622,7 +1504,7 @@ export default function CorporateOrder() {
                     onChange={(e) =>
                       setFormData({ ...formData, budgetMin: e.target.value })
                     }
-                    placeholder="250"
+                    placeholder="Min"
                     min="0"
                     className="border-[#1A9952] focus-visible:ring-[#1A9952]"
                     style={{ fontFamily: "Sweet Sans Pro" }}
@@ -1635,7 +1517,7 @@ export default function CorporateOrder() {
                     onChange={(e) =>
                       setFormData({ ...formData, budgetMax: e.target.value })
                     }
-                    placeholder="500"
+                    placeholder="Max"
                     min="0"
                     className="border-[#1A9952] focus-visible:ring-[#1A9952]"
                     style={{ fontFamily: "Sweet Sans Pro" }}
@@ -1643,13 +1525,139 @@ export default function CorporateOrder() {
                 </div>
               </div>
 
+              {/* Meal Times */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label style={{ fontFamily: "Sweet Sans Pro", fontWeight: 600 }}>
+                    Select your meal time
+                  </Label>
+                  <span 
+                    className="text-xs text-[#1A9952]"
+                    style={{ fontFamily: "Sweet Sans Pro", fontWeight: 500 }}
+                  >
+                    Multi Select
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div
+                    onClick={() => handleMealTimeToggle("hi-tea")}
+                    className={`flex items-center gap-2 p-3 border-2 rounded-lg cursor-pointer transition-colors ${
+                      formData.mealTimes.includes("hi-tea")
+                        ? "border-[#1A9952] bg-[#1A9952]/5"
+                        : "border-gray-300"
+                    }`}
+                    data-testid="checkbox-hi-tea"
+                  >
+                    <div 
+                      className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${
+                        formData.mealTimes.includes("hi-tea")
+                          ? 'bg-[#1A9952] border-[#1A9952]'
+                          : 'border-gray-400'
+                      }`}
+                    >
+                      {formData.mealTimes.includes("hi-tea") && (
+                        <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
+                          <path d="M2 6L5 9L10 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      )}
+                    </div>
+                    <img src={hiTeaIcon} alt="Hi-Tea" className="w-6 h-6 object-contain" />
+                    <span style={{ fontFamily: "Sweet Sans Pro", fontSize: "14px", fontWeight: 500 }}>
+                      Hi-Tea
+                    </span>
+                  </div>
+                  <div
+                    onClick={() => handleMealTimeToggle("breakfast")}
+                    className={`flex items-center gap-2 p-3 border-2 rounded-lg cursor-pointer transition-colors ${
+                      formData.mealTimes.includes("breakfast")
+                        ? "border-[#1A9952] bg-[#1A9952]/5"
+                        : "border-gray-300"
+                    }`}
+                    data-testid="checkbox-breakfast"
+                  >
+                    <div 
+                      className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${
+                        formData.mealTimes.includes("breakfast")
+                          ? 'bg-[#1A9952] border-[#1A9952]'
+                          : 'border-gray-400'
+                      }`}
+                    >
+                      {formData.mealTimes.includes("breakfast") && (
+                        <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
+                          <path d="M2 6L5 9L10 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      )}
+                    </div>
+                    <img src={breakfastIcon} alt="Breakfast" className="w-6 h-6 object-contain" />
+                    <span style={{ fontFamily: "Sweet Sans Pro", fontSize: "14px", fontWeight: 500 }}>
+                      Breakfast
+                    </span>
+                  </div>
+                  <div
+                    onClick={() => handleMealTimeToggle("lunch")}
+                    className={`flex items-center gap-2 p-3 border-2 rounded-lg cursor-pointer transition-colors ${
+                      formData.mealTimes.includes("lunch")
+                        ? "border-[#1A9952] bg-[#1A9952]/5"
+                        : "border-gray-300"
+                    }`}
+                    data-testid="checkbox-lunch"
+                  >
+                    <div 
+                      className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${
+                        formData.mealTimes.includes("lunch")
+                          ? 'bg-[#1A9952] border-[#1A9952]'
+                          : 'border-gray-400'
+                      }`}
+                    >
+                      {formData.mealTimes.includes("lunch") && (
+                        <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
+                          <path d="M2 6L5 9L10 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      )}
+                    </div>
+                    <img src={lunchIcon} alt="Lunch" className="w-6 h-6 object-contain" />
+                    <span style={{ fontFamily: "Sweet Sans Pro", fontSize: "14px", fontWeight: 500 }}>
+                      Lunch
+                    </span>
+                  </div>
+                  <div
+                    onClick={() => handleMealTimeToggle("dinner")}
+                    className={`flex items-center gap-2 p-3 border-2 rounded-lg cursor-pointer transition-colors ${
+                      formData.mealTimes.includes("dinner")
+                        ? "border-[#1A9952] bg-[#1A9952]/5"
+                        : "border-gray-300"
+                    }`}
+                    data-testid="checkbox-dinner"
+                  >
+                    <div 
+                      className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${
+                        formData.mealTimes.includes("dinner")
+                          ? 'bg-[#1A9952] border-[#1A9952]'
+                          : 'border-gray-400'
+                      }`}
+                    >
+                      {formData.mealTimes.includes("dinner") && (
+                        <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
+                          <path d="M2 6L5 9L10 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      )}
+                    </div>
+                    <img src={dinnerIcon} alt="Dinner" className="w-6 h-6 object-contain" />
+                    <span style={{ fontFamily: "Sweet Sans Pro", fontSize: "14px", fontWeight: 500 }}>
+                      Dinner
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Date & Time */}
               <div className="space-y-2">
                 <Label style={{ fontFamily: "Sweet Sans Pro", fontWeight: 600 }}>
                   Select Event Date & Time
                 </Label>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="relative">
-                    <Calendar className="absolute left-3 top-3 w-4 h-4 text-[#1A9952]" />
+                    <Calendar className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
                     <Input
                       id="eventDate"
                       type="date"
@@ -1661,10 +1669,11 @@ export default function CorporateOrder() {
                       required
                       className="pl-10 border-[#1A9952] focus-visible:ring-[#1A9952]"
                       style={{ fontFamily: "Sweet Sans Pro" }}
+                      placeholder="10/05/2025"
                     />
                   </div>
                   <div className="relative">
-                    <Clock className="absolute left-3 top-3 w-4 h-4 text-[#1A9952]" />
+                    <Clock className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
                     <Input
                       id="eventTime"
                       type="time"
@@ -1675,21 +1684,42 @@ export default function CorporateOrder() {
                       }
                       className="pl-10 border-[#1A9952] focus-visible:ring-[#1A9952]"
                       style={{ fontFamily: "Sweet Sans Pro" }}
+                      placeholder="12:00"
                     />
                   </div>
                 </div>
               </div>
 
+              {/* Phone Number */}
               <div className="space-y-2">
-                <Label htmlFor="message">Additional Requests</Label>
-                <Textarea
-                  id="message"
-                  data-testid="textarea-message"
-                  value={formData.message}
+                <Label htmlFor="phone">Enter Your Phone Number</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  data-testid="input-phone"
+                  value={formData.phone}
                   onChange={(e) =>
-                    setFormData({ ...formData, message: e.target.value })
+                    setFormData({ ...formData, phone: e.target.value })
                   }
-                  placeholder="Please add any additional requests here"
+                  placeholder="+91 98552 12375"
+                  required
+                  className="border-[#1A9952] focus-visible:ring-[#1A9952]"
+                  style={{ fontFamily: "Sweet Sans Pro" }}
+                />
+              </div>
+
+              {/* Email Address */}
+              <div className="space-y-2">
+                <Label htmlFor="email">Enter Your Email Address</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  data-testid="input-email"
+                  value={formData.email}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
+                  placeholder="example@email.com"
                   className="border-[#1A9952] focus-visible:ring-[#1A9952]"
                   style={{ fontFamily: "Sweet Sans Pro" }}
                 />

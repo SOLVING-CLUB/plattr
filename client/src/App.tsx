@@ -18,7 +18,9 @@ import HelpPage from "@/pages/HelpPage";
 import AboutPage from "@/pages/AboutPage";
 import ReferralPage from "@/pages/ReferralPage";
 import CorporatePage from "@/pages/CorporatePage";
+import CateringPage from "@/pages/CateringPage";
 import CateringThankYouPage from "@/pages/CateringThankYouPage";
+import CorporateThankYouPage from "@/pages/CorporateThankYouPage";
 import PlannerDetailPage from "@/pages/PlannerDetailPage";
 import AuthPage from "@/pages/AuthPage";
 import OrderConfirmationPage from "@/pages/OrderConfirmationPage";
@@ -139,6 +141,7 @@ function Router() {
   const GuardedAboutPage = withAuthGuard(AboutPage);
   const GuardedReferralPage = withAuthGuard(ReferralPage);
   const GuardedCorporatePage = withAuthGuard(CorporatePage);
+  const GuardedCateringPage = withAuthGuard(CateringPage);
   const GuardedPlannerDetailPage = withAuthGuard(PlannerDetailPage);
   const GuardedOrderConfirmationPage = withAuthGuard(OrderConfirmationPage);
   const GuardedConciergeWizardPage = withAuthGuard(ConciergeWizardPage);
@@ -174,6 +177,8 @@ function Router() {
       <Route path="/about" component={GuardedAboutPage} />
       <Route path="/referral" component={GuardedReferralPage} />
       <Route path="/corporate" component={GuardedCorporatePage} />
+      <Route path="/corporate-thank-you" component={CorporateThankYouPage} />
+      <Route path="/catering" component={GuardedCateringPage} />
       <Route path="/catering-thank-you" component={CateringThankYouPage} />
       <Route path="/concierge" component={GuardedConciergeWizardPage} />
       <Route path="/concierge/results" component={GuardedConciergeResultsPage} />
@@ -187,13 +192,16 @@ function Router() {
 }
 
 function App() {
-  // Skip splash and auth screens for testing - go directly to home
-  const SKIP_SPLASH_AND_AUTH = true;
-  const [showSplash, setShowSplash] = useState(false);
+  // Skip splash and auth screens for testing - set to true to bypass
+  const SKIP_SPLASH_AND_AUTH = false;
+  // Always start with splash showing (will be controlled by useEffect)
+  const [showSplash, setShowSplash] = useState(true);
   const [fadeOut, setFadeOut] = useState(false);
   const [location, setLocation] = useLocation();
   const hasNavigatedFromSplash = useRef(false);
+  const splashShown = useRef(false);
 
+  // Initialize bypass auth data if needed
   useEffect(() => {
     if (!BYPASS_AUTH || typeof window === "undefined") return;
 
@@ -208,83 +216,79 @@ function App() {
     if (!localStorage.getItem("phone")) {
       localStorage.setItem("phone", BYPASS_AUTH_PHONE);
     }
+  }, [BYPASS_AUTH, BYPASS_AUTH_USER_ID, BYPASS_AUTH_USERNAME, BYPASS_AUTH_PHONE]);
 
-    // Skip splash and auth - go directly to home page
+  // Handle skip splash and auth mode
+  useEffect(() => {
     if (SKIP_SPLASH_AND_AUTH) {
       setShowSplash(false);
-      if (location === '/' || location === '/phone' || location === '/verification' || location === '/name' || location === '/auth') {
+      const isAuthenticated = getIsAuthenticated();
+      if (isAuthenticated && (location === '/' || location === '/phone' || location === '/verification' || location === '/name' || location === '/auth')) {
         setLocation('/', { replace: true });
+      } else if (!isAuthenticated && location === '/') {
+        setLocation('/phone', { replace: true });
       }
     }
-  }, [BYPASS_AUTH, BYPASS_AUTH_USER_ID, BYPASS_AUTH_USERNAME, BYPASS_AUTH_PHONE, SKIP_SPLASH_AND_AUTH, location, setLocation]);
-
-  useEffect(() => {
-    if (!BYPASS_AUTH) return;
-
-    // Only auto-set localStorage items, but don't hide splash or redirect
-    // This allows users to see splash and auth pages even with BYPASS_AUTH enabled
-    // The splash screen logic below will handle navigation
-  }, [BYPASS_AUTH]);
+  }, [SKIP_SPLASH_AND_AUTH, location, setLocation]);
 
   // Development mode - set to true to keep splash open for development
   // Set to false when you want normal splash behavior (2 seconds then fade)
   const DEV_MODE_SPLASH = false;
-  
-  // Check if we're in development mode (works in browser and Android emulator)
-  // When DEV_MODE_SPLASH is true, always keep splash open regardless of environment
-  const isDev = DEV_MODE_SPLASH || import.meta.env.DEV || window.location.hostname === '10.0.2.2' || window.location.hostname === 'localhost' || window.location.hostname.includes('192.168') || window.location.hostname.includes('10.');
 
+  // Handle splash screen display and navigation
   useEffect(() => {
-    // Only set up navigation if splash is still showing
-    if (!showSplash) return;
-    
-    // If user is on home page AND we've already navigated from splash, hide splash
-    // This means user completed onboarding - don't show onboarding again
-    if (location === '/' && hasNavigatedFromSplash.current) {
+    // If skip mode is enabled, don't show splash
+    if (SKIP_SPLASH_AND_AUTH) {
       setShowSplash(false);
       return;
     }
-    
-    // If user is authenticated and on home page, hide splash
-    if (location === '/' && getIsAuthenticated() && hasNavigatedFromSplash.current) {
-      setShowSplash(false);
+
+    // If splash has already been shown, don't show it again
+    if (splashShown.current || hasNavigatedFromSplash.current) {
+      if (showSplash) {
+        setShowSplash(false);
+      }
       return;
     }
-    
+
+    // If splash is not showing, don't set up navigation
+    if (!showSplash) {
+      return;
+    }
+
     // If user is on other pages (not onboarding routes), hide splash
     if (location !== '/' && location !== '/phone' && location !== '/verification' && location !== '/name' && location !== '/auth') {
       setShowSplash(false);
+      splashShown.current = true;
+      hasNavigatedFromSplash.current = true;
       return;
     }
-    
-    // At this point, we're on '/', '/phone', '/verification', '/name', or '/auth' route
-    // This means user is in the onboarding flow or initial load - allow splash navigation
 
     // In dev mode, keep splash open so you can develop on it
     if (DEV_MODE_SPLASH) {
       // Splash stays open - you can manually hide it by clicking or pressing a key
       const handleClick = () => {
-        // Only navigate if splash is still showing
-        if (!showSplash) return;
+        if (!showSplash || splashShown.current) return;
+        splashShown.current = true;
         hasNavigatedFromSplash.current = true;
         setFadeOut(true);
         setTimeout(() => {
           setShowSplash(false);
-          // Navigate to phone screen (first step of onboarding)
-          setLocation('/phone');
+          // Always navigate to phone screen after splash
+          setLocation('/phone', { replace: true });
         }, 500);
       };
       
       const handleKeyPress = (e: KeyboardEvent) => {
         if (e.key === 'Escape' || e.key === 'Enter') {
-          if (!showSplash) return;
+          if (!showSplash || splashShown.current) return;
           handleClick();
         }
       };
 
       // Add touch event for mobile/emulator
       const handleTouch = () => {
-        if (!showSplash) return;
+        if (!showSplash || splashShown.current) return;
         handleClick();
       };
 
@@ -299,18 +303,17 @@ function App() {
         window.removeEventListener('keydown', handleKeyPress);
       };
     } else {
-      // Normal behavior: Show splash screen for 2 seconds, then navigate to phone
-      // This ONLY runs when DEV_MODE_SPLASH is false
+      // Normal behavior: Show splash screen for 2 seconds, then navigate
       const timer = setTimeout(() => {
-        // Only navigate if splash is still showing
-        if (!showSplash) return;
+        if (!showSplash || splashShown.current) return;
+        splashShown.current = true;
         hasNavigatedFromSplash.current = true;
         setFadeOut(true);
         // Remove from DOM after fade animation completes, then navigate
         setTimeout(() => {
           setShowSplash(false);
-          // Navigate to phone screen (first step of onboarding)
-          setLocation('/phone');
+          // Always navigate to phone screen after splash
+          setLocation('/phone', { replace: true });
         }, 500); // Match transition duration
       }, 2000);
 
@@ -323,9 +326,10 @@ function App() {
       <Toaster />
       {showSplash && (
         <div
-          className={`transition-opacity duration-500 ${
+          className={`fixed inset-0 transition-opacity duration-500 ${
             fadeOut ? "opacity-0 pointer-events-none" : "opacity-100"
           }`}
+          style={{ zIndex: 10000 }}
         >
           <SplashScreen />
         </div>
