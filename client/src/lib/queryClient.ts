@@ -1,6 +1,7 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 import { supabase, mapApiRouteToSupabase } from "@/lib/supabase-client";
 import { getApiUrl } from "@/config/api";
+import { Capacitor, CapacitorHttp, type HttpOptions } from "@capacitor/core";
 
 // Use direct Supabase REST API
 const USE_DIRECT_SUPABASE = true;
@@ -55,6 +56,47 @@ export async function apiRequest(
   // Use getApiUrl to construct the proper backend URL
   const apiUrl = getApiUrl(url);
   console.log('[apiRequest] Original URL:', url, '→ Constructed URL:', apiUrl);
+
+  const isNative = typeof window !== "undefined" && Capacitor?.isNativePlatform?.();
+
+  if (isNative) {
+    try {
+      const httpOptions: HttpOptions = {
+        url: apiUrl,
+        method: method as any,
+        headers: headers as Record<string, string>,
+        webFetchExtra: {
+          credentials: "include",
+        },
+      };
+
+      if (data !== undefined && method !== "GET") {
+        httpOptions.data = data as any;
+      }
+
+      const nativeResponse = await CapacitorHttp.request(httpOptions);
+      const responseBody =
+        typeof nativeResponse.data === "string"
+          ? nativeResponse.data
+          : JSON.stringify(nativeResponse.data);
+
+      if (nativeResponse.status < 200 || nativeResponse.status >= 300) {
+        throw new Error(`${nativeResponse.status}: ${responseBody}`);
+      }
+
+      return new Response(responseBody, {
+        status: nativeResponse.status,
+        headers: nativeResponse.headers as HeadersInit,
+      });
+    } catch (error) {
+      console.error("[apiRequest:native] Request failed:", {
+        url: apiUrl,
+        method,
+        error,
+      });
+      throw error;
+    }
+  }
   
   const res = await fetch(apiUrl, {
     method,

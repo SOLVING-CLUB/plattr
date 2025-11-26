@@ -1,25 +1,33 @@
+import { Capacitor } from "@capacitor/core";
+
 // API Configuration for mobile and web builds
 
-// Production backend URL for mobile access (Capacitor). Must be HTTPS.
-// Set VITE_API_URL in your env for builds; fallback is localhost for development.
-const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+// Default backend URL used only when running inside a native shell and no VITE_API_URL is provided
+// This keeps dev experience zero-config (assumes `npm run dev` backend on port 5000)
+const DEFAULT_NATIVE_BACKEND = 'http://localhost:3000';
+
+// Production backend URL for mobile access (Capacitor). Must be HTTPS in production.
+// Set VITE_API_URL to override the default when you deploy the API elsewhere.
+const CONFIGURED_BACKEND = import.meta.env.VITE_API_URL;
 
 // Detect if running in Capacitor (mobile app)
-// Proper detection: check for Capacitor object AND ensure we're not in a web browser
+// Prefer Capacitor APIs so this works even when using live-reload over http://<dev-ip>
 function isCapacitor(): boolean {
-  // If we're on localhost in a browser, we're definitely not in a mobile app
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    // In development, always use web mode (relative URLs) to avoid CORS
+  if (typeof window === 'undefined') {
     return false;
   }
-  
-  // Check for Capacitor, but also verify we're not in a standard web browser
+
+  // Capacitor v5+ provides a reliable API to detect native platforms
+  if (Capacitor?.isNativePlatform?.()) {
+    return true;
+  }
+
+  // Fallback for older versions / dev servers
+  const protocol = window.location.protocol;
   const hasCapacitor = !!(window as any).Capacitor;
-  const isWebProtocol = window.location.protocol === 'http:' || window.location.protocol === 'https:';
-  const isCapacitorProtocol = window.location.protocol === 'capacitor:' || window.location.protocol === 'ionic:';
-  
-  // Only return true if Capacitor exists AND we're using a Capacitor protocol
-  return hasCapacitor && (isCapacitorProtocol || !isWebProtocol);
+  const isCapacitorProtocol = protocol === 'capacitor:' || protocol === 'ionic:';
+
+  return hasCapacitor && isCapacitorProtocol;
 }
 
 export function getApiUrl(path: string): string {
@@ -34,8 +42,8 @@ export function getApiUrl(path: string): string {
   
   let baseUrl = '';
   if (isMobile) {
-    // Mobile: use full backend URL (must be HTTPS in production)
-    baseUrl = BACKEND_URL;
+    // Mobile: use configured backend URL or fall back to local dev server
+    baseUrl = CONFIGURED_BACKEND || DEFAULT_NATIVE_BACKEND;
   } else {
     // Web (dev and prod): baseUrl stays empty (relative URLs - same origin)
     // This avoids CORS issues since API and client are on the same origin
@@ -48,3 +56,4 @@ export function getApiUrl(path: string): string {
   
   return fullUrl;
 }
+
