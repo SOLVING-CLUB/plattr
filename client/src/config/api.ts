@@ -3,8 +3,15 @@ import { Capacitor } from "@capacitor/core";
 // API Configuration for mobile and web builds
 
 // Default backend URL used only when running inside a native shell and no VITE_API_URL is provided
-// This keeps dev experience zero-config (assumes `npm run dev` backend on port 5000)
-const DEFAULT_NATIVE_BACKEND = 'http://localhost:3000';
+// For iOS simulator, localhost points to the Mac; for Android emulator, use 10.0.2.2 to reach host.
+function getDefaultNativeBackend(): string {
+  if (Capacitor?.getPlatform?.() === 'android') {
+    // Android emulator: host machine is 10.0.2.2
+    return 'http://10.0.2.2:3000';
+  }
+  // iOS simulator / other native: localhost is fine
+  return 'http://localhost:3000';
+}
 
 // Production backend URL for mobile access (Capacitor). Must be HTTPS in production.
 // Set VITE_API_URL to override the default when you deploy the API elsewhere.
@@ -43,7 +50,7 @@ export function getApiUrl(path: string): string {
   let baseUrl = '';
   if (isMobile) {
     // Mobile: use configured backend URL or fall back to local dev server
-    baseUrl = CONFIGURED_BACKEND || DEFAULT_NATIVE_BACKEND;
+    baseUrl = CONFIGURED_BACKEND || getDefaultNativeBackend();
   } else {
     // Web (dev and prod): baseUrl stays empty (relative URLs - same origin)
     // This avoids CORS issues since API and client are on the same origin

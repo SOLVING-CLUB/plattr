@@ -629,8 +629,151 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Middleware to handle Supabase Auth tokens
+  // Only creates user records if they don't exist (for signup flow)
+  // For login, user should already exist
+  const handleSupabaseAuth = async (req: any, res: any, next: any) => {
+    // If already has session, continue
+    if (req.session.userId) {
+      return next();
+    }
+
+    // Check for Supabase Auth token in Authorization header
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      
+      try {
+        // Verify token with Supabase
+        const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+        
+        if (!supabaseUrl || !supabaseAnonKey) {
+          return next();
+        }
+
+        // Verify token by calling Supabase Auth API
+        const verifyResponse = await fetch(`${supabaseUrl}/auth/v1/user`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'apikey': supabaseAnonKey,
+          },
+        });
+
+        if (verifyResponse.ok) {
+          const userData = await verifyResponse.json();
+          const supabaseUserId = userData.id;
+
+          // Find or create user in users table
+          // For new signups, create the user record; for logins, user should exist
+          let userRecord: any = null;
+          
+          if (db) {
+            const existingUser = await db
+              .select()
+              .from(users)
+              .where(eq(users.id, supabaseUserId))
+              .limit(1);
+            
+            if (existingUser.length > 0) {
+              userRecord = existingUser[0];
+            } else {
+              // User doesn't exist - create it (new signup)
+              // This happens when user signs up with Supabase Auth but hasn't entered name yet
+              const tempUsername = `user_${Math.floor(1000 + Math.random() * 9000)}`;
+              try {
+                const [newUser] = await db
+                  .insert(users)
+                  .values({
+                    id: supabaseUserId,
+                    username: tempUsername,
+                    phone: userData.phone || null,
+                    email: userData.email || null,
+                    password: "",
+                    isVerified: true,
+                  })
+                  .returning();
+                userRecord = newUser;
+                console.log("✅ [supabase-auth] Created user record for new signup:", newUser.id);
+              } catch (insertError: any) {
+                // If insert fails (e.g., unique constraint), try to fetch again
+                if (insertError.code === '23505') {
+                  const retryUser = await db
+                    .select()
+                    .from(users)
+                    .where(eq(users.id, supabaseUserId))
+                    .limit(1);
+                  if (retryUser.length > 0) {
+                    userRecord = retryUser[0];
+                  }
+                } else {
+                  console.error("❌ [supabase-auth] Error creating user:", insertError);
+                }
+              }
+            }
+          } else if (useRestAPI && supabase) {
+            // Use service role to bypass RLS when checking for user
+            const existingUser = await supabase.select("users", {
+              filter: { id: `eq.${supabaseUserId}` },
+              limit: 1,
+            }, true); // Use service role key
+            
+            if (existingUser && existingUser.length > 0) {
+              userRecord = existingUser[0];
+            } else {
+              // User doesn't exist - create it (new signup)
+              const tempUsername = `user_${Math.floor(1000 + Math.random() * 9000)}`;
+              try {
+                const newUser = await supabase.insert("users", {
+                  id: supabaseUserId,
+                  username: tempUsername,
+                  phone: userData.phone || null,
+                  email: userData.email || null,
+                  password: "",
+                  is_verified: true,
+                }, true); // Use service role key
+                userRecord = Array.isArray(newUser) ? newUser[0] : newUser;
+                console.log("✅ [supabase-auth] Created user record for new signup via REST:", supabaseUserId);
+              } catch (insertError: any) {
+                // If insert fails, try to fetch again (might have been created concurrently)
+                // Use service role to bypass RLS
+                const retryUser = await supabase.select("users", {
+                  filter: { id: `eq.${supabaseUserId}` },
+                  limit: 1,
+                }, true); // Use service role key
+                if (retryUser && retryUser.length > 0) {
+                  userRecord = retryUser[0];
+                  console.log("✅ [supabase-auth] User record found after conflict:", userRecord.id);
+                } else {
+                  console.error("❌ [supabase-auth] Error creating user via REST:", insertError);
+                }
+              }
+            }
+          }
+
+          if (userRecord) {
+            // Create session
+            req.session.userId = String(userRecord.id);
+            if (userRecord.phone) {
+              req.session.phone = userRecord.phone;
+            }
+            console.log("✅ [supabase-auth] Session created for user:", userRecord.id);
+          } else {
+            console.log("⚠️ [supabase-auth] Could not create or find user record:", supabaseUserId);
+            // Still allow request to continue - update-username endpoint will handle creation
+          }
+        }
+      } catch (error) {
+        console.error("❌ [supabase-auth] Token verification failed:", error);
+        // Continue without setting session
+      }
+    }
+
+    next();
+  };
+
   // Update username
-  app.post("/api/auth/update-username", async (req, res) => {
+  app.post("/api/auth/update-username", handleSupabaseAuth, async (req, res) => {
     try {
       console.log("👤 [update-username] Request received:", { body: req.body, userId: req.session.userId });
       
@@ -647,6 +790,137 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
+      // Get user record (should exist from signup or middleware)
+      // Use service role to bypass RLS when checking for user
+      let userRecord: any = null;
+      if (db) {
+        const existingUser = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, req.session.userId))
+          .limit(1);
+        userRecord = existingUser.length > 0 ? existingUser[0] : null;
+      } else if (useRestAPI && supabase) {
+        const existingUser = await supabase.select("users", {
+          filter: { id: `eq.${req.session.userId}` },
+          limit: 1,
+        }, true); // Use service role to bypass RLS
+        userRecord = existingUser && existingUser.length > 0 ? existingUser[0] : null;
+      }
+
+      // If user doesn't exist, create it (this is the signup flow - user just signed up)
+      if (!userRecord) {
+        console.log("👤 [update-username] Creating user record for new signup...");
+        
+        // Get user info from Supabase Auth if available
+        let userEmail = null;
+        let userPhone = req.session.phone || null;
+        
+        // Try to get user info from Supabase Auth token
+        const authHeader = req.headers.authorization;
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+          try {
+            const token = authHeader.substring(7);
+            const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+            const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+            
+            if (supabaseUrl && supabaseAnonKey) {
+              const verifyResponse = await fetch(`${supabaseUrl}/auth/v1/user`, {
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'apikey': supabaseAnonKey,
+                },
+              });
+              
+              if (verifyResponse.ok) {
+                const userData = await verifyResponse.json();
+                userEmail = userData.email || null;
+                userPhone = userData.phone || userPhone;
+              }
+            }
+          } catch (error) {
+            console.log("Could not fetch user data from Supabase Auth:", error);
+          }
+        }
+        
+        const tempUsername = `user_${Math.floor(1000 + Math.random() * 9000)}`;
+        
+        if (db) {
+          try {
+            const [newUser] = await db
+              .insert(users)
+              .values({
+                id: req.session.userId,
+                username: tempUsername,
+                phone: userPhone,
+                email: userEmail,
+                password: "",
+                isVerified: true,
+              })
+              .returning();
+            userRecord = newUser;
+            console.log("✅ [update-username] User record created:", newUser.id);
+          } catch (insertError: any) {
+            console.error("❌ [update-username] Error creating user (db):", insertError);
+            // Check if it's a unique constraint violation (user might already exist)
+            if (insertError.code === '23505' || insertError.message?.includes('unique')) {
+              // User already exists, try to fetch it
+              const existingUser = await db
+                .select()
+                .from(users)
+                .where(eq(users.id, req.session.userId))
+                .limit(1);
+              if (existingUser.length > 0) {
+                userRecord = existingUser[0];
+                console.log("✅ [update-username] User record found after conflict:", userRecord.id);
+              } else {
+                res.status(500).json({ error: "Failed to create user record: " + (insertError.message || "Unknown error") });
+                return;
+              }
+            } else {
+              res.status(500).json({ error: "Failed to create user record: " + (insertError.message || "Unknown error") });
+              return;
+            }
+          }
+        } else if (useRestAPI && supabase) {
+          try {
+            const newUser = await supabase.insert("users", {
+              id: req.session.userId,
+              username: tempUsername,
+              phone: userPhone,
+              email: userEmail,
+              password: "",
+              is_verified: true,
+            }, true);
+            userRecord = Array.isArray(newUser) ? newUser[0] : newUser;
+            console.log("✅ [update-username] User record created via REST:", req.session.userId);
+          } catch (insertError: any) {
+            console.error("❌ [update-username] Error creating user (REST):", insertError);
+            
+            // Check if user already exists (might have been created by middleware)
+            // Use service role to bypass RLS
+            const existingUser = await supabase.select("users", {
+              filter: { id: `eq.${req.session.userId}` },
+              limit: 1,
+            }, true); // Use service role key
+            
+            if (existingUser && existingUser.length > 0) {
+              userRecord = existingUser[0];
+              console.log("✅ [update-username] User record found after conflict:", userRecord.id);
+            } else {
+              // Log the actual error for debugging
+              const errorMessage = insertError.message || insertError.toString() || "Unknown error";
+              console.error("❌ [update-username] Full error details:", JSON.stringify(insertError, null, 2));
+              res.status(500).json({ 
+                error: "Failed to create user record: " + errorMessage,
+                details: process.env.NODE_ENV === 'development' ? insertError : undefined
+              });
+              return;
+            }
+          }
+        }
+      }
+
       // Check if username is already taken
       let existingUser: any[] = [];
       
@@ -660,7 +934,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const results = await supabase.select("users", {
           filter: { username: `eq.${username}` },
           limit: 1,
-        });
+        }, true); // Use service role to bypass RLS
         existingUser = results;
       }
 

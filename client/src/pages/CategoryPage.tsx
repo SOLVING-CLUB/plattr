@@ -950,12 +950,12 @@ export default function CategoryPage() {
               className={cn(
                 "h-7 px-3 rounded-full text-xs font-medium transition-all duration-200 flex items-center gap-1",
                 dietaryMode === 'veg'
-                  ? "bg-green-100 dark:bg-green-900/30 shadow-sm text-green-700 dark:text-green-400"
+                  ? "bg-green-100 shadow-sm text-green-700"
                   : "text-muted-foreground hover:text-green-600"
               )}
               data-testid="filter-dietary-veg"
             >
-              <Leaf className={cn("w-3 h-3", dietaryMode === 'veg' ? "" : "text-green-600 dark:text-green-500")} />
+              <Leaf className={cn("w-3 h-3", dietaryMode === 'veg' ? "" : "text-green-600")} />
               <span className="hidden sm:inline">Veg</span>
             </button>
             <button
@@ -963,12 +963,12 @@ export default function CategoryPage() {
               className={cn(
                 "h-7 px-3 rounded-full text-xs font-medium transition-all duration-200 flex items-center gap-1",
                 dietaryMode === 'egg'
-                  ? "bg-yellow-100 dark:bg-yellow-900/30 shadow-sm text-yellow-700 dark:text-yellow-400"
+                  ? "bg-yellow-100 shadow-sm text-yellow-700"
                   : "text-muted-foreground hover:text-yellow-600"
               )}
               data-testid="filter-dietary-egg"
             >
-              <Egg className={cn("w-3 h-3", dietaryMode === 'egg' ? "" : "text-yellow-600 dark:text-yellow-500")} />
+              <Egg className={cn("w-3 h-3", dietaryMode === 'egg' ? "" : "text-yellow-600")} />
               <span className="hidden sm:inline">Egg</span>
             </button>
             <button
@@ -976,12 +976,12 @@ export default function CategoryPage() {
               className={cn(
                 "h-7 px-3 rounded-full text-xs font-medium transition-all duration-200 flex items-center gap-1",
                 dietaryMode === 'non-veg'
-                  ? "bg-red-100 dark:bg-red-900/30 shadow-sm text-red-700 dark:text-red-400"
+                  ? "bg-red-100 shadow-sm text-red-700"
                   : "text-muted-foreground hover:text-red-600"
               )}
               data-testid="filter-dietary-nonveg"
             >
-              <Drumstick className={cn("w-3 h-3", dietaryMode === 'non-veg' ? "" : "text-red-600 dark:text-red-500")} />
+              <Drumstick className={cn("w-3 h-3", dietaryMode === 'non-veg' ? "" : "text-red-600")} />
               <span className="hidden sm:inline">Non-Veg</span>
             </button>
           </div>

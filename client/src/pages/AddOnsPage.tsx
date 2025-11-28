@@ -251,8 +251,8 @@ export default function AddOnsPage() {
       <main className="flex-1 overflow-y-auto p-4 sm:p-6">
         <div className="max-w-4xl mx-auto">
           {/* Info Banner */}
-          <div className="mb-6 p-4 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-lg">
-            <p className="text-sm text-orange-900 dark:text-orange-200">
+          <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+            <p className="text-sm text-orange-900">
               Select optional add-ons to make your event more memorable. You can skip this step if you don't need any extras.
             </p>
           </div>
@@ -285,7 +285,7 @@ export default function AddOnsPage() {
                     key={addOn.id}
                     className={`relative border rounded-lg p-4 transition-all cursor-pointer ${
                       isSelected 
-                        ? 'border-primary bg-orange-50 dark:bg-orange-950/20 shadow-md' 
+                        ? 'border-primary bg-orange-50 shadow-md' 
                         : 'border-border bg-card hover-elevate'
                     }`}
                     onClick={() => handleToggleAddOn(addOn.id)}
@@ -410,7 +410,7 @@ export default function AddOnsPage() {
                   <Icon className="w-8 h-8 text-primary" />
                 </div>
                 
-                <div className="prose prose-sm max-w-none dark:prose-invert">
+                <div className="prose prose-sm max-w-none">
                   <h3 className="text-base font-semibold text-foreground mb-2">What is this?</h3>
                   <p className="text-sm text-muted-foreground leading-relaxed mb-4">
                     {details.description}
@@ -420,15 +420,15 @@ export default function AddOnsPage() {
                   <ul className="space-y-2 text-sm text-muted-foreground">
                     {details.features.map((feature, idx) => (
                       <li key={idx} className="flex items-start gap-2">
-                        <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                        <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
                         <span>{feature}</span>
                       </li>
                     ))}
                   </ul>
 
-                  <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-                    <p className="text-xs font-medium text-amber-900 dark:text-amber-200 mb-1">Important Note:</p>
-                    <p className="text-xs text-amber-800 dark:text-amber-300">
+                  <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <p className="text-xs font-medium text-amber-900 mb-1">Important Note:</p>
+                    <p className="text-xs text-amber-800">
                       {details.tip}
                     </p>
                   </div>

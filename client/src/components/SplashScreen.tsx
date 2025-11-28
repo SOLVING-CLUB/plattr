@@ -2,6 +2,7 @@
 import splashHeroImage from "@assets/splash_hero_woman.png";
 import plattrLogoImage from "@assets/plattr_logo.png";
 import splashBackgroundImage from "@assets/splash_background.png";
+import { useEffect } from "react";
 
 export default function SplashScreen() {
   // Set to true when you add the logo image to attached_assets folder
@@ -9,6 +10,47 @@ export default function SplashScreen() {
   const hasHeroImage = true; // splash_hero_woman.png is available
 
   const isDev = import.meta.env.DEV;
+
+  // Hide status bar on mobile devices
+  useEffect(() => {
+    // Add CSS to hide status bar
+    const style = document.createElement('style');
+    style.textContent = `
+      /* Hide status bar area on splash screen */
+      html, body {
+        overflow: hidden !important;
+        position: fixed !important;
+        width: 100% !important;
+        height: 100% !important;
+      }
+      /* For iOS Safari - hide status bar */
+      @supports (-webkit-touch-callout: none) {
+        body {
+          padding-top: 0 !important;
+          margin-top: 0 !important;
+        }
+      }
+      /* For Android WebView */
+      @media screen and (max-width: 768px) {
+        body {
+          -webkit-user-select: none;
+          -webkit-touch-callout: none;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+
+    // Try to hide status bar via JavaScript (for WebView)
+    if ((window as any).Android && typeof (window as any).Android.hideStatusBar === 'function') {
+      (window as any).Android.hideStatusBar();
+    }
+
+    return () => {
+      if (document.head.contains(style)) {
+        document.head.removeChild(style);
+      }
+    };
+  }, []);
 
   return (
     <div
@@ -24,9 +66,27 @@ export default function SplashScreen() {
         margin: 0,
         padding: 0,
         zIndex: 9999,
+        // Extend to cover status bar area
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
       }}
       data-testid="splash-screen"
     >
+      {/* Overlay to hide custom status bar (time, network, battery icons) from background image */}
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: "60px", // Adjust height to cover the status bar area
+          backgroundColor: "#FFE318", // Match the yellow background color
+          zIndex: 100,
+        }}
+      />
+
       {/* Dev mode indicator */}
       {isDev && (
         <div

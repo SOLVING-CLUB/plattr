@@ -1,5 +1,6 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 import { supabase, mapApiRouteToSupabase } from "@/lib/supabase-client";
+import { supabaseAuth } from "@/lib/supabase-auth";
 import { getApiUrl } from "@/config/api";
 import { Capacitor, CapacitorHttp, type HttpOptions } from "@capacitor/core";
 
@@ -52,6 +53,16 @@ export async function apiRequest(
   
   // Use backend API for auth routes and fallback
   const headers: HeadersInit = data ? { "Content-Type": "application/json" } : {};
+  
+  // Add Supabase Auth token if available
+  try {
+    const { data: { session } } = await supabaseAuth.auth.getSession();
+    if (session?.access_token) {
+      headers["Authorization"] = `Bearer ${session.access_token}`;
+    }
+  } catch (error) {
+    // Supabase auth not available, continue without token
+  }
   
   // Use getApiUrl to construct the proper backend URL
   const apiUrl = getApiUrl(url);

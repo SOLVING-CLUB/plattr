@@ -27,4 +27,4 @@ android/.gradle/
 android/.idea/
 
 # Capacitor build outputs
-**/public/
+**/public/android/keystore.properties

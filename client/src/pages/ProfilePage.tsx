@@ -4,12 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import BottomNav from "@/components/BottomNav";
 import AppHeader from "@/components/AppHeader";
-import ThemeToggle from "@/components/ThemeToggle";
 import { User, MapPin, CreditCard, Bell, HelpCircle, LogOut, ChevronRight, Package, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getQueryFn, queryClient } from "@/lib/queryClient";
 import { cartStorage } from "@/lib/cartStorage";
+import { supabaseAuth } from "@/lib/supabase-auth";
 import type { Dish, Category } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -61,12 +61,28 @@ export default function ProfilePage() {
 
     setIsLoggingOut(true);
     try {
-      await apiRequest("POST", "/api/auth/logout");
+      // Best practice: Sign out from Supabase first (this clears the session)
+      try {
+        const { error } = await supabaseAuth.auth.signOut();
+        if (error) throw error;
+      } catch (error) {
+        console.error("Supabase auth signout error:", error);
+        // Continue with cleanup even if Supabase signout fails
+      }
 
+      // Logout from backend API
+      try {
+        await apiRequest("POST", "/api/auth/logout");
+      } catch (error) {
+        console.log("Backend logout:", error);
+      }
+
+      // Clear all storage (Supabase signOut should handle this, but clear for safety)
       localStorage.removeItem("userId");
       localStorage.removeItem("username");
       localStorage.removeItem("phone");
-      sessionStorage.removeItem("phoneNumber");
+      localStorage.removeItem("email");
+      sessionStorage.clear();
       cartStorage.clearCart();
       queryClient.clear();
 
@@ -75,7 +91,11 @@ export default function ProfilePage() {
         description: "You have been signed out successfully.",
       });
 
-      setLocation("/phone");
+      // Navigate to splash screen (which will then navigate to test-auth)
+      // Clear splash state by reloading the page
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 500);
     } catch (error) {
       console.error("❌ Logout failed:", error);
       toast({
@@ -176,15 +196,6 @@ export default function ProfilePage() {
           })}
         </div>
 
-        {/* Dark Mode Toggle */}
-        <Card className="p-4 mb-6" data-testid="card-dark-mode">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="font-medium">Dark Mode</span>
-            </div>
-            <ThemeToggle />
-          </div>
-        </Card>
 
         {/* Logout & Delete Account */}
         <Button 

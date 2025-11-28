@@ -10,7 +10,6 @@ export default function NameScreen() {
   const [currentTime, setCurrentTime] = useState('9:41');
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const tempUsernamePattern = /^user_\d{4}(?:_\d+)?$/;
 
   // Update time every minute
   useEffect(() => {
@@ -21,27 +20,10 @@ export default function NameScreen() {
       setCurrentTime(`${hours}:${minutes.toString().padStart(2, '0')}`);
     };
     
-    updateTime(); // Set initial time
-    const interval = setInterval(updateTime, 60000); // Update every minute
-    
+    updateTime();
+    const interval = setInterval(updateTime, 60000);
     return () => clearInterval(interval);
   }, []);
-
-  // Guard route - only allow access right after verification
-  useEffect(() => {
-    const needsName = sessionStorage.getItem('needsName');
-    const storedUsername = localStorage.getItem('username') || '';
-
-    if (needsName || tempUsernamePattern.test(storedUsername)) {
-      return;
-    }
-
-    if (storedUsername) {
-      setLocation('/', { replace: true });
-    } else {
-      setLocation('/phone', { replace: true });
-    }
-  }, [setLocation]);
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFullName(e.target.value);
@@ -59,15 +41,16 @@ export default function NameScreen() {
       return data;
     },
     onSuccess: (data: any) => {
-      // Store updated username
+      // Store updated username and clear needsName flag
       localStorage.setItem("username", data.user.username);
       sessionStorage.removeItem('needsName');
+      
       toast({
         title: "Welcome!",
         description: `Welcome to Plattr, ${data.user.username}!`,
       });
-      // Navigate to home page after entering name using replace to prevent going back
-      // This replaces name in history, so user can't go back to onboarding screens
+      
+      // Navigate to home page
       setTimeout(() => {
         setLocation('/', { replace: true });
       }, 500);
@@ -188,4 +171,3 @@ export default function NameScreen() {
     </div>
   );
 }
-

@@ -515,7 +515,7 @@ export default function ConciergeResultsPage() {
 
           {/* Budget Note from AI */}
           {recommendations.aiBudgetNote && (
-            <Card className="mb-6 border-orange-200 bg-orange-50/50 dark:bg-orange-950/20 dark:border-orange-900">
+            <Card className="mb-6 border-orange-200 bg-orange-50/50">
               <CardContent className="p-4">
                 <div className="flex items-start gap-3">
                   <DollarSign className="w-5 h-5 text-orange-600 mt-0.5 flex-shrink-0" />

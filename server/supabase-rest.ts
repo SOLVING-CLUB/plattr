@@ -172,15 +172,15 @@ export const supabase = {
   /**
    * Select data from a table
    */
-  select: async <T = any>(table: string, options?: SupabaseQueryOptions): Promise<T[]> => {
-    return supabaseRequest(table, 'GET', options);
+  select: async <T = any>(table: string, options?: SupabaseQueryOptions, useServiceRole = false): Promise<T[]> => {
+    return supabaseRequest(table, 'GET', options, undefined, useServiceRole);
   },
 
   /**
    * Select a single row
    */
-  selectOne: async <T = any>(table: string, options?: SupabaseQueryOptions): Promise<T | null> => {
-    const results = await supabase.select<T>(table, { ...options, limit: 1 });
+  selectOne: async <T = any>(table: string, options?: SupabaseQueryOptions, useServiceRole = false): Promise<T | null> => {
+    const results = await supabase.select<T>(table, { ...options, limit: 1 }, useServiceRole);
     return results[0] || null;
   },
 

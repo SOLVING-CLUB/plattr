@@ -31,100 +31,106 @@ import MealBoxBuilderPage from "@/pages/MealBoxBuilderPage";
 import VerificationScreen from "@/pages/VerificationScreen";
 import PhoneScreen from "@/pages/PhoneScreen";
 import NameScreen from "@/pages/NameScreen";
+import TestAuthPage from "@/pages/TestAuthPage";
+import TestOtpPasswordPage from "@/pages/TestOtpPasswordPage";
 import SplashScreen from "@/components/SplashScreen";
+import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useState, useRef, type ComponentType, type ReactNode } from "react";
 
-const bypassAuthEnv = import.meta.env.VITE_BYPASS_AUTH;
-const BYPASS_AUTH =
-  bypassAuthEnv === "true" ||
-  (!bypassAuthEnv && import.meta.env.DEV);
-const BYPASS_AUTH_USER_ID = import.meta.env.VITE_BYPASS_AUTH_USER_ID ?? "demo-user";
-const BYPASS_AUTH_PHONE = import.meta.env.VITE_BYPASS_AUTH_PHONE ?? "9999999999";
-const BYPASS_AUTH_USERNAME = import.meta.env.VITE_BYPASS_AUTH_USERNAME ?? "Demo User";
-
-// Redirect component for /cart to /checkout
-function CartRedirect() {
+// Simple auth guard - redirects to /test-auth if not authenticated
+function RequireAuth({ children }: { children: ReactNode }) {
   const [, setLocation] = useLocation();
+  const { isAuthenticated, loading, initialized } = useAuth();
+
   useEffect(() => {
-    setLocation('/checkout');
-  }, [setLocation]);
-  return null;
+    if (initialized && !loading && !isAuthenticated) {
+      setLocation('/test-auth', { replace: true });
+    }
+  }, [isAuthenticated, loading, initialized, setLocation]);
+
+  if (!initialized || loading) {
+    return null; // Show nothing while loading
+  }
+
+  if (!isAuthenticated) {
+    return null; // Will redirect
+  }
+
+  return <>{children}</>;
 }
 
-const getIsAuthenticated = () => {
-  if (BYPASS_AUTH) return true;
-  if (typeof window === "undefined") return false;
-  return Boolean(localStorage.getItem("userId"));
-};
-
-function RequireAuth({
-  children,
-  redirectTo = "/phone",
-}: {
-  children: ReactNode;
-  redirectTo?: string;
-}) {
+// Simple public-only guard - redirects to / if authenticated
+function PublicOnly({ children }: { children: ReactNode }) {
   const [, setLocation] = useLocation();
-  const [isAllowed] = useState(() => getIsAuthenticated());
+  const { isAuthenticated, loading, initialized } = useAuth();
 
   useEffect(() => {
-    if (!isAllowed) {
-      setLocation(redirectTo, { replace: true });
+    if (initialized && !loading && isAuthenticated) {
+      // If authenticated, redirect to home
+      setLocation('/', { replace: true });
     }
-  }, [isAllowed, redirectTo, setLocation]);
+  }, [isAuthenticated, loading, initialized, setLocation]);
 
-  if (!isAllowed) {
+  if (!initialized || loading) {
+    return null;
+  }
+
+  if (isAuthenticated) {
+    return null; // Will redirect
+  }
+
+  return <>{children}</>;
+}
+
+// Name page guard - only allow if needsName flag is set
+function RequireNeedsName({ children }: { children: ReactNode }) {
+  const [, setLocation] = useLocation();
+  const { isAuthenticated, loading, initialized } = useAuth();
+  const [shouldRender, setShouldRender] = useState(false);
+
+  useEffect(() => {
+    if (initialized && !loading) {
+      if (!isAuthenticated) {
+        setLocation('/test-auth', { replace: true });
+        return;
+      }
+
+      const needsName = sessionStorage.getItem('needsName');
+      if (needsName === 'true') {
+        setShouldRender(true);
+      } else {
+        // User doesn't need to set name, redirect to home
+        setLocation('/', { replace: true });
+      }
+    }
+  }, [isAuthenticated, loading, initialized, setLocation]);
+
+  if (!initialized || loading || !shouldRender) {
     return null;
   }
 
   return <>{children}</>;
 }
 
-function PublicOnly({
-  children,
-  redirectTo = "/",
-  allowWhenAuthenticated = false,
-}: {
-  children: ReactNode;
-  redirectTo?: string;
-  allowWhenAuthenticated?: boolean;
-}) {
-  const [, setLocation] = useLocation();
-  const [canRender] = useState(() => allowWhenAuthenticated || !getIsAuthenticated());
+const withAuthGuard = <P extends object>(Component: ComponentType<P>) => (props: P) => (
+  <RequireAuth>
+    <Component {...props} />
+  </RequireAuth>
+);
 
-  useEffect(() => {
-    if (!canRender && !allowWhenAuthenticated) {
-      setLocation(redirectTo, { replace: true });
-    }
-  }, [canRender, redirectTo, setLocation, allowWhenAuthenticated]);
+const withPublicOnly = <P extends object>(Component: ComponentType<P>) => (props: P) => (
+  <PublicOnly>
+    <Component {...props} />
+  </PublicOnly>
+);
 
-  if (!canRender && !allowWhenAuthenticated) {
-    return null;
-  }
-
-  return <>{children}</>;
-}
-
-const withAuthGuard =
-  <P extends object>(Component: ComponentType<P>) =>
-  (props: P) =>
-    (
-      <RequireAuth>
-        <Component {...props} />
-      </RequireAuth>
-    );
-
-const withPublicOnly =
-  <P extends object>(Component: ComponentType<P>, redirectTo = "/", allowWhenAuthenticated = false) =>
-  (props: P) =>
-    (
-      <PublicOnly redirectTo={redirectTo} allowWhenAuthenticated={allowWhenAuthenticated}>
-        <Component {...props} />
-      </PublicOnly>
-    );
+const withNeedsName = <P extends object>(Component: ComponentType<P>) => (props: P) => (
+  <RequireNeedsName>
+    <Component {...props} />
+  </RequireNeedsName>
+);
 
 function Router() {
-  // Handle Android back button globally
   useAndroidBackButton();
 
   const GuardedHomePage = withAuthGuard(HomePage);
@@ -148,16 +154,25 @@ function Router() {
   const GuardedConciergeResultsPage = withAuthGuard(ConciergeResultsPage);
   const GuardedMealBoxPage = withAuthGuard(MealBoxPage);
   const GuardedMealBoxBuilderPage = withAuthGuard(MealBoxBuilderPage);
-  const GuardedCartRedirect = withAuthGuard(CartRedirect);
-  const GuardedNameScreen = withAuthGuard(NameScreen);
-  // Allow auth pages to be accessed even when authenticated (for testing)
-  const PublicAuthPage = withPublicOnly(AuthPage, "/", true);
-  const PublicPhoneScreen = withPublicOnly(PhoneScreen, "/", true);
-  const PublicVerificationScreen = withPublicOnly(VerificationScreen, "/", true);
+  const GuardedCartRedirect = withAuthGuard(() => {
+    const [, setLocation] = useLocation();
+    useEffect(() => { setLocation('/checkout'); }, [setLocation]);
+    return null;
+  });
+
+  // Public auth pages - TestAuthPage handles its own redirects (for email verification flow)
+  const PublicAuthPage = withPublicOnly(AuthPage);
+  const PublicPhoneScreen = withPublicOnly(PhoneScreen);
+  const PublicVerificationScreen = withPublicOnly(VerificationScreen);
+
+  // Name screen - only accessible during signup flow
+  const GuardedNameScreen = withNeedsName(NameScreen);
 
   return (
     <Switch>
       <Route path="/" component={GuardedHomePage} />
+      <Route path="/test-auth" component={TestAuthPage} />
+      <Route path="/test-otp-password" component={TestOtpPasswordPage} />
       <Route path="/auth" component={PublicAuthPage} />
       <Route path="/phone" component={PublicPhoneScreen} />
       <Route path="/verification" component={PublicVerificationScreen} />
@@ -192,134 +207,49 @@ function Router() {
 }
 
 function App() {
-  // Skip splash and auth screens for testing - set to true to bypass
-  const SKIP_SPLASH_AND_AUTH = false;
-  // Always start with splash showing (will be controlled by useEffect)
   const [showSplash, setShowSplash] = useState(true);
   const [fadeOut, setFadeOut] = useState(false);
-  const [location, setLocation] = useLocation();
-  const hasNavigatedFromSplash = useRef(false);
-  const splashShown = useRef(false);
+  const [, setLocation] = useLocation();
+  const splashCompleted = useRef(false);
+  const { isAuthenticated, loading, initialized } = useAuth();
 
-  // Initialize bypass auth data if needed
+  // Force light theme only - ensure dark mode is never enabled
   useEffect(() => {
-    if (!BYPASS_AUTH || typeof window === "undefined") return;
+    document.documentElement.classList.remove('dark');
+    localStorage.setItem('theme', 'light');
+  }, []);
 
-    if (!localStorage.getItem("userId")) {
-      localStorage.setItem("userId", BYPASS_AUTH_USER_ID);
-    }
-
-    if (!localStorage.getItem("username")) {
-      localStorage.setItem("username", BYPASS_AUTH_USERNAME);
-    }
-
-    if (!localStorage.getItem("phone")) {
-      localStorage.setItem("phone", BYPASS_AUTH_PHONE);
-    }
-  }, [BYPASS_AUTH, BYPASS_AUTH_USER_ID, BYPASS_AUTH_USERNAME, BYPASS_AUTH_PHONE]);
-
-  // Handle skip splash and auth mode
+  // Handle splash screen
   useEffect(() => {
-    if (SKIP_SPLASH_AND_AUTH) {
-      setShowSplash(false);
-      const isAuthenticated = getIsAuthenticated();
-      if (isAuthenticated && (location === '/' || location === '/phone' || location === '/verification' || location === '/name' || location === '/auth')) {
-        setLocation('/', { replace: true });
-      } else if (!isAuthenticated && location === '/') {
-        setLocation('/phone', { replace: true });
-      }
-    }
-  }, [SKIP_SPLASH_AND_AUTH, location, setLocation]);
+    if (splashCompleted.current) return;
 
-  // Development mode - set to true to keep splash open for development
-  // Set to false when you want normal splash behavior (2 seconds then fade)
-  const DEV_MODE_SPLASH = false;
+    // Wait for auth to initialize
+    if (!initialized || loading) return;
 
-  // Handle splash screen display and navigation
-  useEffect(() => {
-    // If skip mode is enabled, don't show splash
-    if (SKIP_SPLASH_AND_AUTH) {
-      setShowSplash(false);
-      return;
-    }
-
-    // If splash has already been shown, don't show it again
-    if (splashShown.current || hasNavigatedFromSplash.current) {
-      if (showSplash) {
-        setShowSplash(false);
-      }
-      return;
-    }
-
-    // If splash is not showing, don't set up navigation
-    if (!showSplash) {
-      return;
-    }
-
-    // If user is on other pages (not onboarding routes), hide splash
-    if (location !== '/' && location !== '/phone' && location !== '/verification' && location !== '/name' && location !== '/auth') {
-      setShowSplash(false);
-      splashShown.current = true;
-      hasNavigatedFromSplash.current = true;
-      return;
-    }
-
-    // In dev mode, keep splash open so you can develop on it
-    if (DEV_MODE_SPLASH) {
-      // Splash stays open - you can manually hide it by clicking or pressing a key
-      const handleClick = () => {
-        if (!showSplash || splashShown.current) return;
-        splashShown.current = true;
-        hasNavigatedFromSplash.current = true;
-        setFadeOut(true);
-        setTimeout(() => {
-          setShowSplash(false);
-          // Always navigate to phone screen after splash
-          setLocation('/phone', { replace: true });
-        }, 500);
-      };
+    // Start fade out after 2 seconds
+    const timer = setTimeout(() => {
+      if (splashCompleted.current) return;
       
-      const handleKeyPress = (e: KeyboardEvent) => {
-        if (e.key === 'Escape' || e.key === 'Enter') {
-          if (!showSplash || splashShown.current) return;
-          handleClick();
+      setFadeOut(true);
+      
+      // After fade animation, hide splash and navigate
+      setTimeout(() => {
+        splashCompleted.current = true;
+        setShowSplash(false);
+        
+        // Simple navigation logic:
+        // - If authenticated → go to home
+        // - If not authenticated → go to auth page
+        if (isAuthenticated) {
+          setLocation('/', { replace: true });
+        } else {
+          setLocation('/test-auth', { replace: true });
         }
-      };
+      }, 500);
+    }, 2000);
 
-      // Add touch event for mobile/emulator
-      const handleTouch = () => {
-        if (!showSplash || splashShown.current) return;
-        handleClick();
-      };
-
-      window.addEventListener('click', handleClick);
-      window.addEventListener('touchstart', handleTouch);
-      window.addEventListener('keydown', handleKeyPress);
-
-      // Return cleanup - NO TIMER in dev mode!
-      return () => {
-        window.removeEventListener('click', handleClick);
-        window.removeEventListener('touchstart', handleTouch);
-        window.removeEventListener('keydown', handleKeyPress);
-      };
-    } else {
-      // Normal behavior: Show splash screen for 2 seconds, then navigate
-      const timer = setTimeout(() => {
-        if (!showSplash || splashShown.current) return;
-        splashShown.current = true;
-        hasNavigatedFromSplash.current = true;
-        setFadeOut(true);
-        // Remove from DOM after fade animation completes, then navigate
-        setTimeout(() => {
-          setShowSplash(false);
-          // Always navigate to phone screen after splash
-          setLocation('/phone', { replace: true });
-        }, 500); // Match transition duration
-      }, 2000);
-
-      return () => clearTimeout(timer);
-    }
-  }, [DEV_MODE_SPLASH, setLocation, showSplash, location]);
+    return () => clearTimeout(timer);
+  }, [initialized, loading, isAuthenticated, setLocation]);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -340,7 +270,3 @@ function App() {
 }
 
 export default App;
-
-
-
-// hello world
