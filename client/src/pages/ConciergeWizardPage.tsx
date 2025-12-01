@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -76,13 +75,6 @@ const getCuisineIcon = (iconName: string) => {
   return iconMap[iconName] || Utensils;
 };
 
-const toTitleCase = (value: string) =>
-  value
-    .split(/[_\s-]+/)
-    .filter(Boolean)
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-
 const MEAL_TYPES = [
   { value: "breakfast", label: "Breakfast", icon: "☕" },
   { value: "lunch", label: "Lunch", icon: "🍛" },
@@ -116,140 +108,15 @@ export default function ConciergeWizardPage() {
     categoryCounts: [],
   });
 
-  type SupabaseCuisineRow = {
-    id?: string;
-    name: string;
-    display_name?: string | null;
-    displayName?: string | null;
-    icon?: string | null;
-    display_order?: number | null;
-  };
-
-  type ConciergeCuisine = {
-    id?: string;
-    name: string;
-    displayName: string;
-    icon: string;
-  };
-
-  type SupabaseCategory = {
-    id: string;
-    name: string;
-    meal_type?: string;
-    mealType?: string;
-  };
-
-  // Fetch cuisines from Supabase
-  // const { data: cuisines = [], isLoading: cuisinesLoading } = useQuery<ConciergeCuisine[]>({
-  //   queryKey: ["supabase", "cuisines"],
-  //   queryFn: async () => {
-  //     const normalizeCuisine = (row: SupabaseCuisineRow): ConciergeCuisine => ({
-  //       id: row.id,
-  //       name: row.name,
-  //       displayName: row.displayName ?? row.display_name ?? toTitleCase(row.name),
-  //       icon: row.icon ?? "Utensils",
-  //     });
-
-  //     try {
-  //       const rows = await supabase.select<SupabaseCuisineRow>("cuisines", {
-  //         select: "id,name,display_name,icon,display_order",
-  //         order: "display_order.asc",
-  //       });
-
-  //       if (Array.isArray(rows) && rows.length > 0) {
-  //         return rows.map(normalizeCuisine);
-  //       }
-  //     } catch (error) {
-  //       console.warn("[Supabase] Falling back to derived cuisines", error);
-  //     }
-
-  //     // Fallback: derive cuisine list from dishes table when cuisines table is absent
-  //     try {
-  //       const dishRows = await supabase.select<{ cuisine: string | null }>("dishes", {
-  //         select: "cuisine",
-  //         order: "cuisine.asc",
-  //       });
-
-  //       const seen = new Set<string>();
-  //       const derived: ConciergeCuisine[] = [];
-
-  //       for (const row of dishRows) {
-  //         const cuisineName = row?.cuisine?.trim();
-  //         if (!cuisineName) continue;
-  //         if (seen.has(cuisineName)) continue;
-  //         seen.add(cuisineName);
-  //         derived.push(
-  //           normalizeCuisine({
-  //             name: cuisineName,
-  //           })
-  //         );
-  //       }
-
-  //       return derived;
-  //     } catch (fallbackError) {
-  //       console.error("[Supabase] Failed to derive cuisines from dishes", fallbackError);
-  //       return [] as ConciergeCuisine[];
-  //     }
-  //   },
-  // });
-
-  const { data: cuisines = [], isLoading: cuisinesLoading } = useQuery<ConciergeCuisine[]>({
-    queryKey: ["supabase", "cuisines"],
-    queryFn: async () => {
-      const normalizeCuisine = (row: SupabaseCuisineRow): ConciergeCuisine => ({
-        id: row.id,
-        name: row.name,
-        displayName: row.displayName ?? row.display_name ?? toTitleCase(row.name),
-        icon: row.icon ?? "Utensils",
-      });
-  
-      // Directly derive cuisines from the dishes table only
-      try {
-        const dishRows = await supabase.select<{ cuisine: string | null }>("dishes", {
-          select: "cuisine",
-          order: "cuisine.asc",
-        });
-  
-        const seen = new Set<string>();
-        const derived: ConciergeCuisine[] = [];
-  
-        for (const row of dishRows) {
-          const cuisineName = row?.cuisine?.trim();
-          if (!cuisineName || seen.has(cuisineName)) continue;
-          seen.add(cuisineName);
-          derived.push(
-            normalizeCuisine({
-              name: cuisineName,
-            }),
-          );
-        }
-  
-        return derived;
-      } catch (error) {
-        console.error("[Supabase] Failed to derive cuisines from dishes", error);
-        return [] as ConciergeCuisine[];
-      }
-    },
+  // Fetch cuisines from database
+  const { data: cuisines = [], isLoading: cuisinesLoading } = useQuery<any[]>({
+    queryKey: ['/api/cuisines'],
   });
 
-  // Fetch categories for the selected meal type from Supabase
-  const { data: categories = [], isLoading: categoriesLoading } = useQuery({
-    queryKey: ["supabase", "categories", preferences.mealType],
+  // Fetch categories for the selected meal type
+  const { data: categories = [], isLoading: categoriesLoading } = useQuery<any[]>({
+    queryKey: [`/api/categories/${preferences.mealType}`],
     enabled: !!preferences.mealType,
-    queryFn: async () => {
-      const rows = await supabase.select<SupabaseCategory>("categories", {
-        select: "id,name,meal_type,display_order",
-        order: "display_order.asc",
-        filter: preferences.mealType
-          ? { 'meal_type': `eq.${preferences.mealType}` }
-          : undefined,
-      });
-
-      return rows.map((row) => ({
-        ...row,
-        mealType: row.mealType ?? row.meal_type,
-      }));
-    },
   });
 
   const progress = (currentStep / STEPS.length) * 100;

@@ -93,6 +93,112 @@ export const addOns = pgTable("add_ons", {
   category: text("category").notNull(), // 'staff', 'entertainment', 'decor', 'equipment'
 });
 
+// MealBox Orders
+export const mealboxOrders = pgTable("mealbox_orders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  orderNumber: integer("order_number").notNull().unique(),
+  portions: text("portions").notNull(), // '3-portions', '5-portions', '6-portions', '8-portions'
+  mealPreference: text("meal_preference").notNull(), // 'veg', 'non-veg', 'mixed'
+  selectedMealType: text("selected_meal_type"), // 'breakfast', 'lunch', 'dinner', etc.
+  vegBoxes: integer("veg_boxes").notNull().default(0),
+  eggBoxes: integer("egg_boxes").notNull().default(0),
+  nonVegBoxes: integer("non_veg_boxes").notNull().default(0),
+  vegPlateSelections: text("veg_plate_selections"), // JSON array of selected dishes
+  eggPlateSelections: text("egg_plate_selections"), // JSON array of selected dishes
+  nonVegPlateSelections: text("non_veg_plate_selections"), // JSON array of selected dishes
+  selectedAddons: text("selected_addons"), // JSON array of addon IDs
+  subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
+  deliveryFee: decimal("delivery_fee", { precision: 10, scale: 2 }).notNull().default("0"),
+  tax: decimal("tax", { precision: 10, scale: 2 }).notNull().default("0"),
+  total: decimal("total", { precision: 10, scale: 2 }).notNull(),
+  deliveryDate: text("delivery_date"),
+  deliveryTime: text("delivery_time"),
+  addressId: varchar("address_id").references(() => addresses.id),
+  status: text("status").notNull().default('pending'),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Bulk Meal Orders
+export const bulkMealOrders = pgTable("bulk_meal_orders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  orderNumber: integer("order_number").notNull().unique(),
+  items: text("items").notNull(), // JSON array of {dishId, quantity, price}
+  subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
+  gst: decimal("gst", { precision: 10, scale: 2 }).notNull().default("0"),
+  platformFee: decimal("platform_fee", { precision: 10, scale: 2 }).notNull().default("0"),
+  packagingFee: decimal("packaging_fee", { precision: 10, scale: 2 }).notNull().default("0"),
+  total: decimal("total", { precision: 10, scale: 2 }).notNull(),
+  deliveryDate: text("delivery_date"),
+  deliveryTime: text("delivery_time"),
+  addressId: varchar("address_id").references(() => addresses.id),
+  status: text("status").notNull().default('pending'),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Catering Orders
+export const cateringOrders = pgTable("catering_orders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id), // Optional - can be guest order
+  orderNumber: integer("order_number").notNull().unique(),
+  eventType: text("event_type").notNull(),
+  guestCount: integer("guest_count").notNull(),
+  vegCount: integer("veg_count").default(0),
+  nonVegCount: integer("non_veg_count").default(0),
+  eggCount: integer("egg_count").default(0),
+  eventDate: text("event_date").notNull(),
+  eventTime: text("event_time"),
+  mealTimes: text("meal_times"), // JSON array of meal times
+  dietaryTypes: text("dietary_types"), // JSON array
+  cuisines: text("cuisines"), // JSON array
+  cuisinePreferences: text("cuisine_preferences"), // JSON array
+  budgetMin: decimal("budget_min", { precision: 10, scale: 2 }),
+  budgetMax: decimal("budget_max", { precision: 10, scale: 2 }),
+  addOnIds: text("add_on_ids"), // JSON array
+  name: text("name").notNull(),
+  email: text("email"),
+  phone: text("phone").notNull(),
+  message: text("message"),
+  addressId: varchar("address_id").references(() => addresses.id),
+  status: text("status").notNull().default('pending'),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Corporate Orders
+export const corporateOrders = pgTable("corporate_orders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id), // Optional - can be guest order
+  orderNumber: integer("order_number").notNull().unique(),
+  companyName: text("company_name").notNull(),
+  contactPerson: text("contact_person").notNull(),
+  email: text("email"),
+  phone: text("phone").notNull(),
+  numberOfPeople: integer("number_of_people").notNull(),
+  vegCount: integer("veg_count").default(0),
+  nonVegCount: integer("non_veg_count").default(0),
+  eggCount: integer("egg_count").default(0),
+  eventType: text("event_type").notNull(),
+  budgetMin: decimal("budget_min", { precision: 10, scale: 2 }),
+  budgetMax: decimal("budget_max", { precision: 10, scale: 2 }),
+  eventDate: text("event_date").notNull(),
+  eventTime: text("event_time"),
+  additionalServices: text("additional_services"), // JSON array
+  message: text("message"),
+  addressId: varchar("address_id").references(() => addresses.id),
+  status: text("status").notNull().default('pending'),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Concierge Preferences
+export const conciergePreferences = pgTable("concierge_preferences", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  preferences: text("preferences").notNull(), // JSON object with user preferences
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 // Insert Schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -136,6 +242,32 @@ export const insertAddOnSchema = createInsertSchema(addOns).omit({
   id: true,
 });
 
+export const insertMealboxOrderSchema = createInsertSchema(mealboxOrders).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertBulkMealOrderSchema = createInsertSchema(bulkMealOrders).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCateringOrderSchema = createInsertSchema(cateringOrders).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCorporateOrderSchema = createInsertSchema(corporateOrders).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertConciergePreferenceSchema = createInsertSchema(conciergePreferences).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -163,3 +295,18 @@ export type CartItem = typeof cartItems.$inferSelect;
 
 export type InsertAddOn = z.infer<typeof insertAddOnSchema>;
 export type AddOn = typeof addOns.$inferSelect;
+
+export type InsertMealboxOrder = z.infer<typeof insertMealboxOrderSchema>;
+export type MealboxOrder = typeof mealboxOrders.$inferSelect;
+
+export type InsertBulkMealOrder = z.infer<typeof insertBulkMealOrderSchema>;
+export type BulkMealOrder = typeof bulkMealOrders.$inferSelect;
+
+export type InsertCateringOrder = z.infer<typeof insertCateringOrderSchema>;
+export type CateringOrder = typeof cateringOrders.$inferSelect;
+
+export type InsertCorporateOrder = z.infer<typeof insertCorporateOrderSchema>;
+export type CorporateOrder = typeof corporateOrders.$inferSelect;
+
+export type InsertConciergePreference = z.infer<typeof insertConciergePreferenceSchema>;
+export type ConciergePreference = typeof conciergePreferences.$inferSelect;

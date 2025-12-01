@@ -22,7 +22,7 @@ export async function apiRequest(
   const route = url.split('/').filter(Boolean);
   
   // Auth routes and other backend-only routes should always go to backend
-  const backendOnlyRoutes = ['api/auth', 'api/orders', 'api/cart', 'api/corporate', 'api/figma', 'api/catering-orders'];
+  const backendOnlyRoutes = ['api/auth', 'api/orders', 'api/cart', 'api/corporate', 'api/figma', 'api/catering-orders', 'api/user', 'api/addresses'];
   const isBackendRoute = backendOnlyRoutes.some(backendRoute => 
     url.includes(backendRoute)
   );
@@ -127,9 +127,42 @@ export const getQueryFn = <T>(options: {
   const { on401: unauthorizedBehavior } = options;
   return async ({ queryKey }) => {
     try {
-      // Use direct Supabase REST API
+      const route = queryKey as string[];
+      const url = route.join("/");
+      
+      // Check if this is a backend-only route (skip Supabase mapping)
+      const backendOnlyRoutes = ['api/auth', 'api/orders', 'api/cart', 'api/corporate', 'api/figma', 'api/catering-orders', 'api/user', 'api/addresses'];
+      const isBackendRoute = backendOnlyRoutes.some(backendRoute => 
+        url.includes(backendRoute)
+      );
+      
+      // If it's a backend route, skip Supabase and go directly to backend
+      if (isBackendRoute) {
+        const apiUrl = getApiUrl(url);
+        const res = await fetch(apiUrl, {
+          credentials: 'include',
+        });
+
+        console.log('[API Response]', url, 'Status:', res.status, 'OK:', res.ok);
+
+        if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+          return null as T;
+        }
+
+        await throwIfResNotOk(res);
+        const data = await res.json();
+        
+        if (Array.isArray(data)) {
+          console.log('[API Data]', url, 'Items:', data.length, 'Sample:', JSON.stringify(data.slice(0, 2)));
+        } else {
+          console.log('[API Data]', url, 'Data:', JSON.stringify(data));
+        }
+        
+        return data as T;
+      }
+      
+      // Use direct Supabase REST API for other routes
       if (USE_DIRECT_SUPABASE) {
-        const route = queryKey as string[];
         // Handle cart locally: return null to trigger localStorage usage in UI
         if (route[0] === '/api/cart' || route[1] === 'cart') {
           return null as T;
@@ -187,9 +220,9 @@ export const getQueryFn = <T>(options: {
         return result as T;
       }
       
-      // Fallback: use backend API
-      const url = queryKey.join("/");
-      const res = await fetch(url, {
+      // Fallback: use backend API (url is already declared above)
+      const apiUrl = getApiUrl(url);
+      const res = await fetch(apiUrl, {
         credentials: 'include',
       });
 

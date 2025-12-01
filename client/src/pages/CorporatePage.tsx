@@ -1099,8 +1099,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { corporateOrderService } from "@/lib/supabase-service";
 import { ArrowLeft, Building2, Users, Calendar, Mail, Phone, MapPin, ShoppingCart, UtensilsCrossed, Package, Truck, Clock } from "lucide-react";
 import FloatingNav from "@/pages/FloatingNav";
+import ContinueOrderBanner from "@/pages/ContinueOrderBanner";
 import {
   Carousel,
   CarouselContent,
@@ -1167,7 +1169,7 @@ export default function CorporateOrder() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.companyName || !formData.contactPerson || !formData.phone || !formData.eventDate) {
@@ -1179,8 +1181,41 @@ export default function CorporateOrder() {
       return;
     }
 
-    // Navigate to thank you page
-    setLocation("/corporate-thank-you");
+    try {
+      // Create corporate order
+      await corporateOrderService.create({
+        companyName: formData.companyName,
+        contactPerson: formData.contactPerson,
+        email: formData.email || undefined,
+        phone: formData.phone,
+        numberOfPeople: parseInt(formData.numberOfPeople) || totalPeople,
+        vegCount: parseInt(formData.veg) || 0,
+        nonVegCount: parseInt(formData.nonVeg) || 0,
+        eggCount: parseInt(formData.egg) || 0,
+        eventType: formData.eventType,
+        budgetMin: formData.budgetMin ? parseFloat(formData.budgetMin) : undefined,
+        budgetMax: formData.budgetMax ? parseFloat(formData.budgetMax) : undefined,
+        eventDate: formData.eventDate,
+        eventTime: formData.eventTime || undefined,
+        additionalServices: undefined, // Not in form
+        message: formData.message || undefined,
+        addressId: undefined, // Not in form
+      });
+      
+      toast({
+        title: "Order Created!",
+        description: "Your corporate order has been submitted successfully.",
+      });
+      
+      setLocation("/corporate-thank-you");
+    } catch (error: any) {
+      console.error("Error creating corporate order:", error);
+      toast({
+        variant: "destructive",
+        title: "Order Failed",
+        description: error.message || "Failed to submit corporate order. Please try again.",
+      });
+    }
   };
 
   return (
@@ -1250,7 +1285,7 @@ export default function CorporateOrder() {
           </button>
 
           <button
-            onClick={() => setLocation("/meal-box")}
+            onClick={() => setLocation("/mealbox")}
             data-testid="service-tab-mealbox"
             className="flex flex-col items-center justify-center p-3 transition-all hover-elevate active-elevate-2 aspect-square"
             style={{
@@ -1713,6 +1748,8 @@ export default function CorporateOrder() {
         </Card>
       </div>
 
+      {/* Continue Order Banner */}
+      <ContinueOrderBanner />
       <FloatingNav activeTab={activeTab} onTabChange={handleTabChange} />
     </div>
   );

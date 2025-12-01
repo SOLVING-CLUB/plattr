@@ -919,9 +919,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { cateringOrderService } from "@/lib/supabase-service";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Building2, Users, Calendar, Mail, Phone, MapPin, ShoppingCart, UtensilsCrossed, Package, Truck, Clock, X, ChevronDown } from "lucide-react";
 import FloatingNav from "@/pages/FloatingNav";
+import ContinueOrderBanner from "@/pages/ContinueOrderBanner";
 import {
   Carousel,
   CarouselContent,
@@ -1008,7 +1010,7 @@ export default function CateringOrder() {
     if (tab === "home") {
       setLocation("/");
     } else if (tab === "menu") {
-      setLocation("/categories/lunch-dinner");
+      setLocation("/bulk-meals");
     } else if (tab === "profile") {
       setLocation("/profile");
     }
@@ -1050,7 +1052,7 @@ export default function CateringOrder() {
     { value: "multi-cuisine", label: "Multi-Cuisine" }
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.eventType || !formData.phone || !formData.eventDate) {
@@ -1062,8 +1064,44 @@ export default function CateringOrder() {
       return;
     }
 
-    // Navigate to thank you page
-    setLocation("/catering-thank-you");
+    try {
+      // Create catering order
+      await cateringOrderService.create({
+        eventType: formData.eventType,
+        guestCount: parseInt(formData.numberOfPeople) || totalPeople || 0,
+        vegCount: parseInt(formData.veg) || 0,
+        nonVegCount: parseInt(formData.nonVeg) || 0,
+        eggCount: parseInt(formData.egg) || 0,
+        eventDate: formData.eventDate,
+        eventTime: formData.eventTime || undefined,
+        mealTimes: formData.mealTimes.length > 0 ? formData.mealTimes : undefined,
+        dietaryTypes: undefined, // Not in form
+        cuisines: undefined, // Not in form
+        cuisinePreferences: formData.cuisinePreferences.length > 0 ? formData.cuisinePreferences : undefined,
+        budgetMin: formData.budgetMin ? parseFloat(formData.budgetMin) : undefined,
+        budgetMax: formData.budgetMax ? parseFloat(formData.budgetMax) : undefined,
+        addOnIds: undefined, // Not in form
+        name: "Guest", // Default name
+        email: formData.email || undefined,
+        phone: formData.phone,
+        message: undefined, // Not in form
+        addressId: undefined, // Not in form
+      });
+      
+      toast({
+        title: "Order Created!",
+        description: "Your catering inquiry has been submitted successfully.",
+      });
+      
+      setLocation("/catering-thank-you");
+    } catch (error: any) {
+      console.error("Error creating catering order:", error);
+      toast({
+        variant: "destructive",
+        title: "Order Failed",
+        description: error.message || "Failed to submit catering order. Please try again.",
+      });
+    }
   };
 
   return (
@@ -1146,7 +1184,7 @@ export default function CateringOrder() {
           </button>
 
           <button
-            onClick={() => setLocation("/meal-box")}
+            onClick={() => setLocation("/mealbox")}
             data-testid="service-tab-mealbox"
             className="flex flex-col items-center justify-center p-3 transition-all hover-elevate active-elevate-2 aspect-square"
             style={{
@@ -1743,6 +1781,8 @@ export default function CateringOrder() {
         </Card>
       </div>
 
+      {/* Continue Order Banner */}
+      <ContinueOrderBanner />
       <FloatingNav activeTab={activeTab} onTabChange={handleTabChange} />
     </div>
   );

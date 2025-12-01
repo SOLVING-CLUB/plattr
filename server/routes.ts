@@ -1491,8 +1491,199 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ========== USER PROFILE ROUTES ==========
+  
+  // Get current user profile
+  app.get("/api/user/profile", handleSupabaseAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      let user: any = null;
+
+      if (db) {
+        const userResult = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, userId))
+          .limit(1);
+
+        if (userResult.length > 0) {
+          user = userResult[0];
+        }
+      } else if (useRestAPI && supabase) {
+        const userResult = await supabase.select("users", {
+          filter: { id: `eq.${userId}` },
+          limit: 1,
+        }, true); // Use service role to bypass RLS
+
+        if (userResult && userResult.length > 0) {
+          user = userResult[0];
+        }
+      } else {
+        return res.status(500).json({ error: "Database connection not available" });
+      }
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      res.json({
+        id: user.id,
+        username: user.username,
+        phone: user.phone,
+        email: user.email,
+        isVerified: user.isVerified || user.is_verified,
+      });
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+      res.status(500).json({ error: "Failed to fetch user profile" });
+    }
+  });
+
+  // Update user profile
+  app.put("/api/user/profile", handleSupabaseAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const schema = z.object({
+        username: z.string().min(2, "Username must be at least 2 characters").optional(),
+        email: z.string().email("Invalid email address").optional(),
+        phone: z.string().regex(/^[0-9]{10}$/, "Phone must be 10 digits").optional(),
+      });
+
+      const data = schema.parse(req.body);
+
+      // Check if username is already taken (if provided)
+      if (data.username) {
+        if (db) {
+          const existingUser = await db
+            .select()
+            .from(users)
+            .where(and(eq(users.username, data.username), sql`${users.id} != ${userId}`))
+            .limit(1);
+          
+          if (existingUser.length > 0) {
+            return res.status(400).json({ error: "Username already taken" });
+          }
+        } else if (useRestAPI && supabase) {
+          const existingUser = await supabase.select("users", {
+            filter: { username: `eq.${data.username}` },
+            limit: 1,
+          }, true);
+          
+          if (existingUser && existingUser.length > 0 && existingUser[0].id !== userId) {
+            return res.status(400).json({ error: "Username already taken" });
+          }
+        }
+      }
+
+      // Check if phone is already taken (if provided)
+      if (data.phone) {
+        if (db) {
+          const existingUser = await db
+            .select()
+            .from(users)
+            .where(and(eq(users.phone, data.phone), sql`${users.id} != ${userId}`))
+            .limit(1);
+          
+          if (existingUser.length > 0) {
+            return res.status(400).json({ error: "Phone number already registered" });
+          }
+        } else if (useRestAPI && supabase) {
+          const existingUser = await supabase.select("users", {
+            filter: { phone: `eq.${data.phone}` },
+            limit: 1,
+          }, true);
+          
+          if (existingUser && existingUser.length > 0 && existingUser[0].id !== userId) {
+            return res.status(400).json({ error: "Phone number already registered" });
+          }
+        }
+      }
+
+      const updateData: any = {};
+      if (data.username) updateData.username = data.username;
+      if (data.email) updateData.email = data.email;
+      if (data.phone) updateData.phone = data.phone;
+
+      let updatedUser: any = null;
+
+      if (db) {
+        const [result] = await db
+          .update(users)
+          .set(updateData)
+          .where(eq(users.id, userId))
+          .returning();
+        updatedUser = result;
+      } else if (useRestAPI && supabase) {
+        // For REST API, we need to use service role to update
+        const result = await supabase.update("users", updateData, {
+          filter: { id: `eq.${userId}` },
+        }, true); // Use service role
+        updatedUser = Array.isArray(result) ? result[0] : result;
+      } else {
+        return res.status(500).json({ error: "Database connection not available" });
+      }
+
+      if (!updatedUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      res.json({
+        id: updatedUser.id,
+        username: updatedUser.username,
+        phone: updatedUser.phone,
+        email: updatedUser.email,
+        isVerified: updatedUser.isVerified || updatedUser.is_verified,
+      });
+    } catch (error) {
+      console.error("Error updating user profile:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: error.errors[0].message });
+        return;
+      }
+      res.status(500).json({ error: "Failed to update user profile" });
+    }
+  });
+
+  // ========== ADDRESS ROUTES ==========
+  
+  // Get all addresses for current user
+  app.get("/api/addresses", handleSupabaseAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      if (!db) {
+        return res.status(500).json({ error: "Database connection not available" });
+      }
+
+      const userAddresses = await db
+        .select()
+        .from(addresses)
+        .where(eq(addresses.userId, userId))
+        .orderBy(addresses.isDefault);
+
+      res.json(userAddresses);
+    } catch (error) {
+      console.error("Error fetching addresses:", error);
+      res.status(500).json({ error: "Failed to fetch addresses" });
+    }
+  });
+
   // Create address
-  app.post("/api/addresses", async (req, res) => {
+  app.post("/api/addresses", handleSupabaseAuth, async (req, res) => {
     try {
       const userId = req.session.userId;
       
@@ -1540,6 +1731,172 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
       res.status(500).json({ error: "Failed to create address" });
+    }
+  });
+
+  // Update address
+  app.put("/api/addresses/:id", handleSupabaseAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      const { id } = req.params;
+      
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      if (!db) {
+        return res.status(500).json({ error: "Database connection not available" });
+      }
+
+      // Verify address belongs to user
+      const existingAddress = await db
+        .select()
+        .from(addresses)
+        .where(and(eq(addresses.id, id), eq(addresses.userId, userId)))
+        .limit(1);
+
+      if (existingAddress.length === 0) {
+        return res.status(404).json({ error: "Address not found or access denied" });
+      }
+
+      const schema = z.object({
+        label: z.string().min(1, "Label is required").optional(),
+        address: z.string().min(10, "Please enter a complete address").optional(),
+        landmark: z.string().nullable().optional(),
+        isDefault: z.boolean().optional(),
+      });
+
+      const data = schema.parse(req.body);
+
+      // If this is set as default, unset other defaults
+      if (data.isDefault && db) {
+        await db
+          .update(addresses)
+          .set({ isDefault: false })
+          .where(and(eq(addresses.userId, userId), sql`${addresses.id} != ${id}`));
+      }
+
+      const updateData: any = {};
+      if (data.label !== undefined) updateData.label = data.label;
+      if (data.address !== undefined) updateData.address = data.address;
+      if (data.landmark !== undefined) updateData.landmark = data.landmark;
+      if (data.isDefault !== undefined) updateData.isDefault = data.isDefault;
+
+      const [updatedAddress] = await db
+        .update(addresses)
+        .set(updateData)
+        .where(eq(addresses.id, id))
+        .returning();
+
+      res.json(updatedAddress);
+    } catch (error) {
+      console.error("Error updating address:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: error.errors[0].message });
+        return;
+      }
+      res.status(500).json({ error: "Failed to update address" });
+    }
+  });
+
+  // Delete address
+  app.delete("/api/addresses/:id", handleSupabaseAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      const { id } = req.params;
+      
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      if (!db) {
+        return res.status(500).json({ error: "Database connection not available" });
+      }
+
+      // Verify address belongs to user
+      const existingAddress = await db
+        .select()
+        .from(addresses)
+        .where(and(eq(addresses.id, id), eq(addresses.userId, userId)))
+        .limit(1);
+
+      if (existingAddress.length === 0) {
+        return res.status(404).json({ error: "Address not found or access denied" });
+      }
+
+      await db.delete(addresses).where(eq(addresses.id, id));
+
+      res.json({ success: true, message: "Address deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting address:", error);
+      res.status(500).json({ error: "Failed to delete address" });
+    }
+  });
+
+  // ========== ORDER ROUTES ==========
+  
+  // Get all orders for current user
+  app.get("/api/orders", handleSupabaseAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      if (!db) {
+        return res.status(500).json({ error: "Database connection not available" });
+      }
+
+      // Fetch all orders for user with address info
+      const userOrders = await db
+        .select({
+          id: orders.id,
+          orderNumber: orders.orderNumber,
+          subtotal: orders.subtotal,
+          deliveryFee: orders.deliveryFee,
+          tax: orders.tax,
+          total: orders.total,
+          deliveryDate: orders.deliveryDate,
+          deliveryTime: orders.deliveryTime,
+          status: orders.status,
+          createdAt: orders.createdAt,
+          addressLabel: addresses.label,
+          address: addresses.address,
+        })
+        .from(orders)
+        .innerJoin(addresses, eq(orders.addressId, addresses.id))
+        .where(eq(orders.userId, userId))
+        .orderBy(sql`${orders.createdAt} DESC`);
+
+      // For each order, fetch order items
+      const ordersWithItems = await Promise.all(
+        userOrders.map(async (order) => {
+          const items = await db
+            .select({
+              id: orderItems.id,
+              quantity: orderItems.quantity,
+              price: orderItems.price,
+              dishId: dishes.id,
+              dishName: dishes.name,
+              dishImageUrl: dishes.imageUrl,
+              dishDietaryType: dishes.dietaryType,
+            })
+            .from(orderItems)
+            .innerJoin(dishes, eq(orderItems.dishId, dishes.id))
+            .where(eq(orderItems.orderId, order.id));
+
+          return {
+            ...order,
+            items,
+          };
+        })
+      );
+
+      res.json(ordersWithItems);
+    } catch (error) {
+      console.error("Error fetching orders:", error);
+      res.status(500).json({ error: "Failed to fetch orders" });
     }
   });
 

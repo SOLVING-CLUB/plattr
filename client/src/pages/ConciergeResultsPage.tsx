@@ -1,51 +1,14 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { Sparkles, ShoppingCart, ArrowLeft, Loader2, TrendingUp, Users, DollarSign } from "lucide-react";
 import { getSupabaseImageUrl } from "@/lib/supabase";
-import { SupabaseQueryOptions, supabase } from "@/lib/supabase-client";
-
-const CATEGORY_NAME_MAP: Record<string, string> = {
-  beverages: "Beverages",
-  salads: "Salads",
-  bakery: "Bakery",
-  breakfast: "Breakfast",
-  snacks: "Snacks",
-  starters: "Starters",
-  desserts: "Desserts",
-  sweets: "Sweets",
-  "main-course": "Main Course",
-  main_course: "Main Course",
-  soup: "Soups",
-  sides: "Sides",
-  "sides-and-accompaniments": "Sides & Accompaniments",
-  chaats: "Chaats",
-  biryani: "Biryani",
-  "rice-items": "Rice Items",
-  "breads-curries": "Breads & Curries",
-  "baked-snacks": "Baked Snacks",
-  "fried-snacks": "Fried Snacks",
-  "south-indian-tiffins": "South Indian Tiffins",
-  "north-indian-tiffins": "North Indian Tiffins",
-  "quick-bites": "Quick Bites",
-  aftermeal: "After Meal",
-};
-
-const formatCategoryName = (categoryId?: string | null) => {
-  if (!categoryId) return "Chef's Picks";
-  return (
-    CATEGORY_NAME_MAP[categoryId] ||
-    categoryId
-      .split("-")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(" ")
-  );
-};
 
 interface Dish {
   id: string;
@@ -55,13 +18,10 @@ interface Dish {
   imageUrl: string;
   mealType: string[];
   categoryId: string | null;
-  categoryName: string;
   spiceLevel: string | null;
   dietaryType: string | null;
   dishType: string | null;
   recommendedCategory?: string;
-  cuisine?: string | null;
-  isAvailable: boolean;
 }
 
 interface RecommendationResponse {
@@ -110,236 +70,21 @@ export default function ConciergeResultsPage() {
     const generateRecommendations = async () => {
       try {
         setIsGenerating(true);
+        const response = await fetch("/api/concierge/recommendations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(preferences),
+          credentials: "include",
+        });
 
-        const options: SupabaseQueryOptions = {
-          select:
-            "id,name,description,price,least_price,image_url,meal_type,category_id,is_available,spice_level,dietary_type,dish_type,cuisine",
-          order: "price.asc",
-        };
-
-        const rows = await supabase.select<{
-          id: string;
-          name: string;
-          description?: string | null;
-          price?: string | number | null;
-          least_price?: string | number | null;
-          image_url?: string | null;
-          meal_type?: string[] | string | null;
-          category_id?: string | null;
-          is_available?: boolean | null;
-          spice_level?: string | null;
-          dietary_type?: string | null;
-          dish_type?: string | null;
-          cuisine?: string | null;
-        }>("dishes", options);
-
-        const normalizeMealType = (value: string[] | string | null | undefined): string[] => {
-          if (Array.isArray(value)) return value;
-          if (typeof value === "string" && value.length > 0) {
-            return value
-              .replace(/[{}]/g, "")
-              .split(",")
-              .map((item) => item.trim())
-              .filter(Boolean);
-          }
-          return [];
-        };
-
-        const allDishes: Dish[] = rows.map((row) => ({
-          id: row.id,
-          name: row.name,
-          description: row.description ?? "",
-          price: row.price != null ? String(row.price) : "0",
-          imageUrl: row.image_url ?? "",
-          mealType: normalizeMealType(row.meal_type),
-          categoryId: row.category_id ?? null,
-          categoryName: formatCategoryName(row.category_id),
-          spiceLevel: row.spice_level ?? null,
-          dietaryType: row.dietary_type ?? null,
-          dishType: row.dish_type ?? null,
-          cuisine: row.cuisine ?? null,
-          isAvailable: row.is_available ?? true,
-          recommendedCategory: undefined,
-        }));
-
-        const categoryIds = Array.from(
-          new Set(
-            allDishes
-              .map((dish) => dish.categoryId)
-              .filter((value): value is string => Boolean(value))
-          )
-        );
-
-        if (categoryIds.length > 0) {
-          const categoryRows = await supabase.select<{ id: string; name: string | null }>(
-            "categories",
-            {
-              select: "id,name",
-              filter: { id: `in.(${categoryIds.join(",")})` },
-            }
-          );
-
-          const categoryMap: Record<string, string> = {};
-          categoryRows.forEach((row) => {
-            categoryMap[row.id] = row.name?.trim() || formatCategoryName(row.id);
-          });
-
-          allDishes.forEach((dish) => {
-            if (dish.categoryId) {
-              dish.categoryName = categoryMap[dish.categoryId] || formatCategoryName(dish.categoryId);
-            }
-          });
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || "Failed to generate recommendations");
         }
 
-        const matchesMealType = (dish: Dish) => {
-          if (!preferences.mealType) return true;
-
-          const preference = preferences.mealType.toLowerCase();
-          const preferenceAliases: Record<string, string[]> = {
-            breakfast: ["breakfast", "tiffins"],
-            lunch: ["lunch", "lunch-dinner", "lunch & dinner", "main course"],
-            dinner: ["dinner", "lunch-dinner", "lunch & dinner", "main course"],
-            snacks: ["snacks", "quick bites", "appetizers"],
-          };
-
-          const allowedValues = preferenceAliases[preference] || [preference];
-
-          return dish.mealType.some((type) => {
-            const normalizedType = type.toLowerCase();
-            return allowedValues.some((allowed) =>
-              normalizedType.includes(allowed)
-            );
-          });
-        };
-
-        const matchesCuisine = (dish: Dish) => {
-          if (!preferences.cuisinePreferences || preferences.cuisinePreferences.length === 0) {
-            return true;
-          }
-          const dishCuisine = dish.cuisine?.toLowerCase() ?? "";
-          return preferences.cuisinePreferences.some((pref: string) =>
-            dishCuisine.includes(pref.toLowerCase())
-          );
-        };
-
-        const matchesDietary = (dish: Dish) => {
-          const pref = preferences.dietaryPreference;
-          if (!pref || pref === "all") return true;
-          const dishType = dish.dietaryType?.toLowerCase() ?? "";
-          if (pref === "veg") return dishType === "veg";
-          if (pref === "non-veg") return dishType === "non-veg";
-          if (pref === "egg") return dishType === "egg";
-          return true;
-        };
-
-        const filtered = allDishes
-          .filter((dish) => dish.isAvailable !== false)
-          .filter(matchesMealType)
-          .filter(matchesCuisine)
-          .filter(matchesDietary);
-
-        const MAX_RECOMMENDATIONS = 12;
-        const selection: Dish[] = [];
-        let runningTotal = 0;
-
-        const sorted = filtered.sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
-
-        for (const dish of sorted) {
-          const price = parseFloat(dish.price || "0");
-          if (Number.isNaN(price)) continue;
-
-          if (preferences.budget && runningTotal + price > preferences.budget && selection.length >= 6) {
-            continue;
-          }
-
-          selection.push({
-            ...dish,
-            recommendedCategory: dish.dishType ?? dish.categoryName ?? undefined,
-          });
-          runningTotal += price;
-
-          if (selection.length >= MAX_RECOMMENDATIONS) {
-            break;
-          }
-        }
-
-        const chosen = selection.length > 0 ? selection : sorted.slice(0, Math.min(6, sorted.length));
-
-        const categoryGroups = chosen.reduce<Record<string, Dish[]>>((acc, dish) => {
-          const key = dish.categoryName || dish.recommendedCategory || "Chef's Picks";
-          if (!acc[key]) acc[key] = [];
-          acc[key].push(dish);
-          return acc;
-        }, {});
-
-        const totalEstimatedCost = chosen.reduce((sum, dish) => {
-          const price = parseFloat(dish.price || "0");
-          return sum + (Number.isFinite(price) ? price : 0);
-        }, 0);
-
-        const estimatedCostPerPerson = totalEstimatedCost / Math.max(1, preferences.numberOfPax || 1);
-
-        let budgetStatus: RecommendationResponse["budgetStatus"] = null;
-        let aiBudgetNote: RecommendationResponse["aiBudgetNote"] = null;
-
-        if (preferences.budget) {
-          if (totalEstimatedCost <= preferences.budget) {
-            budgetStatus = "within_budget";
-            aiBudgetNote = "This menu stays within your stated budget.";
-          } else {
-            budgetStatus = "over_budget";
-            aiBudgetNote = "This selection exceeds your stated budget. Consider removing a premium dish.";
-          }
-        }
-
-        const cuisineSummary = preferences.cuisinePreferences?.length
-          ? preferences.cuisinePreferences.join(", ")
-          : "a variety of cuisines";
-
-        const highlightCategories = Object.entries(categoryGroups)
-          .sort((a, b) => b[1].length - a[1].length)
-          .slice(0, 3)
-          .map(([categoryName, dishes]) => {
-            const highlights = dishes
-              .slice(0, 2)
-              .map((dish) => dish.name)
-              .join(" and ");
-            return `${categoryName.toLowerCase()} such as ${highlights}`;
-          });
-
-        const highlightSentence = highlightCategories.length
-          ? `Highlights include ${highlightCategories.join(", ")}.`
-          : "Highlights include chef-curated favourites that balance flavours across the menu.";
-
-        const aiSummary = `I've curated ${chosen.length} dishes perfect for your ${
-          preferences.eventType || "celebration"
-        }, celebrating ${cuisineSummary.toLowerCase()} traditions with ${
-          preferences.dietaryPreference || "mixed"
-        } options. ${highlightSentence}`;
-
-        const recommendationPayload: RecommendationResponse = {
-          sessionId: typeof crypto !== "undefined" && "randomUUID" in crypto
-            ? crypto.randomUUID()
-            : `supabase-${Math.random().toString(36).slice(2)}`,
-          recommendations: chosen,
-          totalEstimatedCost,
-          estimatedCostPerPerson,
-          preferences: {
-            cuisinePreference: cuisineSummary,
-            numberOfPax: preferences.numberOfPax,
-            eventType: preferences.eventType,
-            budget: preferences.budget,
-            mealType: preferences.mealType,
-            spiceLevel: preferences.dietaryPreference,
-          },
-          aiSummary,
-          budgetStatus,
-          aiBudgetNote,
-        };
-
-        setRecommendations(recommendationPayload);
+        const data: RecommendationResponse = await response.json();
+        setRecommendations(data);
       } catch (error: any) {
-        console.error("[Supabase] concierge recommendations failed", error);
         toast({
           title: "Error",
           description: error.message || "Failed to generate recommendations",
@@ -415,8 +160,9 @@ export default function ConciergeResultsPage() {
   }
 
   // Group dishes by the category name provided by webhook
-  const groupedDishes = recommendations.recommendations.reduce((acc, dish: Dish) => {
-    const categoryName = dish.categoryName || dish.recommendedCategory || dish.dishType || 'Chef\'s Picks';
+  const groupedDishes = recommendations.recommendations.reduce((acc, dish: any) => {
+    // Use recommendedCategory if available (from webhook), otherwise fall back to dishType
+    const categoryName = dish.recommendedCategory || dish.dishType || 'Other';
     if (!acc[categoryName]) acc[categoryName] = [];
     acc[categoryName].push(dish);
     return acc;
@@ -515,7 +261,7 @@ export default function ConciergeResultsPage() {
 
           {/* Budget Note from AI */}
           {recommendations.aiBudgetNote && (
-            <Card className="mb-6 border-orange-200 bg-orange-50/50">
+            <Card className="mb-6 border-orange-200 bg-orange-50/50 dark:bg-orange-950/20 dark:border-orange-900">
               <CardContent className="p-4">
                 <div className="flex items-start gap-3">
                   <DollarSign className="w-5 h-5 text-orange-600 mt-0.5 flex-shrink-0" />

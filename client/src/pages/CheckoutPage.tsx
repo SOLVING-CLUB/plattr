@@ -10,7 +10,9 @@ import OrderSummaryCard from "@/components/OrderSummaryCard";
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { getSupabaseImageUrl } from "@/lib/supabase";
-import { apiRequest, queryClient, getQueryFn } from "@/lib/queryClient";
+import { addressService } from "@/lib/supabase-service";
+import { supabaseAuth } from "@/lib/supabase-auth";
+import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { cartStorage } from "@/lib/cartStorage";
 import { useGoBack } from "@/hooks/useGoBack";
@@ -108,40 +110,27 @@ export default function CheckoutPage() {
 
       // For authenticated users, create the actual order
       // First, create the address
-      const addressResponse = await apiRequest('POST', '/api/addresses', {
+      const address = await addressService.create({
         label: addressLabel,
         address: deliveryAddress,
         landmark: landmark || null,
         isDefault: false,
       });
-      
-      if (!addressResponse.ok) {
-        const errorData = await addressResponse.json();
-        throw new Error(errorData.error || 'Failed to create address');
-      }
-      
-      const addressData = await addressResponse.json();
-      const newAddressId = addressData.id;
 
       // Then create the order with the new address
-      const orderResponse = await apiRequest('POST', '/api/orders', {
-        addressId: newAddressId,
+      const order = await orderService.create(
+        address.id,
         deliveryDate,
-        deliveryTime,
-      });
+        deliveryTime
+      );
       
-      if (!orderResponse.ok) {
-        const errorData = await orderResponse.json();
-        throw new Error(errorData.error || 'Failed to create order');
-      }
-      
-      return await orderResponse.json();
+      return order;
     },
     onSuccess: (orderData) => {
       // Clear cart from localStorage
       cartStorage.clearCart();
       
-      // Invalidate cart query to refresh
+      // Invalidate cart query to refresh (if using query)
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
       
       // Show success message

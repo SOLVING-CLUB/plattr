@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { edgeFunctions, userService } from "@/lib/supabase-service";
+import { supabaseAuth } from "@/lib/supabase-auth";
 
 export default function AuthPage() {
   const [, setLocation] = useLocation();
@@ -31,11 +32,22 @@ export default function AuthPage() {
     mutationFn: async (phoneNumber: string) => {
       console.log('🔍 Checking if phone exists:', phoneNumber);
       try {
-        const response = await apiRequest("POST", `/api/auth/check-phone`, { phone: phoneNumber });
-        console.log('📥 Phone check response received');
-        const data = await response.json();
-        console.log('📊 Phone check data:', data);
-        return data as { exists: boolean; username: string | null };
+        // Check if user exists in Supabase
+        const { data: users, error } = await supabaseAuth
+          .from('users')
+          .select('username')
+          .eq('phone', phoneNumber)
+          .limit(1)
+          .single();
+
+        if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+          throw error;
+        }
+
+        return {
+          exists: !!users,
+          username: users?.username || null,
+        };
       } catch (error) {
         console.error('❌ Phone check failed:', error);
         throw error;
@@ -56,13 +68,9 @@ export default function AuthPage() {
 
       console.log('✅ Starting OTP send process...');
 
-      // Send OTP via API
+      // Send OTP via Edge Function
       console.log('📱 Sending OTP to:', phoneNumber);
-      const response = await apiRequest("POST", `/api/auth/send-otp`, {
-        phone: phoneNumber,
-      });
-      
-      const data = await response.json();
+      const data = await edgeFunctions.sendOTP(phoneNumber);
       console.log('✅ OTP sent successfully!', data);
       
       return data;
@@ -84,24 +92,24 @@ export default function AuthPage() {
     },
   });
 
-  // Verify OTP using standard API
+  // Verify OTP using Edge Function
   const verifyOtpMutation = useMutation({
     mutationFn: async () => {
       try {
         console.log('Verifying OTP...');
-        const response = await apiRequest("POST", `/api/auth/verify-otp`, {
+        const data = await edgeFunctions.verifyOTP(
           phone,
           otp,
-          username: isExistingUser ? undefined : username,
-        });
+          isExistingUser ? undefined : username
+        );
 
-        // apiRequest throws on error, so if we get here, response is ok
-        const data = await response.json();
         console.log('OTP verified successfully', data);
         
         // Store user info
+        if (data.user) {
         localStorage.setItem("userId", data.user.id);
         localStorage.setItem("username", data.user.username);
+        }
         
         return data;
       } catch (error: any) {
@@ -111,7 +119,7 @@ export default function AuthPage() {
         let errorMessage = 'Invalid OTP. Please try again.';
         
         if (error.message) {
-          if (error.message.includes('Invalid or expired')) {
+          if (error.message.includes('Invalid or expired') || error.message.includes('expired')) {
             errorMessage = 'Invalid or expired OTP. Please request a new one.';
           } else {
             errorMessage = error.message;

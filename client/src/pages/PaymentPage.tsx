@@ -2,7 +2,7 @@ import { useStripe, Elements, PaymentElement, useElements } from '@stripe/react-
 import { loadStripe } from '@stripe/stripe-js';
 import { useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
-import { apiRequest } from "@/lib/queryClient";
+import { edgeFunctions } from "@/lib/supabase-service";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -108,10 +108,9 @@ export default function PaymentPage() {
       return;
     }
 
-    // Create PaymentIntent - server will calculate amount from cart using session userId
-    apiRequest("POST", "/api/create-payment-intent", {})
-      .then(async (response) => {
-        const data = await response.json();
+    // Create PaymentIntent - Edge Function will fetch cart from database
+    edgeFunctions.createPaymentIntent([]) // Empty array - function fetches from DB
+      .then((data) => {
         if (data.clientSecret && data.amount) {
           setClientSecret(data.clientSecret);
           setAmount(data.amount);
@@ -124,7 +123,7 @@ export default function PaymentPage() {
         setError("Unable to initialize payment. Please log in and try again.");
         toast({
           title: "Payment Setup Failed",
-          description: "Unable to initialize payment. Please try again.",
+          description: error.message || "Unable to initialize payment. Please try again.",
           variant: "destructive",
         });
       });

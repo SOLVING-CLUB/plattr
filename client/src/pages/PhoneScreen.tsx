@@ -3,7 +3,7 @@ import { useLocation } from 'wouter';
 import plattrLogoImage from "@assets/plattr_logo.png";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { edgeFunctions } from "@/lib/supabase-service";
 
 export default function PhoneScreen() {
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -51,11 +51,7 @@ export default function PhoneScreen() {
 
       try {
         console.log('📱 Sending OTP to:', phone);
-        const response = await apiRequest("POST", `/api/auth/send-otp`, {
-          phone: phone,
-        });
-        
-        const data = await response.json();
+        const data = await edgeFunctions.sendOTP(phone);
         sessionStorage.setItem('phoneNumber', phone);
 
         console.log('✅ OTP sent successfully!');

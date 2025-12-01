@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, Clock, MapPin, Package, Calendar } from "lucide-react";
-import { getQueryFn } from "@/lib/queryClient";
+import { orderService } from "@/lib/supabase-service";
 import { getSupabaseImageUrl } from "@/lib/supabase";
 import { useGoBack } from "@/hooks/useGoBack";
 
@@ -59,7 +59,8 @@ export default function OrderDetailsPage() {
   const goBack = useGoBack('/orders');
 
   const { data: order, isLoading } = useQuery<OrderDetails>({
-    queryKey: ['/api/orders', orderId],
+    queryKey: ['order', orderId],
+    queryFn: () => orderService.getById(orderId!),
     enabled: !!orderId,
   });
 

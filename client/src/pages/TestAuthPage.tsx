@@ -11,6 +11,60 @@ import { supabaseAuth } from "@/lib/supabase-auth";
 import { supabase } from "@/lib/supabase-client";
 import { useAuth } from "@/hooks/useAuth";
 
+// Helper to create user in users table if doesn't exist
+// Uses authenticated Supabase client to respect RLS policies
+async function ensureUserInTable(userId: string, email: string | null, phone: string | null) {
+  try {
+    // Get authenticated session
+    const { data: { session } } = await supabaseAuth.auth.getSession();
+    if (!session) {
+      throw new Error('Not authenticated');
+    }
+
+    // Use authenticated Supabase client (respects RLS)
+    const { data: existingUser } = await supabaseAuth
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single();
+    
+    if (existingUser) {
+      return existingUser;
+    }
+    
+    // User doesn't exist, create them using authenticated client
+    const tempUsername = `user_${Math.floor(1000 + Math.random() * 9000)}`;
+    const { data: newUser, error: insertError } = await supabaseAuth
+      .from('users')
+      .insert({
+        id: userId,
+        username: tempUsername,
+        email: email,
+        phone: phone,
+        password: '',
+        is_verified: true,
+      })
+      .select()
+      .single();
+    
+    if (insertError) {
+      // If insert fails (e.g., RLS policy), try to fetch again (might have been created by another process)
+      console.warn('Error creating user, trying to fetch:', insertError);
+      const { data: fetchedUser } = await supabaseAuth
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      return fetchedUser;
+    }
+    
+    return newUser;
+  } catch (error: any) {
+    console.error('Error in ensureUserInTable:', error);
+    throw error;
+  }
+}
+
 export default function TestAuthPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -44,6 +98,15 @@ export default function TestAuthPage() {
         setLocation("/name", { replace: true });
       }
       // If not verified yet, stay on page (waiting for verification)
+      return;
+    }
+    
+    // Check if this is a fresh login (not from a redirect after logout)
+    // If user just logged out and came here, don't auto-redirect
+    const justLoggedOut = sessionStorage.getItem('justLoggedOut');
+    if (justLoggedOut === 'true') {
+      // Clear the flag and stay on page
+      sessionStorage.removeItem('justLoggedOut');
       return;
     }
     
@@ -113,19 +176,40 @@ export default function TestAuthPage() {
 
       if (error) {
         // Handle specific Supabase Auth errors
-        if (error.message.includes('Invalid login credentials') || error.message.includes('Email not confirmed')) {
+        let errorMessage = error.message || "Failed to login. Please try again.";
+        
+        if (error.message.includes('Invalid login credentials') || 
+            error.message.includes('Email not confirmed') ||
+            error.status === 400) {
+          
+          // Check if user exists in Auth but was created via phone/OTP
+          if (error.status === 400) {
+            // Try to check if user exists via email lookup
+            try {
+              const existingUser = await supabase.selectOne("users", {
+                filter: { email: `eq.${loginEmail}` }
+              });
+              
+              if (existingUser) {
+                errorMessage = "This account was created with phone number. Please use phone login or reset your password.";
+              } else {
+                errorMessage = "Invalid email or password. If you signed up with phone, please use phone login.";
+              }
+            } catch (e) {
+              // Fall through to default error
+            }
+          }
+          
           toast({
             variant: "destructive",
             title: "Login Failed",
-            description: error.message.includes('Email not confirmed') 
-              ? "Please verify your email before logging in. Check your inbox for the verification link."
-              : "Invalid email or password. Please check your credentials and try again.",
+            description: errorMessage,
           });
         } else {
           toast({
             variant: "destructive",
             title: "Login Failed",
-            description: error.message || "Failed to login. Please try again.",
+            description: errorMessage,
           });
         }
         setIsLoginLoading(false);
@@ -146,11 +230,13 @@ export default function TestAuthPage() {
           return;
         }
         
-        // Check if user exists in users table
+        // Ensure user exists in users table (create if not)
         try {
-          const userRecord = await supabase.selectOne("users", {
-            filter: { id: `eq.${data.user.id}` }
-          });
+          const userRecord = await ensureUserInTable(
+            data.user.id,
+            data.user.email || null,
+            data.user.phone || null
+          );
           
           if (userRecord) {
             localStorage.setItem("userId", data.user.id);
@@ -188,13 +274,15 @@ export default function TestAuthPage() {
               setLocation("/", { replace: true });
             }
           } else {
+            // This should rarely happen now, but handle it just in case
             toast({
               variant: "destructive",
-              title: "Account Not Found",
-              description: "Please sign up first to create an account.",
+              title: "Error",
+              description: "Failed to create user account. Please try again.",
             });
           }
         } catch (error) {
+          console.error('Error checking/creating user:', error);
           toast({
             variant: "destructive",
             title: "Error",

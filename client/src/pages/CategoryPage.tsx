@@ -12,6 +12,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import AppHeader from "@/components/AppHeader";
 import BottomNav from "@/components/BottomNav";
 import PlatterVisualization from "@/components/PlatterVisualization";
+import ContinueOrderBanner from "@/pages/ContinueOrderBanner";
 import FloatingCartButton from "@/components/FloatingCartButton";
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -1118,6 +1119,7 @@ export default function CategoryPage() {
         onClick={() => setShowPlatter(true)}
       />
 
+      <ContinueOrderBanner />
       <BottomNav 
         activeTab={activeTab}
         onTabChange={handleTabChange}

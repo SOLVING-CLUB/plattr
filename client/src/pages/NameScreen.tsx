@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import plattrLogoImage from "@assets/plattr_logo.png";
-import { apiRequest } from "@/lib/queryClient";
+import { userService } from "@/lib/supabase-service";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 
@@ -34,11 +34,10 @@ export default function NameScreen() {
   // Update username mutation
   const updateUsernameMutation = useMutation({
     mutationFn: async (username: string) => {
-      const response = await apiRequest("POST", `/api/auth/update-username`, {
+      const updatedUser = await userService.updateProfile({
         username: username.trim(),
       });
-      const data = await response.json();
-      return data;
+      return { user: updatedUser };
     },
     onSuccess: (data: any) => {
       // Store updated username and clear needsName flag

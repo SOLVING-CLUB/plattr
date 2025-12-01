@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import plattrLogoImage from "@assets/plattr_logo.png";
-import { apiRequest } from "@/lib/queryClient";
+import { edgeFunctions } from "@/lib/supabase-service";
+import { supabaseAuth } from "@/lib/supabase-auth";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 
@@ -87,7 +88,7 @@ export default function VerificationScreen() {
 
   const isComplete = code.every(digit => digit !== '');
 
-  // Verify OTP via standard API
+  // Verify OTP via Edge Function
   const verifyOtpMutation = useMutation({
     mutationFn: async (otpCode: string) => {
       if (!phoneNumber) {
@@ -96,25 +97,21 @@ export default function VerificationScreen() {
 
       try {
         console.log('🔐 Verifying OTP...');
-        const response = await apiRequest("POST", "/api/auth/verify-otp", {
-          phone: phoneNumber,
-          otp: otpCode,
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error || "Failed to verify OTP");
-        }
+        const data = await edgeFunctions.verifyOTP(phoneNumber, otpCode);
 
         console.log('✅ OTP verified successfully');
 
+        // Note: The Edge Function creates/authenticates the user in Supabase Auth
+        // The session is automatically managed by Supabase Auth
+        // We still store some data in localStorage for backward compatibility
+        if (data.user) {
         localStorage.setItem("userId", data.user.id);
         if (data.user.username) {
           localStorage.setItem("username", data.user.username);
         }
         if (data.user.phone) {
           localStorage.setItem("phone", data.user.phone);
+          }
         }
 
         sessionStorage.removeItem('phoneNumber');
@@ -127,7 +124,7 @@ export default function VerificationScreen() {
     },
     onSuccess: (data: any) => {
       const tempUsernamePattern = /^user_\d{4}(?:_\d+)?$/;
-      const isTempUsername = tempUsernamePattern.test(data.user.username || '');
+      const isTempUsername = tempUsernamePattern.test(data.user?.username || '');
       
       if (isTempUsername) {
         toast({
@@ -140,7 +137,7 @@ export default function VerificationScreen() {
         sessionStorage.removeItem('needsName');
         toast({
           title: "Welcome back!",
-          description: `Logged in as ${data.user.username}`,
+          description: `Logged in as ${data.user?.username || 'User'}`,
         });
         setLocation('/', { replace: true });
       }

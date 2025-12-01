@@ -511,6 +511,7 @@ import ServicesWeOfferSection from "@/pages/ServicesWeOfferSection";
 import SpotlightFeaturesSection from "@/pages/SpotlightSection";
 import SmartMenuConciergeSection from "@/pages/SmartMenuSection";
 import FloatingNav from "@/pages/FloatingNav";
+import ContinueOrderBanner from "@/pages/ContinueOrderBanner";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Home() {
@@ -538,10 +539,7 @@ export default function Home() {
   const handleExploreMenu = () => {
     console.log("Explore Menu clicked");
     setActiveTab("menu");
-    toast({
-      title: "Menu",
-      description: "Menu page coming soon!",
-    });
+    setLocation("/explore-menu");
   };
 
   const handleServiceClick = (serviceId: string) => {
@@ -554,8 +552,8 @@ export default function Home() {
     } else if (serviceId === "mealbox") {
       setLocation("/mealbox");
     } else if (serviceId === "bulk") {
-      // Redirect to categories page for bulk meals
-      setLocation("/categories/lunch-dinner");
+      // Redirect to bulk meals page
+      setLocation("/bulk-meals");
     } else {
       toast({
         title: "Service Selected",
@@ -569,21 +567,15 @@ export default function Home() {
     setActiveTab(tab);
     
     if (tab === "menu") {
-      setLocation("/meal-box");
+      setLocation("/menu");
     } else if (tab === "profile") {
-      toast({
-        title: "Profile Page",
-        description: "Profile page coming soon!",
-      });
+      setLocation("/profile");
     }
   };
 
   const handleTryMenuConcierge = () => {
     console.log("Smart Menu Concierge clicked");
-    toast({
-      title: "Smart Menu Concierge",
-      description: "AI-powered menu creation coming soon!",
-    });
+    setLocation("/smart-menu-concierge");
   };
 
   return (
@@ -605,6 +597,8 @@ export default function Home() {
         <SmartMenuConciergeSection onTryNow={handleTryMenuConcierge} />
       </div>
     
+      {/* Continue Order Banner */}
+      <ContinueOrderBanner />
       <FloatingNav activeTab={activeTab} onTabChange={handleTabChange} />
     </div>
   );

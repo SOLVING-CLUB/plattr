@@ -7,6 +7,7 @@ import NotFound from "@/pages/not-found";
 import HomePage from "@/pages/HomePage";
 import AdminDashboard from "@/pages/AdminDashboard";
 import CategoryPage from "@/pages/CategoryPage";
+import Menu from "@/pages/Menu";
 import DishesPage from "@/pages/DishesPage";
 import CheckoutPage from "@/pages/CheckoutPage";
 import PaymentPage from "@/pages/PaymentPage";
@@ -14,6 +15,9 @@ import AddOnsPage from "@/pages/AddOnsPage";
 import OrdersPage from "@/pages/OrdersPage";
 import OrderDetailsPage from "@/pages/OrderDetailsPage";
 import ProfilePage from "@/pages/ProfilePage";
+import EditProfile from "@/pages/EditProfile";
+import SavedAddresses from "@/pages/SavedAddresses";
+import PaymentMethods from "@/pages/PaymentMethods";
 import HelpPage from "@/pages/HelpPage";
 import AboutPage from "@/pages/AboutPage";
 import ReferralPage from "@/pages/ReferralPage";
@@ -26,8 +30,16 @@ import AuthPage from "@/pages/AuthPage";
 import OrderConfirmationPage from "@/pages/OrderConfirmationPage";
 import ConciergeWizardPage from "@/pages/ConciergeWizardPage";
 import ConciergeResultsPage from "./pages/ConciergeResultsPage";
+import SmartMenuConcierge from "@/pages/SmartMenuConcierge";
+import SmartMenuResults from "@/pages/SmartMenuResults";
+import ExploreMenuPage from "@/pages/ExploreMenuPage";
 import MealBoxPage from "@/pages/MealBoxPage";
 import MealBoxBuilderPage from "@/pages/MealBoxBuilderPage";
+import BulkMeal from "@/pages/BulkMeal";
+import BulkMealCart from "@/pages/BulkMealCart";
+import BulkMealAddons from "@/pages/BulkMealAddons";
+import BulkMealDelivery from "@/pages/BulkMealDelivery";
+import BulkMealThankyouPage from "@/pages/BulkMealThankyouPage";
 import VerificationScreen from "@/pages/VerificationScreen";
 import PhoneScreen from "@/pages/PhoneScreen";
 import NameScreen from "@/pages/NameScreen";
@@ -35,6 +47,7 @@ import TestAuthPage from "@/pages/TestAuthPage";
 import TestOtpPasswordPage from "@/pages/TestOtpPasswordPage";
 import SplashScreen from "@/components/SplashScreen";
 import { useAuth } from "@/hooks/useAuth";
+import { CartProvider } from "@/context/CartContex";
 import { useEffect, useState, useRef, type ComponentType, type ReactNode } from "react";
 
 // Simple auth guard - redirects to /test-auth if not authenticated
@@ -113,16 +126,16 @@ function RequireNeedsName({ children }: { children: ReactNode }) {
 }
 
 const withAuthGuard = <P extends object>(Component: ComponentType<P>) => (props: P) => (
-  <RequireAuth>
-    <Component {...props} />
-  </RequireAuth>
-);
+      <RequireAuth>
+        <Component {...props} />
+      </RequireAuth>
+    );
 
 const withPublicOnly = <P extends object>(Component: ComponentType<P>) => (props: P) => (
   <PublicOnly>
-    <Component {...props} />
-  </PublicOnly>
-);
+        <Component {...props} />
+      </PublicOnly>
+    );
 
 const withNeedsName = <P extends object>(Component: ComponentType<P>) => (props: P) => (
   <RequireNeedsName>
@@ -136,6 +149,7 @@ function Router() {
   const GuardedHomePage = withAuthGuard(HomePage);
   const GuardedAdminDashboard = withAuthGuard(AdminDashboard);
   const GuardedCategoryPage = withAuthGuard(CategoryPage);
+  const GuardedMenuPage = withAuthGuard(Menu);
   const GuardedDishesPage = withAuthGuard(DishesPage);
   const GuardedCheckoutPage = withAuthGuard(CheckoutPage);
   const GuardedPaymentPage = withAuthGuard(PaymentPage);
@@ -143,6 +157,9 @@ function Router() {
   const GuardedOrdersPage = withAuthGuard(OrdersPage);
   const GuardedOrderDetailsPage = withAuthGuard(OrderDetailsPage);
   const GuardedProfilePage = withAuthGuard(ProfilePage);
+  const GuardedEditProfile = withAuthGuard(EditProfile);
+  const GuardedSavedAddresses = withAuthGuard(SavedAddresses);
+  const GuardedPaymentMethods = withAuthGuard(PaymentMethods);
   const GuardedHelpPage = withAuthGuard(HelpPage);
   const GuardedAboutPage = withAuthGuard(AboutPage);
   const GuardedReferralPage = withAuthGuard(ReferralPage);
@@ -152,8 +169,16 @@ function Router() {
   const GuardedOrderConfirmationPage = withAuthGuard(OrderConfirmationPage);
   const GuardedConciergeWizardPage = withAuthGuard(ConciergeWizardPage);
   const GuardedConciergeResultsPage = withAuthGuard(ConciergeResultsPage);
+  const GuardedSmartMenuConcierge = withAuthGuard(SmartMenuConcierge);
+  const GuardedSmartMenuResults = withAuthGuard(SmartMenuResults);
+  const GuardedExploreMenuPage = withAuthGuard(ExploreMenuPage);
   const GuardedMealBoxPage = withAuthGuard(MealBoxPage);
   const GuardedMealBoxBuilderPage = withAuthGuard(MealBoxBuilderPage);
+  const GuardedBulkMeal = withAuthGuard(BulkMeal);
+  const GuardedBulkMealCart = withAuthGuard(BulkMealCart);
+  const GuardedBulkMealAddons = withAuthGuard(BulkMealAddons);
+  const GuardedBulkMealDelivery = withAuthGuard(BulkMealDelivery);
+  const GuardedBulkMealThankyouPage = withAuthGuard(BulkMealThankyouPage);
   const GuardedCartRedirect = withAuthGuard(() => {
     const [, setLocation] = useLocation();
     useEffect(() => { setLocation('/checkout'); }, [setLocation]);
@@ -171,6 +196,8 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={GuardedHomePage} />
+      <Route path="/menu" component={GuardedMenuPage} />
+      <Route path="/explore-menu" component={GuardedExploreMenuPage} />
       <Route path="/test-auth" component={TestAuthPage} />
       <Route path="/test-otp-password" component={TestOtpPasswordPage} />
       <Route path="/auth" component={PublicAuthPage} />
@@ -188,6 +215,9 @@ function Router() {
       <Route path="/orders" component={GuardedOrdersPage} />
       <Route path="/orders/:orderId" component={GuardedOrderDetailsPage} />
       <Route path="/profile" component={GuardedProfilePage} />
+      <Route path="/edit-profile" component={GuardedEditProfile} />
+      <Route path="/saved-addresses" component={GuardedSavedAddresses} />
+      <Route path="/payment-methods" component={GuardedPaymentMethods} />
       <Route path="/help" component={GuardedHelpPage} />
       <Route path="/about" component={GuardedAboutPage} />
       <Route path="/referral" component={GuardedReferralPage} />
@@ -198,8 +228,15 @@ function Router() {
       <Route path="/concierge" component={GuardedConciergeWizardPage} />
       <Route path="/concierge/results" component={GuardedConciergeResultsPage} />
       <Route path="/concierge-results" component={GuardedConciergeResultsPage} />
+      <Route path="/smart-menu-concierge" component={GuardedSmartMenuConcierge} />
+      <Route path="/smart-menu-results" component={GuardedSmartMenuResults} />
       <Route path="/mealbox" component={GuardedMealBoxPage} />
       <Route path="/mealbox/builder" component={GuardedMealBoxBuilderPage} />
+      <Route path="/bulk-meals" component={GuardedBulkMeal} />
+      <Route path="/bulk-meals-cart" component={GuardedBulkMealCart} />
+      <Route path="/bulk-meals-addons" component={GuardedBulkMealAddons} />
+      <Route path="/bulk-meals-delivery" component={GuardedBulkMealDelivery} />
+      <Route path="/bulk-meals-thank-you" component={GuardedBulkMealThankyouPage} />
       <Route path="/admin" component={GuardedAdminDashboard} />
       <Route component={NotFound} />
     </Switch>
@@ -246,25 +283,27 @@ function App() {
           setLocation('/test-auth', { replace: true });
         }
       }, 500);
-    }, 2000);
+      }, 2000);
 
-    return () => clearTimeout(timer);
+      return () => clearTimeout(timer);
   }, [initialized, loading, isAuthenticated, setLocation]);
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Toaster />
-      {showSplash && (
-        <div
-          className={`fixed inset-0 transition-opacity duration-500 ${
-            fadeOut ? "opacity-0 pointer-events-none" : "opacity-100"
-          }`}
-          style={{ zIndex: 10000 }}
-        >
-          <SplashScreen />
-        </div>
-      )}
-      <Router />
+      <CartProvider>
+        <Toaster />
+        {showSplash && (
+          <div
+            className={`fixed inset-0 transition-opacity duration-500 ${
+              fadeOut ? "opacity-0 pointer-events-none" : "opacity-100"
+            }`}
+            style={{ zIndex: 10000 }}
+          >
+            <SplashScreen />
+          </div>
+        )}
+        <Router />
+      </CartProvider>
     </QueryClientProvider>
   );
 }
