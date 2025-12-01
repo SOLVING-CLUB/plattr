@@ -65,15 +65,15 @@ export default function BulkMealsDelivery() {
         addressId: selectedAddressId || undefined,
       });
       
-      localStorage.removeItem("bulkMealsAddons");
-      clearCart();
+    localStorage.removeItem("bulkMealsAddons");
+    clearCart();
       
       toast({
         title: "Order Created!",
         description: "Your bulk meal order has been placed successfully.",
       });
       
-      setLocation("/bulk-meals-thank-you");
+    setLocation("/bulk-meals-thank-you");
     } catch (error: any) {
       console.error("Error creating order:", error);
       toast({

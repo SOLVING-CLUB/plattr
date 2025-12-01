@@ -1093,7 +1093,7 @@ export default function CateringOrder() {
         description: "Your catering inquiry has been submitted successfully.",
       });
       
-      setLocation("/catering-thank-you");
+    setLocation("/catering-thank-you");
     } catch (error: any) {
       console.error("Error creating catering order:", error);
       toast({

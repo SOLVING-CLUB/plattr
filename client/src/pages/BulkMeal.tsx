@@ -20,7 +20,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { Dish } from "@shared/schema";
 import { ArrowLeft, Building2, Users, Calendar, Mail, Phone, MapPin, ShoppingCart, UtensilsCrossed, Package, Truck, Clock, X, ChevronDown, Search, Mic, ArrowUpDown, SlidersHorizontal, Star, Utensils } from "lucide-react";
 import FloatingNav from "@/pages/FloatingNav";
-import { useCart } from "@/context/CartContex";
+    import { useCart } from "@/context/CartContex";
     import {
   Carousel,
   CarouselContent,
@@ -847,12 +847,12 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                         data-testid={`button-add-${item.id}`}
                       >
                         {addedItems.has(item.id) ? "ADDED" : "ADD"}
-                  </Button>
-                </div>
-              </div>
+                      </Button>
+                    </div>
+                  </div>
             ))
                 )}
-          </div>
+              </div>
             </div>
           </div>
         </div>

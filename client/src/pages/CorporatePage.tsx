@@ -1207,7 +1207,7 @@ export default function CorporateOrder() {
         description: "Your corporate order has been submitted successfully.",
       });
       
-      setLocation("/corporate-thank-you");
+    setLocation("/corporate-thank-you");
     } catch (error: any) {
       console.error("Error creating corporate order:", error);
       toast({

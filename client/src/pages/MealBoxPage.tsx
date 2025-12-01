@@ -994,7 +994,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { useCart } from "@/context/CartContex";
+import { useCart } from "@/context/CartContex"; 
 import { mealboxOrderService, addressService } from "@/lib/supabase-service";
 import { useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
@@ -3992,8 +3992,8 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                     addressId: selectedAddressId || undefined,
                   });
                   
-                  // Clear mealbox progress when order is placed
-                  clearMealBoxProgress();
+                // Clear mealbox progress when order is placed
+                clearMealBoxProgress();
                   
                   toast({
                     title: "Order Created!",

@@ -539,9 +539,9 @@ export default function Menu() {
                   </div>
                 ) : (
                   searchFilteredItems.map((item) => (
-                    <div key={item.id} className="bg-white rounded-lg border border-gray-200 overflow-hidden" data-testid={`card-food-${item.id}`}>
+                  <div key={item.id} className="bg-white rounded-lg border border-gray-200 overflow-hidden" data-testid={`card-food-${item.id}`}>
                       {/* Food Image */}
-                      <div className="relative" style={{ paddingTop: "100%" }}>
+                    <div className="relative" style={{ paddingTop: "100%" }}>
                         {item.image ? (
                           <img 
                             src={item.image} 
@@ -549,11 +549,11 @@ export default function Menu() {
                             className="absolute inset-0 w-full h-full object-cover"
                           />
                         ) : (
-                          <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
-                            <Utensils className="w-12 h-12 sm:w-16 sm:h-16 text-gray-400" />
-                          </div>
-                        )}
+                      <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
+                        <Utensils className="w-12 h-12 sm:w-16 sm:h-16 text-gray-400" />
                       </div>
+                        )}
+                    </div>
                     
                     {/* Food Details */}
                     <div className="p-2 sm:p-3">
