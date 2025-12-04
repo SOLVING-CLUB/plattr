@@ -408,10 +408,26 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
   });
 
   // Fetch dish types for selected category
-  const { data: dishTypes = [] } = useQuery<string[]>({
+  const { data: fetchedDishTypes = [] } = useQuery<string[]>({
     queryKey: ['/api/dish-types', selectedCategory],
-    enabled: !!selectedCategory,
+    enabled: !!selectedCategory && selectedCategory !== 'all',
   });
+
+  // When "All" is selected, compute all unique dish types from all dishes
+  const allUniqueDishTypes = useMemo(() => {
+    if (selectedCategory !== 'all') return [];
+    const types = new Set<string>();
+    dishes.forEach(dish => {
+      const dishType = (dish as any).dish_type || dish.dishType;
+      if (dishType && dishType.trim() !== '') {
+        types.add(dishType);
+      }
+    });
+    return Array.from(types).sort();
+  }, [dishes, selectedCategory]);
+
+  // Use allUniqueDishTypes when "All" is selected, otherwise use fetched dish types
+  const dishTypes = selectedCategory === 'all' ? allUniqueDishTypes : fetchedDishTypes;
 
   // Reset dish type filter when category changes
   useEffect(() => {

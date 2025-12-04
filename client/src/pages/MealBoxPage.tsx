@@ -1788,10 +1788,26 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
   };
 
   // Fetch dish types for selected category
-  const { data: dishTypes = [] } = useQuery<string[]>({
+  const { data: fetchedDishTypes = [] } = useQuery<string[]>({
     queryKey: ['/api/dish-types', selectedCategory],
-    enabled: !!selectedCategory && currentStep === 4,
+    enabled: !!selectedCategory && selectedCategory !== 'all' && currentStep === 4,
   });
+
+  // When "All" is selected, compute all unique dish types from all dishes
+  const allUniqueDishTypes = useMemo(() => {
+    if (selectedCategory !== 'all') return [];
+    const types = new Set<string>();
+    dishes.forEach(dish => {
+      const dishType = (dish as any).dish_type || dish.dishType;
+      if (dishType && dishType.trim() !== '') {
+        types.add(dishType);
+      }
+    });
+    return Array.from(types).sort();
+  }, [dishes, selectedCategory]);
+
+  // Use allUniqueDishTypes when "All" is selected, otherwise use fetched dish types
+  const dishTypes = selectedCategory === 'all' ? allUniqueDishTypes : fetchedDishTypes;
 
   // Reset dish type filter when category changes
   useEffect(() => {
@@ -1814,7 +1830,8 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
   // Filter items based on category, dish type, allowed types for current dietary tab, and exclude already selected items
   const filteredItems = foodItems.filter(item => {
     // Category filter - check if dish belongs to selected category
-    if (selectedCategory) {
+    // Skip category filter if 'all' is selected (show all categories)
+    if (selectedCategory && selectedCategory !== 'all') {
       const dish = dishes.find(d => d.id === item.id);
       if (dish) {
         const dishCategoryId = (dish as any).category_id || dish.categoryId;
