@@ -3500,7 +3500,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
 
         {/* Step 5: Cart Details */}
         {currentStep === 5 && (
-          <div className="pb-24">
+          <div className="pb-20">
             {/* Sticky Cart Total Bar Section - below back navigation (top: 40px) */}
             <div 
               className="sticky z-40 bg-white border-b border-gray-200 -mx-4 px-4 py-3 mb-4"
