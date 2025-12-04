@@ -526,21 +526,23 @@ export default function Menu() {
         }}
       >
         <div className="px-4 pt-12 pb-3">
-          <button
-            className={`flex items-center gap-2 font-medium ${scrollY > 50 ? "text-[#06352A]" : "text-[#06352A]"}`}
+          <Button
+            variant="ghost"
+            size="sm"
+            className={scrollY > 50 ? "text-[#06352A] hover:text-[#06352A] hover:bg-gray-100" : "text-[#06352A] hover:text-[#06352A] hover:bg-black/10"}
             onClick={() => setLocation("/")}
             data-testid="button-back"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-4 h-4 mr-2" />
             Back
-          </button>
+          </Button>
         </div>
       </div>
 
-      {/* Header Section */}
-      <div className="relative z-10 px-4 pt-4 pb-4">
+      {/* Header Section with Location and Cart */}
+      <div className="relative z-10 px-4 pt-4 pb-6">
         {/* Location and Cart */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
             <MapPin className="w-5 h-5 text-[#06352A]" />
             <span className="text-[#06352A] font-semibold text-[18px]" style={{ fontFamily: "Sweet Sans Pro" }}>
