@@ -182,6 +182,11 @@ export default function Menu() {
   const [activeTab, setActiveTab] = useState<"home" | "menu" | "profile">("menu");
   const [scrollY, setScrollY] = useState(0);
 
+  // Scroll to top on page load
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   // Track scroll position for sticky header
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY);
