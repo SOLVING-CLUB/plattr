@@ -575,7 +575,7 @@ export default function Menu() {
         className="sticky z-40 px-4 pb-2 pt-4 transition-all duration-200" 
         style={{ 
           top: '92px',
-          backgroundColor: "white",
+          backgroundColor: "#FDF8F3",
           boxShadow: isStuck ? "0 2px 4px rgba(0,0,0,0.1)" : "none"
         }}
       >
@@ -588,13 +588,10 @@ export default function Menu() {
               placeholder="Search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-12 py-3 bg-white text-base"
+              className="w-full pl-12 pr-4 py-3 bg-white text-base"
               style={{ fontFamily: "Sweet Sans Pro", borderRadius: "10px" }}
               data-testid="input-search"
             />
-            <button className="absolute right-4 top-1/2 transform -translate-y-1/2">
-              <Mic className="w-5 h-5 text-gray-400" />
-            </button>
           </div>
         </div>
 
