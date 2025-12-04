@@ -777,7 +777,7 @@ export default function Menu() {
           {/* CategoryPage-style Layout */}
           <div className="flex gap-0 flex-1 w-full max-w-full">
             {/* Left Sidebar - Category Filters (Starters, Sides, Mains, etc.) - Sticky with internal scroll */}
-            <aside className="w-24 md:w-32 border-r bg-card/50 backdrop-blur-sm flex-shrink-0 sticky self-start" style={{ top: '222px', maxHeight: 'calc(100vh - 222px)', overflowY: 'auto' }}>
+            <aside className="w-24 md:w-32 border-r bg-card/50 backdrop-blur-sm flex-shrink-0 sticky self-start" style={{ top: '250px', maxHeight: 'calc(100vh - 250px)', overflowY: 'auto' }}>
               <div className="flex flex-col py-3">
                 {/* Always show "All" option */}
                 <button
