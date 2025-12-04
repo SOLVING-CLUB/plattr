@@ -998,10 +998,17 @@ import { useCart } from "@/context/CartContex";
 import { mealboxOrderService, addressService } from "@/lib/supabase-service";
 import { useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
-import type { Dish } from "@shared/schema";
+import type { Dish, Category as CategoryType } from "@shared/schema";
 import { getSupabaseImageUrl } from "@/lib/supabase"; 
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Building2, MapPin, ShoppingCart, UtensilsCrossed, Package, Truck, Search, Check, ChevronRight, ChevronLeft, Star, ArrowUpDown, SlidersHorizontal } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
+import { Slider } from "@/components/ui/slider";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { cn } from "@/lib/utils";
+import { ArrowLeft, Building2, MapPin, ShoppingCart, UtensilsCrossed, Package, Truck, Search, Check, ChevronRight, ChevronLeft, Star, ArrowUpDown, SlidersHorizontal, LayoutGrid, Leaf, Drumstick, Egg, Sparkles } from "lucide-react";
 import FloatingNav from "@/pages/FloatingNav";
 import ContinueOrderBanner from "@/pages/ContinueOrderBanner";
 import mealBoxHeroPattern from "@assets/Hero Pattern - Meal Box_1763885298156.png";
@@ -1023,6 +1030,182 @@ import decorIcon from "@assets/streamline-ultimate_party-decoration-bold_1763917
 import tablewareIcon from "@assets/roentgen_fork-and-knife_1763917839169.png";
 import musicIcon from "@assets/roentgen_fork-and-knife_1763917839169.png";
 import cameraIcon from "@assets/mdi_camera3_1763917839155.png";
+import biryaniImage1 from '@assets/stock_images/indian_biryani_dish__60e99e80.jpg';
+import idliImage1 from '@assets/stock_images/indian_idli_sambar_s_c6bb3ca9.jpg';
+import vadaImage1 from '@assets/stock_images/indian_vada_d82fc29e.jpg';
+import thaliImage from '@assets/stock_images/indian_thali_meal_3a645a6d.jpg';
+import samosaImage from '@assets/stock_images/samosa_snacks_indian_0946aa28.jpg';
+import platterImage from '@assets/stock_images/indian_food_platter__b34d03e7.jpg';
+import masalaDosaImage from '@assets/image_1760599491069.png';
+import pongalImage from '@assets/image_1760599583321.png';
+import uttapamImage from '@assets/image_1760599632589.png';
+import alooParathaImage from '@assets/image_1760599701468.png';
+import choleBhatureImage from '@assets/image_1760599722844.png';
+import pohaImage from '@assets/image_1760599744216.png';
+import upmaImage from '@assets/image_1760599771826.png';
+import breadToastImage from '@assets/image_1760599797811.png';
+import southIndianPlatterImage from '@assets/image_1760599912464.png';
+
+// Map meal_type to category_ids based on user's specification
+const MEAL_TYPE_CATEGORIES: Record<string, string[]> = {
+  // Breakfast (meal_type) - used when "breakfast" tab is selected
+  'breakfast': [
+    'sides-and-accompaniments',
+    'bakery',
+    'sweets',
+    'beverages',
+    'desserts',
+    'salads',
+    'breakfast',
+    'snacks'
+  ],
+  // Snacks (meal_type) - used when "hi-tea" tab is selected
+  'snacks': [
+    'sides-and-accompaniments',
+    'chaats',
+    'snacks',
+    'bakery',
+    'sweets',
+    'beverages',
+    'desserts',
+    'salads',
+    'breakfast'
+  ],
+  // Lunch & Dinner (meal_type) - used when "lunch" or "dinner" tab is selected
+  'lunch-dinner': [
+    'starters',
+    'sides-and-accompaniments',
+    'main-course',
+    'chaats',
+    'snacks',
+    'sweets',
+    'beverages',
+    'desserts',
+    'salads',
+    'soup',
+    'after-meal'
+  ]
+};
+
+// Fallback images for categories
+const CATEGORY_IMAGES: Record<string, string> = {
+  'all': idliImage1,
+  'south-indian-tiffins': southIndianPlatterImage,
+  'north-indian-tiffins': masalaDosaImage,
+  'quick-bites': vadaImage1,
+  'fried-snacks': vadaImage1,
+  'baked-snacks': idliImage1,
+  'chaats': vadaImage1,
+  'rice-items': biryaniImage1,
+  'breads-curries': masalaDosaImage,
+  'biryani': biryaniImage1,
+  'sides-and-accompaniments': idliImage1,
+  'bakery': idliImage1,
+  'sweets': idliImage1,
+  'beverages': idliImage1,
+  'desserts': idliImage1,
+  'salads': idliImage1,
+  'breakfast': idliImage1,
+  'snacks': idliImage1,
+  'starters': idliImage1,
+  'main-course': idliImage1,
+  'soup': idliImage1,
+  'after-meal': idliImage1,
+};
+
+// Dish type images for sidebar
+const DISH_TYPE_IMAGES: Record<string, string> = {
+  // Beverages
+  'Juice': idliImage1,
+  'Beverage': idliImage1,
+  'ColdDrink': idliImage1,
+  'HotDrink': idliImage1,
+  'Alcoholic': idliImage1,
+  'Milkshake': idliImage1,
+  'Smoothie': idliImage1,
+  
+  // Breakfast items
+  'Bread': breadToastImage,
+  'EggPlate': idliImage1,
+  'GrainBowl': pongalImage,
+  'Handheld': masalaDosaImage,
+  'HotFry': vadaImage1,
+  'PanFry': uttapamImage,
+  'SavoryBakery': samosaImage,
+  'Steamed': idliImage1,
+  'SweetGriddle': uttapamImage,
+  
+  // Snacks
+  'Chips': samosaImage,
+  'Namkeen': samosaImage,
+  'Pizza': samosaImage,
+  
+  // Chaats
+  'CurdChaat': vadaImage1,
+  'DryChaat': vadaImage1,
+  'FusionChaat': vadaImage1,
+  'StuffedDough': samosaImage,
+  'WetChaat': vadaImage1,
+  
+  // Desserts & Sweets
+  'Cake': samosaImage,
+  'Pastry': samosaImage,
+  'BreadMithai': masalaDosaImage,
+  'ColostrumMithai': masalaDosaImage,
+  'FriedMithai': vadaImage1,
+  'GrainMithai': pongalImage,
+  
+  // Salads
+  'FruitSalad': platterImage,
+  'LeafySalad': platterImage,
+  'LegumeSalad': platterImage,
+  
+  // Lunch/Dinner
+  'Soup': thaliImage,
+  'ClearSoup': thaliImage,
+  'CreamySoup': thaliImage,
+  'ClearBroth': thaliImage,
+  'Starters': vadaImage1,
+  'ColdBite': platterImage,
+  'DryFry': vadaImage1,
+  'Grill': vadaImage1,
+  
+  // Default fallback
+  'default': idliImage1,
+};
+
+// Helper to get dish image
+const getDishImage = (dish: Dish): string => {
+  if (dish.imageUrl) {
+    const supabaseUrl = getSupabaseImageUrl(dish.imageUrl);
+    if (supabaseUrl && supabaseUrl.startsWith("http")) {
+      return supabaseUrl;
+    }
+  }
+
+  const name = dish.name.toLowerCase();
+  if (name.includes("dosa")) return masalaDosaImage;
+  if (name.includes("idli") || name.includes("idly")) return idliImage1;
+  if (name.includes("vada")) return vadaImage1;
+  if (name.includes("biryani")) return biryaniImage1;
+  if (name.includes("samosa")) return samosaImage;
+  return thaliImage;
+};
+
+// Map meal category to meal_type filter for Supabase
+const getMealTypeFilter = (mealType: MealType): string => {
+  switch (mealType) {
+    case "hi-tea":
+      return "snacks";
+    case "breakfast":
+      return "breakfast";
+    case "lunch":
+    case "dinner":
+      return "lunch-dinner";
+    default:
+      return "lunch-dinner";
+  }
+};
 
 type ServiceType = "bulk-meals" | "mealbox" | "catering" | "corporate";
 type PortionSize = 3 | 5 | 6 | 8;
@@ -1082,7 +1265,8 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
   const [eggBoxes, setEggBoxes] = useState<string>("");
   const [nonVegBoxes, setNonVegBoxes] = useState<string>("");
   const [selectedMealType, setSelectedMealType] = useState<MealType>("lunch");
-  const [selectedCategory, setSelectedCategory] = useState<FoodCategory>("all");
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [selectedDishType, setSelectedDishType] = useState<string>("all");
   const [selectedSubcategory, setSelectedSubcategory] = useState<"all" | "grilled" | "fried" | "stuffed">("all");
   const [currentDietaryTab, setCurrentDietaryTab] = useState<"veg" | "egg" | "non-veg">("veg");
   const [selectedSlotIndex, setSelectedSlotIndex] = useState<number>(0);
@@ -1090,6 +1274,14 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
   const [showFilterDropdown, setShowFilterDropdown] = useState<boolean>(false);
   const [selectedSort, setSelectedSort] = useState<string>("popular");
   const [selectedFilter, setSelectedFilter] = useState<string>("all");
+  const [dietaryMode, setDietaryMode] = useState<'all' | 'veg' | 'egg' | 'non-veg'>('all');
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 500]);
+  const [sortOption, setSortOption] = useState<'price-low' | 'price-high' | 'name-az' | 'name-za'>('price-low');
+  const [filterDialogOpen, setFilterDialogOpen] = useState(false);
+  const [sortDialogOpen, setSortDialogOpen] = useState(false);
+  const [platterPlannerOpen, setPlatterPlannerOpen] = useState(false);
+  const [dishDetailOpen, setDishDetailOpen] = useState(false);
+  const [detailDish, setDetailDish] = useState<Dish | null>(null);
   
   // Separate selections for each dietary type
   const [vegPlateSelections, setVegPlateSelections] = useState<PortionSelection[]>([]);
@@ -1098,6 +1290,12 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
   
   // Add-ons selection
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
+
+  // Fetch saved addresses
+  const { data: savedAddresses = [] } = useQuery({
+    queryKey: ["addresses"],
+    queryFn: () => addressService.getAll(),
+  });
 
   // Restore MealBox progress on mount (only once)
   useEffect(() => {
@@ -1408,21 +1606,99 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
   // Map meal type to meal_type filter for Supabase
   const getMealTypeFilter = (mealType: MealType): string => {
     const mapping: Record<MealType, string> = {
-      "breakfast": "breakfast",
-      "lunch": "lunch-dinner",
-      "dinner": "lunch-dinner",
-      "hi-tea": "snacks",
+      "hi-tea": "snacks",        // Hi-Tea → Snacks
+      "breakfast": "breakfast",  // Breakfast → Breakfast
+      "lunch": "lunch-dinner",   // Lunch → Lunch & Dinner
+      "dinner": "lunch-dinner",  // Dinner → Lunch & Dinner
     };
     return mapping[mealType] || "lunch-dinner";
   };
 
-  // Fetch dishes from Supabase based on selected meal type
+  const mealType = getMealTypeFilter(selectedMealType);
+
+  // Fetch ALL categories from database
+  const { data: allCategoriesFromDb = [] } = useQuery<CategoryType[]>({
+    queryKey: ['/api/categories', 'all'],
+  });
+
+  // Get category IDs for the current meal type - with safety check
+  const categoryIdsForMealType = useMemo(() => {
+    if (!mealType) return [];
+    const ids = MEAL_TYPE_CATEGORIES[mealType];
+    if (Array.isArray(ids) && ids.length > 0) {
+      return ids;
+    }
+    return [];
+  }, [mealType]);
+
+  // Filter and order categories based on frontend mapping
+  const categories = useMemo(() => {
+    return categoryIdsForMealType
+      .map(id => allCategoriesFromDb.find(cat => cat.id === id))
+      .filter(Boolean) as CategoryType[];
+  }, [allCategoriesFromDb, categoryIdsForMealType]);
+
+  // Set first category as selected when categories load or when meal type changes
+  useEffect(() => {
+    if (categories.length > 0 && currentStep === 4) {
+      const firstCategoryId = categories[0].id;
+      if (!selectedCategory || !categories.find(c => c.id === selectedCategory)) {
+        setSelectedCategory(firstCategoryId);
+      }
+    }
+  }, [categories, selectedCategory, mealType, currentStep]);
+
+  // Fetch ALL dishes for the current meal type's categories (for accurate category counts)
+  // Use the frontend-defined category IDs - fetch dishes for each category separately and merge
+  // For counts, we want all dishes regardless of dietary tab, so use 'all' for dietary filter
+  const dietaryForAllDishes = 'all';
+  
+  // Get all unique category IDs across all meal types (for fixed hooks)
+  const allPossibleCategoryIds = useMemo(() => {
+    const allIds = new Set<string>();
+    Object.values(MEAL_TYPE_CATEGORIES).forEach(ids => {
+      ids.forEach(id => allIds.add(id));
+    });
+    return Array.from(allIds);
+  }, []);
+  
+  // Create fixed queries for all possible categories (to avoid hooks violation)
+  // Only enable queries for categories in the current meal type
+  const allDishesQueries = allPossibleCategoryIds.map(catId => {
+    const isEnabled = categoryIdsForMealType.includes(catId) && currentStep === 4;
+    return useQuery<Dish[]>({
+      queryKey: ['/api/dishes', mealType, catId, dietaryForAllDishes],
+      enabled: isEnabled && !!mealType,
+    });
+  });
+  
+  // Merge all dishes from all categories (only from enabled queries)
+  const allDishes = useMemo(() => {
+    const merged: Dish[] = [];
+    const seenIds = new Set<string>();
+    
+    allPossibleCategoryIds.forEach((catId, index) => {
+      if (categoryIdsForMealType.includes(catId)) {
+        const query = allDishesQueries[index];
+        const dishes = query.data || [];
+        dishes.forEach(dish => {
+          // Filter by isAvailable
+          const isAvailable = (dish as any).is_available !== false && dish.isAvailable !== false;
+          if (isAvailable && !seenIds.has(dish.id)) {
+            seenIds.add(dish.id);
+            merged.push(dish);
+          }
+        });
+      }
+    });
+    
+    return merged;
+  }, [allDishesQueries.map((q, i) => categoryIdsForMealType.includes(allPossibleCategoryIds[i]) ? q.data : null).join(','), categoryIdsForMealType.join(',')]);
+
+  // Fetch dishes for selected category (for display)
   const { data: dishes = [], isLoading: isLoadingDishes } = useQuery<Dish[]>({
-    queryKey: ['/api/dishes', getMealTypeFilter(selectedMealType), 'all'],
-    queryFn: async ({ queryKey }) => {
-      const queryFn = getQueryFn<Dish[]>({ on401: 'throw' });
-      return queryFn({ queryKey });
-    },
+    queryKey: ['/api/dishes', mealType, selectedCategory, currentDietaryTab],
+    enabled: !!selectedCategory && currentStep === 4,
   });
 
   // Transform dishes to match the FoodItem format
@@ -1469,10 +1745,82 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
       });
   }, [dishes]);
   
-  // Filter items based on category, allowed types for current dietary tab, and exclude already selected items
+  // Get dish count for a category (from all dishes, respecting filters)
+  const getDishCountForCategory = (categoryId: string): number => {
+    const count = allDishes.filter(d => {
+      // Handle both camelCase and snake_case from database
+      const dishCategoryId = (d as any).category_id || d.categoryId;
+      
+      // Filter by category
+      if (dishCategoryId !== categoryId) return false;
+      
+      // Apply dietary filter based on current dietary tab (egg is client-side name matching)
+      if (currentDietaryTab === 'egg') {
+        // For egg tab, filter by name containing 'egg' or dietaryType being egg/egg-veg
+        const dietaryType = d.dietaryType?.toLowerCase() || 'veg';
+        if (dietaryType !== 'egg' && dietaryType !== 'egg-veg' && !d.name.toLowerCase().includes('egg')) {
+          return false;
+        }
+      } else if (currentDietaryTab === 'veg') {
+        // For veg tab, only show veg dishes
+        const dietaryType = d.dietaryType?.toLowerCase() || 'veg';
+        if (dietaryType === 'non-veg') return false;
+      } else if (currentDietaryTab === 'non-veg') {
+        // For non-veg tab, show all (veg, egg, non-veg)
+        // No filtering needed
+      }
+      
+      return true;
+    }).length;
+    
+    return count;
+  };
+
+  // Fetch dish types for selected category
+  const { data: dishTypes = [] } = useQuery<string[]>({
+    queryKey: ['/api/dish-types', selectedCategory],
+    enabled: !!selectedCategory && currentStep === 4,
+  });
+
+  // Reset dish type filter when category changes
+  useEffect(() => {
+    if (currentStep === 4) {
+      setSelectedDishType('all');
+    }
+  }, [selectedCategory, currentStep]);
+
+  // Get dish count for a specific dish type
+  const getDishCountForDishType = (dishType: string): number => {
+    if (dishType === 'all') return foodItems.length;
+    return foodItems.filter(item => {
+      const dish = dishes.find(d => d.id === item.id);
+      if (!dish) return false;
+      const dishDishType = (dish as any).dish_type || dish.dishType;
+      return dishDishType === dishType;
+    }).length;
+  };
+
+  // Filter items based on category, dish type, allowed types for current dietary tab, and exclude already selected items
   const filteredItems = foodItems.filter(item => {
-    // Category filter
-    if (selectedCategory !== "all" && item.category !== selectedCategory) return false;
+    // Category filter - check if dish belongs to selected category
+    if (selectedCategory) {
+      const dish = dishes.find(d => d.id === item.id);
+      if (dish) {
+        const dishCategoryId = (dish as any).category_id || dish.categoryId;
+        if (dishCategoryId !== selectedCategory) return false;
+      } else {
+        return false;
+      }
+    }
+    
+    // Dish type filter
+    if (selectedDishType !== 'all') {
+      const dish = dishes.find(d => d.id === item.id);
+      if (dish) {
+        const dishDishType = (dish as any).dish_type || dish.dishType;
+        if (dishDishType !== selectedDishType) return false;
+      }
+    }
     
     // Only show items allowed for current plate type
     const allowedTypes = getAllowedItemTypes();
@@ -1601,6 +1949,20 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
     }
+  };
+
+  const openDishDetail = (dish: Dish) => {
+    setDetailDish(dish);
+    setDishDetailOpen(true);
+  };
+
+  // Helper to get category image
+  const getCategoryImageUrl = (categoryId: string): string => {
+    const category = categories.find(c => c.id === categoryId);
+    if (category?.imageUrl && !category.imageUrl.startsWith('/images/')) {
+      return category.imageUrl;
+    }
+    return CATEGORY_IMAGES[categoryId] || idliImage1;
   };
 
   // Handle food item selection - allow selecting any item, fill next available slot
@@ -2845,184 +3207,289 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
               })}
             </div>
 
-            {/* Category Sidebar + Food Grid Container */}
-            <div className="flex gap-4">
-              {/* Left Category Sidebar */}
-              <div className="sticky flex flex-col gap-2 self-start" style={{ width: "90px", top: "200px" }}>
+            {/* CategoryPage-style Layout */}
+            <div className="flex gap-0 flex-1 w-full max-w-full">
+              {/* Left Sidebar - Dish Type Filters */}
+              <aside className="w-24 md:w-32 border-r bg-card/50 backdrop-blur-sm flex-shrink-0 overflow-y-auto pb-36 md:pb-6">
+                <div className="flex flex-col py-3">
+                  {/* Always show "All" option */}
                 <button
-                  onClick={() => setSelectedCategory("all")}
-                  className="flex flex-col items-center gap-1 p-2 rounded-lg transition-all"
-                  style={{ backgroundColor: selectedCategory === "all" ? "#1A9952" : "transparent" }}
-                  data-testid="category-all"
-                >
-                  <div className="w-12 h-12 rounded-full bg-[#FFF3E0] flex items-center justify-center">
-                    <span className="text-2xl">🍽️</span>
+                    onClick={() => { handleInteraction(); setSelectedDishType('all'); }}
+                    className={cn(
+                      "flex flex-col items-center gap-2 py-4 px-2 transition-all relative",
+                      selectedDishType === 'all'
+                        ? "bg-primary/10 before:absolute before:left-0 before:top-3 before:bottom-3 before:w-1.5 before:bg-primary before:rounded-r" 
+                        : "hover-elevate"
+                    )}
+                    data-testid="filter-dishtype-all"
+                  >
+                    <div className={cn(
+                      "relative w-16 h-16 md:w-20 md:h-20 rounded-full overflow-hidden border-2 transition-all flex items-center justify-center",
+                      selectedDishType === 'all'
+                        ? "border-primary shadow-lg scale-105 bg-primary/20" 
+                        : "border-border bg-card"
+                    )}>
+                      <LayoutGrid className={cn(
+                        "w-8 h-8 md:w-10 md:h-10",
+                        selectedDishType === 'all' ? "text-primary" : "text-muted-foreground"
+                      )} />
                   </div>
-                  <span className="text-[8px] sm:text-[9px] md:text-[10px] font-medium text-center leading-tight" style={{ fontFamily: "Sweet Sans Pro", color: selectedCategory === "all" ? "white" : "#06352A" }}>
+                    <div className="text-center w-full px-1">
+                      <span className={cn(
+                        "text-xs md:text-sm font-semibold block line-clamp-1 leading-tight mb-1",
+                        selectedDishType === 'all' ? "text-primary" : "text-foreground"
+                      )}>
                     All
                   </span>
-                </button>
-
-                <button
-                  onClick={() => setSelectedCategory("appetizers")}
-                  className="flex flex-col items-center gap-1 p-2 rounded-lg transition-all"
-                  style={{ backgroundColor: selectedCategory === "appetizers" ? "#1A9952" : "transparent" }}
-                  data-testid="category-appetizers"
-                >
-                  <div className="w-12 h-12 rounded-full bg-[#FFF3E0] flex items-center justify-center">
-                    <span className="text-2xl">🥗</span>
+                      <Badge 
+                        variant={selectedDishType === 'all' ? "default" : "secondary"}
+                        className="text-[10px] h-5 px-2 font-medium"
+                      >
+                        {filteredItems.length}
+                      </Badge>
                   </div>
-                  <span className="text-[8px] sm:text-[9px] md:text-[10px] font-medium text-center leading-tight" style={{ fontFamily: "Sweet Sans Pro", color: selectedCategory === "appetizers" ? "white" : "#06352A" }}>
-                    Appetizers
-                  </span>
                 </button>
 
+                  {/* Show dish type options if available */}
+                  {dishTypes.map((dishType) => {
+                    const count = getDishCountForDishType(dishType);
+                    const dishTypeImage = DISH_TYPE_IMAGES[dishType] || DISH_TYPE_IMAGES['default'];
+                    
+                    return (
                 <button
-                  onClick={() => setSelectedCategory("rice")}
-                  className="flex flex-col items-center gap-1 p-2 rounded-lg transition-all"
-                  style={{ backgroundColor: selectedCategory === "rice" ? "#1A9952" : "transparent" }}
-                  data-testid="category-rice"
-                >
-                  <div className="w-12 h-12 rounded-full bg-[#FFF3E0] flex items-center justify-center">
-                    <span className="text-2xl">🍚</span>
+                        key={dishType}
+                        onClick={() => { handleInteraction(); setSelectedDishType(dishType); }}
+                        className={cn(
+                          "flex flex-col items-center gap-2 py-4 px-2 transition-all relative",
+                          selectedDishType === dishType
+                            ? "bg-primary/10 before:absolute before:left-0 before:top-3 before:bottom-3 before:w-1.5 before:bg-primary before:rounded-r" 
+                            : "hover-elevate"
+                        )}
+                        data-testid={`filter-dishtype-${dishType.toLowerCase()}`}
+                      >
+                        <div className={cn(
+                          "relative w-16 h-16 md:w-20 md:h-20 rounded-full overflow-hidden border-2 transition-all",
+                          selectedDishType === dishType
+                            ? "border-primary shadow-lg scale-105" 
+                            : "border-border"
+                        )}>
+                          <img 
+                            src={dishTypeImage}
+                            alt={dishType}
+                            className="w-full h-full object-cover"
+                          />
+                          {selectedDishType === dishType && (
+                            <div className="absolute inset-0 bg-gradient-to-t from-primary/30 to-transparent pointer-events-none" />
+                          )}
                   </div>
-                  <span className="text-[8px] sm:text-[9px] md:text-[10px] font-medium text-center leading-tight" style={{ fontFamily: "Sweet Sans Pro", color: selectedCategory === "rice" ? "white" : "#06352A" }}>
-                    Rice
+                        <div className="text-center w-full px-1">
+                          <span className={cn(
+                            "text-xs md:text-sm font-semibold block line-clamp-2 leading-tight mb-1",
+                            selectedDishType === dishType ? "text-primary" : "text-foreground"
+                          )}>
+                            {dishType}
                   </span>
+                          <Badge 
+                            variant={selectedDishType === dishType ? "default" : "secondary"}
+                            className="text-[10px] h-5 px-2 font-medium"
+                          >
+                            {count}
+                          </Badge>
+                  </div>
                 </button>
+                    );
+                  })}
+                </div>
+              </aside>
 
+              {/* Right Content - Dishes Grid */}
+              <div className="flex-1 px-3 md:px-4 py-4 md:py-6 min-w-0 overflow-y-auto overflow-x-hidden pb-20 md:pb-6">
+                {/* Horizontal Category Tabs - Sticky */}
+                <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm pb-4 mb-2 border-b shadow-md -mx-3 md:-mx-4 px-3 md:px-4" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+                  <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide px-1 pt-3">
+                    {categories.map((cat) => {
+                      const totalInCategory = getDishCountForCategory(cat.id);
+                      
+                      return (
                 <button
-                  onClick={() => setSelectedCategory("entree")}
-                  className="flex flex-col items-center gap-1 p-2 rounded-lg transition-all"
-                  style={{ backgroundColor: selectedCategory === "entree" ? "#1A9952" : "transparent" }}
-                  data-testid="category-entree"
-                >
-                  <div className="w-12 h-12 rounded-full bg-[#FFF3E0] flex items-center justify-center">
-                    <span className="text-2xl">🍛</span>
+                          key={cat.id}
+                          onClick={() => {
+                            handleInteraction();
+                            setSelectedCategory(cat.id);
+                            setSelectedDishType('all');
+                          }}
+                          className="flex flex-col items-center gap-1.5 transition-all flex-shrink-0"
+                          data-testid={`tab-category-${cat.id}`}
+                        >
+                          <div className={cn(
+                            "relative w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden border-3 transition-all",
+                            selectedCategory === cat.id 
+                              ? "border-primary shadow-[0_8px_16px_rgba(255,107,53,0.4)] scale-105 ring-2 ring-primary/20" 
+                              : "border-border/50 hover:scale-102"
+                          )}>
+                            <img 
+                              src={getCategoryImageUrl(cat.id)}
+                              alt={cat.name}
+                              className="w-full h-full object-cover"
+                            />
+                            {selectedCategory === cat.id && (
+                              <div className="absolute inset-0 bg-gradient-to-t from-primary/20 to-transparent pointer-events-none" />
+                            )}
                   </div>
-                  <span className="text-[8px] sm:text-[9px] md:text-[10px] font-medium text-center leading-tight" style={{ fontFamily: "Sweet Sans Pro", color: selectedCategory === "entree" ? "white" : "#06352A" }}>
-                    Entree
+                          <div className="text-center">
+                            <span className={cn(
+                              "text-xs md:text-sm font-bold block whitespace-nowrap mb-0.5",
+                              selectedCategory === cat.id ? "text-primary" : "text-muted-foreground"
+                            )}>
+                              {cat.name}
                   </span>
+                            <Badge 
+                              variant={selectedCategory === cat.id ? "default" : "secondary"}
+                              className="text-[10px] h-5 px-2 font-medium"
+                            >
+                              {totalInCategory}
+                            </Badge>
+                  </div>
                 </button>
+                      );
+                    })}
+                  </div>
+                </div>
 
+                <div className="mb-4 flex justify-between items-center gap-2 flex-wrap">
+                  <h2 className="text-xl font-bold font-serif" data-testid="text-section-title">
+                    {categories.find(c => c.id === selectedCategory)?.name || 'All Categories'}
+                  </h2>
+                  
+                  {/* Dietary Mode Segmented Control */}
+                  <div className="inline-flex items-center gap-1 p-1 bg-muted rounded-full" data-testid="dietary-filter">
                 <button
-                  onClick={() => setSelectedCategory("roti")}
-                  className="flex flex-col items-center gap-1 p-2 rounded-lg transition-all"
-                  style={{ backgroundColor: selectedCategory === "roti" ? "#1A9952" : "transparent" }}
-                  data-testid="category-roti"
-                >
-                  <div className="w-12 h-12 rounded-full bg-[#FFF3E0] flex items-center justify-center">
-                    <span className="text-2xl">🫓</span>
-                  </div>
-                  <span className="text-[8px] sm:text-[9px] md:text-[10px] font-medium text-center leading-tight" style={{ fontFamily: "Sweet Sans Pro", color: selectedCategory === "roti" ? "white" : "#06352A" }}>
-                    Roti
-                  </span>
+                      onClick={() => { handleInteraction(); setDietaryMode('all'); }}
+                      className={cn(
+                        "h-7 px-3 rounded-full text-xs font-medium transition-all duration-200",
+                        dietaryMode === 'all'
+                          ? "bg-background shadow-sm text-foreground"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                      data-testid="filter-dietary-all"
+                    >
+                      All
                 </button>
-
-                <button
-                  onClick={() => setSelectedCategory("biryani")}
-                  className="flex flex-col items-center gap-1 p-2 rounded-lg transition-all"
-                  style={{ backgroundColor: selectedCategory === "biryani" ? "#1A9952" : "transparent" }}
-                  data-testid="category-biryani"
-                >
-                  <div className="w-12 h-12 rounded-full bg-[#FFF3E0] flex items-center justify-center">
-                    <span className="text-2xl">🍛</span>
-                  </div>
-                  <span className="text-[8px] sm:text-[9px] md:text-[10px] font-medium text-center leading-tight" style={{ fontFamily: "Sweet Sans Pro", color: selectedCategory === "biryani" ? "white" : "#06352A" }}>
-                    Biryani
-                  </span>
-                </button>
-
-                <button
-                  onClick={() => setSelectedCategory("dessert")}
-                  className="flex flex-col items-center gap-1 p-2 rounded-lg transition-all"
-                  style={{ backgroundColor: selectedCategory === "dessert" ? "#1A9952" : "transparent" }}
-                  data-testid="category-dessert"
-                >
-                  <div className="w-12 h-12 rounded-full bg-[#FFF3E0] flex items-center justify-center">
-                    <span className="text-2xl">🍰</span>
-                  </div>
-                  <span className="text-[8px] sm:text-[9px] md:text-[10px] font-medium text-center leading-tight" style={{ fontFamily: "Sweet Sans Pro", color: selectedCategory === "dessert" ? "white" : "#06352A" }}>
-                    Dessert
-                  </span>
-                </button>
-              </div>
-
-              {/* Right Content Area */}
-              <div className="flex-1">
-                {/* Subcategory Options */}
-                <div className="sticky top-[120px] z-30 bg-white pt-3 pb-2 -mx-1 px-1 rounded-lg shadow-sm">
-                <div className="flex items-center gap-2 overflow-x-auto pb-2">
                   <button
-                    onClick={() => setSelectedSubcategory("grilled")}
-                    className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-all whitespace-nowrap flex-shrink-0"
-                    style={{ 
-                      backgroundColor: selectedSubcategory === "grilled" ? "#1A9952" : "white",
-                      border: "1px solid #E5E7EB"
-                    }}
-                    data-testid="subcategory-grilled"
-                  >
-                    <img src={grilledIcon} alt="Grilled" className="w-6 h-6 sm:w-7 sm:h-7 object-cover rounded-full flex-shrink-0" />
-                    <span className="text-[9px] sm:text-[10px] font-medium" style={{ 
-                      fontFamily: "Sweet Sans Pro",
-                      color: selectedSubcategory === "grilled" ? "white" : "#06352A"
-                    }}>
-                      Grilled
-                    </span>
+                      onClick={() => { handleInteraction(); setDietaryMode('veg'); }}
+                      className={cn(
+                        "h-7 px-3 rounded-full text-xs font-medium transition-all duration-200 flex items-center gap-1",
+                        dietaryMode === 'veg'
+                          ? "bg-green-100 shadow-sm text-green-700"
+                          : "text-muted-foreground hover:text-green-600"
+                      )}
+                      data-testid="filter-dietary-veg"
+                    >
+                      <Leaf className={cn("w-3 h-3", dietaryMode === 'veg' ? "" : "text-green-600")} />
+                      <span className="hidden sm:inline">Veg</span>
                   </button>
-
                   <button
-                    onClick={() => setSelectedSubcategory("fried")}
-                    className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-all whitespace-nowrap flex-shrink-0"
-                    style={{ 
-                      backgroundColor: selectedSubcategory === "fried" ? "#1A9952" : "white",
-                      border: "1px solid #E5E7EB"
-                    }}
-                    data-testid="subcategory-fried"
-                  >
-                    <img src={friedIcon} alt="Fried" className="w-6 h-6 sm:w-7 sm:h-7 object-cover rounded-full flex-shrink-0" />
-                    <span className="text-[9px] sm:text-[10px] font-medium" style={{ 
-                      fontFamily: "Sweet Sans Pro",
-                      color: selectedSubcategory === "fried" ? "white" : "#06352A"
-                    }}>
-                      Fried
-                    </span>
+                      onClick={() => { handleInteraction(); setDietaryMode('egg'); }}
+                      className={cn(
+                        "h-7 px-3 rounded-full text-xs font-medium transition-all duration-200 flex items-center gap-1",
+                        dietaryMode === 'egg'
+                          ? "bg-yellow-100 shadow-sm text-yellow-700"
+                          : "text-muted-foreground hover:text-yellow-600"
+                      )}
+                      data-testid="filter-dietary-egg"
+                    >
+                      <Egg className={cn("w-3 h-3", dietaryMode === 'egg' ? "" : "text-yellow-600")} />
+                      <span className="hidden sm:inline">Egg</span>
                   </button>
-
                   <button
-                    onClick={() => setSelectedSubcategory("stuffed")}
-                    className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-all whitespace-nowrap flex-shrink-0"
-                    style={{ 
-                      backgroundColor: selectedSubcategory === "stuffed" ? "#1A9952" : "white",
-                      border: "1px solid #E5E7EB"
-                    }}
-                    data-testid="subcategory-stuffed"
-                  >
-                    <img src={stuffedIcon} alt="Stuffed" className="w-6 h-6 sm:w-7 sm:h-7 object-cover rounded-full flex-shrink-0" />
-                    <span className="text-[9px] sm:text-[10px] font-medium" style={{ 
-                      fontFamily: "Sweet Sans Pro",
-                      color: selectedSubcategory === "stuffed" ? "white" : "#06352A"
-                    }}>
-                      Stuffed
-                    </span>
+                      onClick={() => { handleInteraction(); setDietaryMode('non-veg'); }}
+                      className={cn(
+                        "h-7 px-3 rounded-full text-xs font-medium transition-all duration-200 flex items-center gap-1",
+                        dietaryMode === 'non-veg'
+                          ? "bg-red-100 shadow-sm text-red-700"
+                          : "text-muted-foreground hover:text-red-600"
+                      )}
+                      data-testid="filter-dietary-nonveg"
+                    >
+                      <Drumstick className={cn("w-3 h-3", dietaryMode === 'non-veg' ? "" : "text-red-600")} />
+                      <span className="hidden sm:inline">Non-Veg</span>
                   </button>
                 </div>
                 </div>
 
-                {/* Food Items Grid */}
-                <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                <div className="mb-6 flex items-center gap-2 flex-wrap">
+                  {/* Filter Button */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-9 gap-1.5"
+                    onClick={() => { handleInteraction(); setFilterDialogOpen(true); }}
+                    data-testid="button-filter"
+                  >
+                    <SlidersHorizontal className="w-4 h-4" />
+                    <span className="hidden sm:inline">Filters</span>
+                  </Button>
+
+                  {/* Sort Button */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-9 gap-1.5"
+                    onClick={() => { handleInteraction(); setSortDialogOpen(true); }}
+                    data-testid="button-sort"
+                  >
+                    <ArrowUpDown className="w-4 h-4" />
+                    <span className="hidden sm:inline">Sort</span>
+                  </Button>
+
+                  {/* Platter Planner Button */}
+                  <Button
+                    variant="default"
+                    size="lg"
+                    className="gap-1.5 bg-primary hover:bg-primary/90 animate-pulse hover:animate-none ml-auto"
+                    onClick={() => { handleInteraction(); setPlatterPlannerOpen(true); }}
+                    data-testid="button-platter-planner"
+                  >
+                    <Sparkles className="w-5 h-5 animate-spin" style={{ animationDuration: '3s' }} />
+                    Platter Planner
+                  </Button>
+                </div>
+                    
+                {isLoadingDishes ? (
+                  <div className="text-center py-12">
+                    <p className="text-muted-foreground">Loading dishes...</p>
+                  </div>
+                ) : filteredItems.length === 0 ? (
+                  <div className="text-center py-12">
+                    <p className="text-muted-foreground">No dishes match the selected filters</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {filteredItems.map((item) => {
                     const currentSelections = getCurrentPlateSelections();
                     const isSelected = currentSelections.some(sel => sel.itemId === item.id);
+                      const dish = dishes.find(d => d.id === item.id);
                     
                     return (
-                      <div 
+                        <Card 
                         key={item.id} 
-                        className={`bg-white rounded-lg border overflow-hidden relative ${
-                          isSelected ? 'border-[#1A9952] border-2' : 'border-gray-200'
-                        }`}
-                      >
-                        {/* Selected Indicator */}
+                          className={cn(
+                            "overflow-hidden hover-elevate group",
+                            isSelected && "ring-2 ring-primary"
+                          )}
+                          data-testid={`card-dish-${item.id}`}
+                        >
+                          <div 
+                            className="relative h-40 md:h-48 overflow-hidden cursor-pointer"
+                            onClick={() => { handleInteraction(); if (dish) openDishDetail(dish); }}
+                            data-testid={`image-dish-${item.id}`}
+                          >
+                            <img 
+                              src={dish ? getDishImage(dish) : item.image || idliImage1}
+                              alt={item.name}
+                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                         {isSelected && (
                           <div className="absolute top-2 right-2 z-10">
                             <div className="w-6 h-6 bg-[#1A9952] rounded-full flex items-center justify-center">
@@ -3030,54 +3497,57 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                             </div>
                           </div>
                         )}
-                        
-                        {/* Food Image Placeholder */}
-                        <div className="relative" style={{ paddingTop: "100%" }}>
-                          <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
-                            <UtensilsCrossed className="w-12 h-12 sm:w-16 sm:h-16 text-gray-400" />
+                            {item.type === "veg" && (
+                              <div className="absolute top-2 left-2 w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
+                                <Leaf className="w-3 h-3 text-white" />
                           </div>
+                            )}
+                            {item.type === "egg" && (
+                              <div className="absolute top-2 left-2 w-5 h-5 rounded-full bg-yellow-500 flex items-center justify-center">
+                                <Egg className="w-3 h-3 text-white" />
                         </div>
-                        
-                        {/* Food Details */}
-                        <div className="p-2 sm:p-3">
-                          {/* Rating */}
-                          <div className="flex items-center gap-1 mb-1">
-                            <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-[#1A9952] text-[#1A9952]" />
-                            <span className="text-[10px] sm:text-xs font-semibold" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                              {item.rating}({item.reviewCount})
-                            </span>
+                            )}
+                            {item.type === "non-veg" && (
+                              <div className="absolute top-2 left-2 w-5 h-5 rounded-full bg-red-500 flex items-center justify-center">
+                                <Drumstick className="w-3 h-3 text-white" />
                           </div>
-                          
-                          {/* Name */}
-                          <h3 className="font-semibold mb-1.5 sm:mb-2 text-[10px] sm:text-[11px] md:text-xs line-clamp-2" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                            )}
+                          </div>
+                          <div className="p-3 md:p-4">
+                            <h3 className="font-bold text-sm md:text-base mb-1 line-clamp-1" data-testid={`text-dish-name-${item.id}`}>
                             {item.name}
                           </h3>
-                          
-                          {/* Price and Add Button */}
-                          <div className="flex items-center justify-between gap-1.5">
-                            <span className="text-xs sm:text-sm md:text-base font-bold flex-shrink-0" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                              ₹{item.price}
+                            {dish?.description && (
+                              <div className="mb-3">
+                                <p className="text-xs text-muted-foreground line-clamp-2" data-testid={`text-dish-description-${item.id}`}>
+                                  {dish.description}
+                                </p>
+                              </div>
+                            )}
+                            <div className="flex items-center justify-between gap-2 mb-2">
+                              <span className="text-primary font-bold text-lg" data-testid={`text-dish-price-${item.id}`}>
+                                ₹{item.price.toFixed(0)}
                             </span>
+                            </div>
                             <Button
-                              onClick={() => handleItemSelection(item)}
-                              className="px-2 sm:px-3 md:px-4 py-1 text-[10px] sm:text-xs font-semibold border-0 min-h-0 h-auto"
-                              style={{ 
-                                fontFamily: "Sweet Sans Pro",
-                                backgroundColor: isSelected ? "#D1D5DB" : "#1A9952",
-                                color: isSelected ? "#6B7280" : "white",
-                                borderRadius: "6px",
-                                cursor: "pointer",
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleInteraction();
+                                handleItemSelection(item);
                               }}
+                              variant={isSelected ? "secondary" : "default"}
+                              className="w-full rounded-full px-4"
                               data-testid={`button-add-${item.id}`}
                             >
                               {isSelected ? "SELECTED" : "ADD"}
                             </Button>
                           </div>
-                        </div>
-                      </div>
+                        </Card>
                     );
                   })}
                 </div>
+                )}
               </div>
             </div>
           </div>
@@ -3850,16 +4320,19 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
               {/* Choose Saved Address */}
               <div>
                 <label className="block text-sm font-semibold mb-2" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                  Choose Saved Address
+                  Choose Saved Address (Optional)
                 </label>
                 <select
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-500"
                   style={{ fontFamily: "Sweet Sans Pro" }}
                   data-testid="select-saved-address"
                 >
-                  <option value="">Select Address</option>
-                  <option value="home">Home Address</option>
-                  <option value="office">Office Address</option>
+                  <option value="">Select Address (Optional)</option>
+                  {savedAddresses.map((address) => (
+                    <option key={address.id} value={address.id}>
+                      {address.label} {address.isDefault ? "(Default)" : ""}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -3969,7 +4442,17 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                   // Get form values
                   const deliveryDate = (document.querySelector('[data-testid="input-event-date"]') as HTMLInputElement)?.value || null;
                   const deliveryTime = (document.querySelector('[data-testid="input-event-time"]') as HTMLInputElement)?.value || null;
-                  const selectedAddressId = (document.querySelector('[data-testid="select-saved-address"]') as HTMLSelectElement)?.value || null;
+                  const selectedAddressId = (document.querySelector('[data-testid="select-saved-address"]') as HTMLSelectElement)?.value || "";
+                  
+                  // Validate addressId - only use if it's a valid UUID (not empty string or invalid value)
+                  let validAddressId: string | undefined = undefined;
+                  if (selectedAddressId && selectedAddressId.trim() !== "" && selectedAddressId !== "home" && selectedAddressId !== "office") {
+                    // Check if it's a valid UUID format
+                    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+                    if (uuidRegex.test(selectedAddressId)) {
+                      validAddressId = selectedAddressId;
+                    }
+                  }
                   
                   // Create order
                   await mealboxOrderService.create({
@@ -3987,9 +4470,9 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                     deliveryFee: 0,
                     tax: gst,
                     total: total,
-                    deliveryDate: deliveryDate,
-                    deliveryTime: deliveryTime,
-                    addressId: selectedAddressId || undefined,
+                    deliveryDate: deliveryDate || undefined,
+                    deliveryTime: deliveryTime || undefined,
+                    addressId: validAddressId,
                   });
                   
                 // Clear mealbox progress when order is placed
@@ -4020,9 +4503,9 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                 color: "white",
                 borderRadius: "10px"
               }}
-              data-testid="button-select-payment"
+              data-testid="button-submit"
             >
-              <span>Select Payment Method</span>
+              <span>Submit</span>
               <span className="font-bold text-xl">
                 ₹{(() => {
                   const vegCount = parseInt(vegBoxes) || 0;

@@ -125,6 +125,7 @@ export const bulkMealOrders = pgTable("bulk_meal_orders", {
   userId: varchar("user_id").notNull().references(() => users.id),
   orderNumber: integer("order_number").notNull().unique(),
   items: text("items").notNull(), // JSON array of {dishId, quantity, price}
+  selectedAddons: text("selected_addons"), // JSON array of addon IDs
   subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
   gst: decimal("gst", { precision: 10, scale: 2 }).notNull().default("0"),
   platformFee: decimal("platform_fee", { precision: 10, scale: 2 }).notNull().default("0"),

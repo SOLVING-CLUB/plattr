@@ -1,38 +1,34 @@
+import { useState } from "react";
 import { useRoute, useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import DishCard from "@/components/DishCard";
 import AppHeader from "@/components/AppHeader";
 import BottomNav from "@/components/BottomNav";
 import FloatingCartButton from "@/components/FloatingCartButton";
-import { useState } from "react";
 import { useGoBack } from "@/hooks/useGoBack";
+import type { Dish } from "@shared/schema";
+import { getSupabaseImageUrl } from "@/lib/supabase";
 
-import dishImage from '@assets/stock_images/biryani_rice_dish_fo_8445bdd6.jpg';
-import dishImage2 from '@assets/stock_images/indian_food_platter__fb1fa3f3.jpg';
-
-// todo: remove mock functionality
-const MOCK_DISHES = [
-  { id: '1', name: 'Masala Dosa', description: 'Crispy rice crepe with spiced potato filling', price: 80, image: dishImage },
-  { id: '2', name: 'Idli Sambar', description: 'Steamed rice cakes with lentil stew', price: 60, image: dishImage2 },
-  { id: '3', name: 'Vada', description: 'Crispy lentil fritters', price: 40, image: dishImage },
-  { id: '4', name: 'Pongal', description: 'Rice and lentil khichdi with ghee', price: 70, image: dishImage2 },
-  { id: '5', name: 'Uttapam', description: 'Thick rice pancake with toppings', price: 90, image: dishImage },
-  { id: '6', name: 'Rava Dosa', description: 'Crispy semolina crepe', price: 85, image: dishImage2 },
-];
+import dishFallbackImage from "@assets/stock_images/biryani_rice_dish_fo_8445bdd6.jpg";
 
 export default function DishesPage() {
   const [, params] = useRoute("/dishes/:mealType/:category");
   const [, setLocation] = useLocation();
-  const mealType = params?.mealType || 'tiffins';
+  const mealType = (params?.mealType as string) || "tiffins";
+  const categoryId = (params?.category as string) || "all";
   const goBack = useGoBack(`/categories/${mealType}`);
-  const [activeTab, setActiveTab] = useState('categories');
+  const [activeTab, setActiveTab] = useState("categories");
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   
-  // todo: remove mock functionality
-  const [cartItems, setCartItems] = useState([
-    { id: '1', name: 'Masala Dosa', price: 80, quantity: 1, category: 'Tiffins', image: dishImage }
-  ]);
+  // Fetch dishes for this meal type + category from Supabase
+  const {
+    data: dishes = [],
+    isLoading,
+  } = useQuery<Dish[]>({
+    queryKey: ["/api/dishes", mealType, categoryId, "all"],
+  });
 
   const category = params?.category || 'south-indian-tiffins';
 
@@ -57,23 +53,21 @@ export default function DishesPage() {
     }
   };
 
-  const handleUpdateQuantity = (id: string, change: number) => {
-    setCartItems(items => 
-      items.map(item => 
-        item.id === id ? { ...item, quantity: Math.max(1, item.quantity + change) } : item
-      )
-    );
-  };
+  const uiDishes = dishes
+    .filter(dish => dish.isAvailable !== false)
+    .map(dish => ({
+      id: dish.id,
+      name: dish.name,
+      description: dish.description || "",
+      price: Number(dish.price),
+      image: dish.imageUrl ? getSupabaseImageUrl(dish.imageUrl) : dishFallbackImage,
+    }));
 
-  const handleRemoveItem = (id: string) => {
-    setCartItems(items => items.filter(item => item.id !== id));
-  };
-
-  const totalItems = Object.values(quantities).reduce((sum, q) => sum + q, 0) + cartItems.reduce((sum, item) => sum + item.quantity, 0);
+  const totalItems = Object.values(quantities).reduce((sum, q) => sum + q, 0);
   const totalPrice = Object.entries(quantities).reduce((sum, [id, q]) => {
-    const dish = MOCK_DISHES.find(d => d.id === id);
+    const dish = uiDishes.find(d => d.id === id);
     return sum + (dish ? dish.price * q : 0);
-  }, 0) + cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  }, 0);
 
   const categoryName = category.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 
@@ -105,8 +99,13 @@ export default function DishesPage() {
           </p>
         </div>
 
+        {isLoading ? (
+          <p className="text-muted-foreground">Loading dishes...</p>
+        ) : uiDishes.length === 0 ? (
+          <p className="text-muted-foreground">No dishes available for this category yet.</p>
+        ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {MOCK_DISHES.map((dish) => (
+            {uiDishes.map((dish) => (
             <DishCard
               key={dish.id}
               id={dish.id}
@@ -120,6 +119,7 @@ export default function DishesPage() {
             />
           ))}
         </div>
+        )}
       </main>
 
       <FloatingCartButton 

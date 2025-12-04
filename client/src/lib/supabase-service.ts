@@ -637,6 +637,7 @@ export const bulkMealOrderService = {
    */
   async create(orderData: {
     items: Array<{ dishId: string; quantity: number; price: number }>;
+    selectedAddons?: string[];
     subtotal: number;
     gst: number;
     platformFee: number;
@@ -667,6 +668,9 @@ export const bulkMealOrderService = {
         user_id: user.id,
         order_number: nextOrderNumber,
         items: JSON.stringify(orderData.items),
+        selected_addons: orderData.selectedAddons && orderData.selectedAddons.length > 0 
+          ? JSON.stringify(orderData.selectedAddons) 
+          : null,
         subtotal: orderData.subtotal.toFixed(2),
         gst: orderData.gst.toFixed(2),
         platform_fee: orderData.platformFee.toFixed(2),

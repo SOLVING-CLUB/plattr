@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useCart } from "@/context/CartContex";
 import FloatingNav from "@/pages/FloatingNav";
-import { bulkMealOrderService } from "@/lib/supabase-service";
+import { bulkMealOrderService, addressService } from "@/lib/supabase-service";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
 
 export default function BulkMealsDelivery() {
   const [, setLocation] = useLocation();
@@ -13,6 +14,12 @@ export default function BulkMealsDelivery() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<"home" | "menu" | "profile">("menu");
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
+
+  // Fetch saved addresses
+  const { data: savedAddresses = [] } = useQuery({
+    queryKey: ["addresses"],
+    queryFn: () => addressService.getAll(),
+  });
 
   useEffect(() => {
     if (cart.length === 0) {
@@ -43,7 +50,29 @@ export default function BulkMealsDelivery() {
       // Get form values
       const deliveryDate = (document.querySelector('[data-testid="input-event-date"]') as HTMLInputElement)?.value || null;
       const deliveryTime = (document.querySelector('[data-testid="input-event-time"]') as HTMLInputElement)?.value || null;
-      const selectedAddressId = (document.querySelector('[data-testid="select-saved-address"]') as HTMLSelectElement)?.value || null;
+      const selectedAddressId = (document.querySelector('[data-testid="select-saved-address"]') as HTMLSelectElement)?.value || "";
+      
+      // Validate addressId - only use if it's a valid UUID (not empty string or invalid value)
+      let validAddressId: string | undefined = undefined;
+      if (selectedAddressId && selectedAddressId.trim() !== "" && selectedAddressId !== "home" && selectedAddressId !== "office") {
+        // Check if it's a valid UUID format
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (uuidRegex.test(selectedAddressId)) {
+          validAddressId = selectedAddressId;
+        }
+      }
+      
+      // Get selected addons from localStorage
+      const BULK_MEALS_ADDONS_KEY = "bulkMealsAddons";
+      let selectedAddons: string[] = [];
+      const storedAddons = localStorage.getItem(BULK_MEALS_ADDONS_KEY);
+      if (storedAddons) {
+        try {
+          selectedAddons = JSON.parse(storedAddons);
+        } catch {
+          selectedAddons = [];
+        }
+      }
       
       // Convert cart items to order format
       const items = cart.map(item => ({
@@ -55,14 +84,15 @@ export default function BulkMealsDelivery() {
       // Create order
       await bulkMealOrderService.create({
         items: items,
+        selectedAddons: selectedAddons.length > 0 ? selectedAddons : undefined,
         subtotal: subtotal,
         gst: gst,
         platformFee: platformFee,
         packagingFee: packagingFee,
         total: grandTotal,
-        deliveryDate: deliveryDate,
-        deliveryTime: deliveryTime,
-        addressId: selectedAddressId || undefined,
+        deliveryDate: deliveryDate || undefined,
+        deliveryTime: deliveryTime || undefined,
+        addressId: validAddressId,
       });
       
     localStorage.removeItem("bulkMealsAddons");
@@ -176,16 +206,19 @@ export default function BulkMealsDelivery() {
           {/* Choose Saved Address */}
           <div>
             <label className="block text-sm font-semibold mb-2" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-              Choose Saved Address
+              Choose Saved Address (Optional)
             </label>
             <select
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-500"
               style={{ fontFamily: "Sweet Sans Pro" }}
               data-testid="select-saved-address"
             >
-              <option value="">Select Address</option>
-              <option value="home">Home Address</option>
-              <option value="office">Office Address</option>
+              <option value="">Select Address (Optional)</option>
+              {savedAddresses.map((address) => (
+                <option key={address.id} value={address.id}>
+                  {address.label} {address.isDefault ? "(Default)" : ""}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -284,9 +317,9 @@ export default function BulkMealsDelivery() {
             color: "white",
             borderRadius: "10px"
           }}
-          data-testid="button-select-payment"
+          data-testid="button-submit"
         >
-          <span>Select Payment Method</span>
+          <span>Submit</span>
           <span className="font-bold text-xl">
             ₹{grandTotal.toLocaleString('en-IN')}
           </span>

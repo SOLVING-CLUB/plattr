@@ -40,6 +40,7 @@ import BulkMealCart from "@/pages/BulkMealCart";
 import BulkMealAddons from "@/pages/BulkMealAddons";
 import BulkMealDelivery from "@/pages/BulkMealDelivery";
 import BulkMealThankyouPage from "@/pages/BulkMealThankyouPage";
+import MealBoxThankyouPage from "@/pages/MealBoxThankyouPage";
 import VerificationScreen from "@/pages/VerificationScreen";
 import PhoneScreen from "@/pages/PhoneScreen";
 import NameScreen from "@/pages/NameScreen";
@@ -232,6 +233,7 @@ function Router() {
       <Route path="/smart-menu-results" component={GuardedSmartMenuResults} />
       <Route path="/mealbox" component={GuardedMealBoxPage} />
       <Route path="/mealbox/builder" component={GuardedMealBoxBuilderPage} />
+      <Route path="/mealbox-thank-you" component={MealBoxThankyouPage} />
       <Route path="/bulk-meals" component={GuardedBulkMeal} />
       <Route path="/bulk-meals-cart" component={GuardedBulkMealCart} />
       <Route path="/bulk-meals-addons" component={GuardedBulkMealAddons} />

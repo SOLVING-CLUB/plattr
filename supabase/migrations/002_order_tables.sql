@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS bulk_meal_orders (
   user_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   order_number INTEGER NOT NULL UNIQUE,
   items TEXT NOT NULL, -- JSON array of {dishId, quantity, price}
+  selected_addons TEXT, -- JSON array of addon IDs
   subtotal DECIMAL(10, 2) NOT NULL,
   gst DECIMAL(10, 2) NOT NULL DEFAULT 0,
   platform_fee DECIMAL(10, 2) NOT NULL DEFAULT 0,
@@ -62,6 +63,16 @@ CREATE TABLE IF NOT EXISTS bulk_meal_orders (
   status TEXT NOT NULL DEFAULT 'pending',
   created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+-- Add selected_addons column if table already exists (for existing databases)
+DO $$ 
+BEGIN
+  IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'bulk_meal_orders') THEN
+    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'bulk_meal_orders' AND column_name = 'selected_addons') THEN
+      ALTER TABLE bulk_meal_orders ADD COLUMN selected_addons TEXT;
+    END IF;
+  END IF;
+END $$;
 
 -- Create Catering Orders Table
 -- Drop existing table if it has wrong schema (will recreate with correct schema)
