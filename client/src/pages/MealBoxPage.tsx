@@ -3258,7 +3258,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
             {/* CategoryPage-style Layout */}
             <div className="flex gap-0 flex-1 w-full max-w-full">
               {/* Left Sidebar - Category Filters (Starters, Sides, Mains, etc.) - Sticky with internal scroll */}
-              <aside className="w-24 md:w-32 border-r bg-card/50 backdrop-blur-sm flex-shrink-0 sticky self-start" style={{ top: '244px', maxHeight: 'calc(100vh - 244px)', overflowY: 'auto' }}>
+              <aside className="w-20 md:w-24 border-r bg-card/50 backdrop-blur-sm flex-shrink-0 sticky self-start" style={{ top: '244px', maxHeight: 'calc(100vh - 244px)', overflowY: 'auto' }}>
                 <div className="flex flex-col py-3">
                   {/* Always show "All" option */}
                   <button
@@ -3272,7 +3272,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                     data-testid="filter-category-all"
                   >
                     <div className={cn(
-                      "relative w-16 h-16 md:w-20 md:h-20 rounded-full overflow-hidden border-2 transition-all flex items-center justify-center",
+                      "relative w-12 h-12 md:w-14 md:h-14 rounded-full overflow-hidden border-2 transition-all flex items-center justify-center",
                       selectedCategory === 'all'
                         ? "border-primary shadow-lg scale-105 bg-primary/20" 
                         : "border-border bg-card"
@@ -3315,7 +3315,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                         data-testid={`filter-category-${cat.id}`}
                       >
                         <div className={cn(
-                          "relative w-16 h-16 md:w-20 md:h-20 rounded-full overflow-hidden border-2 transition-all",
+                          "relative w-12 h-12 md:w-14 md:h-14 rounded-full overflow-hidden border-2 transition-all",
                           selectedCategory === cat.id
                             ? "border-primary shadow-lg scale-105" 
                             : "border-border"
