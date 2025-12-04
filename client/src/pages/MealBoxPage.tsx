@@ -2843,8 +2843,8 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
         {/* Step 4: Choose Food Category */}
         {currentStep === 4 && (
         <div className="space-y-6">
-            {/* Sticky Proceed Card - below main back button (top: 72px) */}
-            <div className="sticky z-30 -mx-4 px-4 py-3 bg-white" style={{ top: "72px" }}>
+            {/* Proceed Card - non-sticky */}
+            <div className="-mx-4 px-4 py-3 bg-white">
               <div className="flex items-center justify-between p-4 rounded-lg" style={{ backgroundColor: "#1A9952" }}>
               <div className="flex items-center gap-3">
                 <img src={mealBoxImage} alt="Meal Box" className="w-12 h-12 object-contain" />
@@ -2877,8 +2877,8 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
               </div>
             </div>
 
-            {/* Sticky Search Bar for Step 4 - below proceed card (top: 72px + 84px = 156px) */}
-            <div className="sticky z-20 bg-white pb-2 -mx-4 px-4 pt-2 shadow-sm" style={{ top: "156px" }}>
+            {/* Search Bar - non-sticky */}
+            <div className="bg-white pb-2 -mx-4 px-4 pt-2">
               <div className="flex items-center gap-2 bg-white px-4 py-3 border border-gray-200" style={{ borderRadius: "10px" }}>
                 <Search className="w-6 h-6 text-gray-500" />
                 <input
@@ -3580,12 +3580,11 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
         {/* Step 5: Cart Details */}
         {currentStep === 5 && (
           <div className="pb-24">
-            {/* Sticky Cart Total Bar - below main back button (top: 72px) */}
+            {/* Cart Total Bar - non-sticky */}
             <div 
-              className="sticky z-30 bg-white border-b border-gray-200 -mx-4 px-4 py-3 mb-4"
+              className="bg-white border-b border-gray-200 -mx-4 px-4 py-3 mb-4"
               style={{ 
-                boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-                top: "72px"
+                boxShadow: "0 2px 4px rgba(0,0,0,0.05)"
               }}
             >
               <div className="flex items-center justify-between">
