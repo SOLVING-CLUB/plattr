@@ -882,11 +882,12 @@ export default function Menu() {
                         key={dishType}
                         onClick={() => setSelectedDishType(dishType)}
                         className={cn(
-                          "flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all flex-shrink-0",
+                          "flex items-center gap-2 px-3 py-1.5 border transition-all flex-shrink-0",
                           selectedDishType === dishType 
                             ? "border-[#1A9952] bg-white shadow-sm" 
                             : "border-gray-200 bg-white hover:border-gray-300"
                         )}
+                        style={{ borderRadius: '10px' }}
                         data-testid={`tab-dishtype-${dishType.toLowerCase()}`}
                       >
                         <div className="relative w-7 h-7 rounded-full overflow-hidden flex-shrink-0">
