@@ -2112,8 +2112,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
       <div 
         className="sticky top-0 z-50 transition-all duration-200"
         style={{
-          backgroundColor: scrollY > 50 ? 'rgba(255, 255, 255, 0.95)' : 'transparent',
-          backdropFilter: scrollY > 50 ? 'blur(8px)' : 'none',
+          backgroundColor: scrollY > 50 ? 'white' : 'transparent',
           boxShadow: scrollY > 50 ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
         }}
       >
