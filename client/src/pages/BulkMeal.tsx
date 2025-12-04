@@ -835,7 +835,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
         className="sticky z-40 px-4 pb-2 pt-4 transition-all duration-200" 
         style={{ 
           top: '92px',
-          backgroundColor: isStuck ? "white" : "transparent",
+          backgroundColor: "white",
           boxShadow: isStuck ? "0 2px 4px rgba(0,0,0,0.1)" : "none"
         }}
       >
