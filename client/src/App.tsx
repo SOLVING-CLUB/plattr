@@ -144,8 +144,26 @@ const withNeedsName = <P extends object>(Component: ComponentType<P>) => (props:
   </RequireNeedsName>
 );
 
+// Scroll to top on every route change
+function ScrollToTop() {
+  const [location] = useLocation();
+  
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [location]);
+  
+  return null;
+}
+
 function Router() {
   useAndroidBackButton();
+  
+  // Disable browser's native scroll restoration
+  useEffect(() => {
+    if ('scrollRestoration' in history) {
+      history.scrollRestoration = 'manual';
+    }
+  }, []);
 
   const GuardedHomePage = withAuthGuard(HomePage);
   const GuardedAdminDashboard = withAuthGuard(AdminDashboard);
@@ -195,8 +213,10 @@ function Router() {
   const GuardedNameScreen = withNeedsName(NameScreen);
 
   return (
-    <Switch>
-      <Route path="/" component={GuardedHomePage} />
+    <>
+      <ScrollToTop />
+      <Switch>
+        <Route path="/" component={GuardedHomePage} />
       <Route path="/menu" component={GuardedMenuPage} />
       <Route path="/explore-menu" component={GuardedExploreMenuPage} />
       <Route path="/test-auth" component={TestAuthPage} />
@@ -240,8 +260,9 @@ function Router() {
       <Route path="/bulk-meals-delivery" component={GuardedBulkMealDelivery} />
       <Route path="/bulk-meals-thank-you" component={GuardedBulkMealThankyouPage} />
       <Route path="/admin" component={GuardedAdminDashboard} />
-      <Route component={NotFound} />
-    </Switch>
+        <Route component={NotFound} />
+      </Switch>
+    </>
   );
 }
 
