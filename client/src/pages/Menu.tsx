@@ -650,9 +650,10 @@ export default function Menu() {
 
       {/* Sticky Search Bar and Meal Category Container */}
       <div 
-        className="sticky top-0 z-40 px-4 pb-2 pt-2 transition-all duration-200" 
+        className="sticky z-40 px-4 pb-2 pt-4 transition-all duration-200" 
         style={{ 
-          backgroundColor: isStuck ? "white" : "transparent",
+          top: '92px',
+          backgroundColor: "white",
           boxShadow: isStuck ? "0 2px 4px rgba(0,0,0,0.1)" : "none"
         }}
       >
@@ -777,7 +778,7 @@ export default function Menu() {
           {/* CategoryPage-style Layout */}
           <div className="flex gap-0 flex-1 w-full max-w-full">
             {/* Left Sidebar - Category Filters (Starters, Sides, Mains, etc.) - Sticky with internal scroll */}
-            <aside className="w-20 md:w-24 border-r bg-card/50 backdrop-blur-sm flex-shrink-0 sticky self-start" style={{ top: '244px', maxHeight: 'calc(100vh - 244px)', overflowY: 'auto' }}>
+            <aside className="w-20 md:w-24 border-r bg-card/50 backdrop-blur-sm flex-shrink-0 sticky self-start" style={{ top: '212px', maxHeight: 'calc(100vh - 212px)', overflowY: 'auto' }}>
               <div className="flex flex-col py-3">
                 {/* Always show "All" option */}
                 <button
