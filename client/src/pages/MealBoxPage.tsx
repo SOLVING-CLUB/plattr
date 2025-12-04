@@ -3237,94 +3237,93 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
 
             {/* CategoryPage-style Layout */}
             <div className="flex gap-0 flex-1 w-full max-w-full">
-              {/* Left Sidebar - Dish Type Filters */}
+              {/* Left Sidebar - Category Filters (Starters, Sides, Mains, etc.) */}
               <aside className="w-24 md:w-32 border-r bg-card/50 backdrop-blur-sm flex-shrink-0 overflow-y-auto pb-36 md:pb-6">
                 <div className="flex flex-col py-3">
                   {/* Always show "All" option */}
-                <button
-                    onClick={() => { handleInteraction(); setSelectedDishType('all'); }}
+                  <button
+                    onClick={() => { handleInteraction(); setSelectedCategory('all'); setSelectedDishType('all'); }}
                     className={cn(
                       "flex flex-col items-center gap-2 py-4 px-2 transition-all relative",
-                      selectedDishType === 'all'
+                      selectedCategory === 'all'
                         ? "bg-primary/10 before:absolute before:left-0 before:top-3 before:bottom-3 before:w-1.5 before:bg-primary before:rounded-r" 
                         : "hover-elevate"
                     )}
-                    data-testid="filter-dishtype-all"
+                    data-testid="filter-category-all"
                   >
                     <div className={cn(
                       "relative w-16 h-16 md:w-20 md:h-20 rounded-full overflow-hidden border-2 transition-all flex items-center justify-center",
-                      selectedDishType === 'all'
+                      selectedCategory === 'all'
                         ? "border-primary shadow-lg scale-105 bg-primary/20" 
                         : "border-border bg-card"
                     )}>
                       <LayoutGrid className={cn(
                         "w-8 h-8 md:w-10 md:h-10",
-                        selectedDishType === 'all' ? "text-primary" : "text-muted-foreground"
+                        selectedCategory === 'all' ? "text-primary" : "text-muted-foreground"
                       )} />
-                  </div>
+                    </div>
                     <div className="text-center w-full px-1">
                       <span className={cn(
                         "text-xs md:text-sm font-semibold block line-clamp-1 leading-tight mb-1",
-                        selectedDishType === 'all' ? "text-primary" : "text-foreground"
+                        selectedCategory === 'all' ? "text-primary" : "text-foreground"
                       )}>
-                    All
-                  </span>
+                        All
+                      </span>
                       <Badge 
-                        variant={selectedDishType === 'all' ? "default" : "secondary"}
+                        variant={selectedCategory === 'all' ? "default" : "secondary"}
                         className="text-[10px] h-5 px-2 font-medium"
                       >
                         {filteredItems.length}
                       </Badge>
-                  </div>
-                </button>
+                    </div>
+                  </button>
 
-                  {/* Show dish type options if available */}
-                  {dishTypes.map((dishType) => {
-                    const count = getDishCountForDishType(dishType);
-                    const dishTypeImage = DISH_TYPE_IMAGES[dishType] || DISH_TYPE_IMAGES['default'];
+                  {/* Show category options (Starters, Sides, Mains, etc.) */}
+                  {categories.map((cat) => {
+                    const totalInCategory = getDishCountForCategory(cat.id);
                     
                     return (
-                <button
-                        key={dishType}
-                        onClick={() => { handleInteraction(); setSelectedDishType(dishType); }}
+                      <button
+                        key={cat.id}
+                        onClick={() => { handleInteraction(); setSelectedCategory(cat.id); setSelectedDishType('all'); }}
                         className={cn(
                           "flex flex-col items-center gap-2 py-4 px-2 transition-all relative",
-                          selectedDishType === dishType
+                          selectedCategory === cat.id
                             ? "bg-primary/10 before:absolute before:left-0 before:top-3 before:bottom-3 before:w-1.5 before:bg-primary before:rounded-r" 
                             : "hover-elevate"
                         )}
-                        data-testid={`filter-dishtype-${dishType.toLowerCase()}`}
+                        data-testid={`filter-category-${cat.id}`}
                       >
                         <div className={cn(
                           "relative w-16 h-16 md:w-20 md:h-20 rounded-full overflow-hidden border-2 transition-all",
-                          selectedDishType === dishType
+                          selectedCategory === cat.id
                             ? "border-primary shadow-lg scale-105" 
                             : "border-border"
                         )}>
                           <img 
-                            src={dishTypeImage}
-                            alt={dishType}
+                            src={getCategoryImageUrl(cat.id)}
+                            alt={cat.name}
                             className="w-full h-full object-cover"
                           />
-                          {selectedDishType === dishType && (
+                          {selectedCategory === cat.id && (
                             <div className="absolute inset-0 bg-gradient-to-t from-primary/30 to-transparent pointer-events-none" />
                           )}
-                  </div>
+                        </div>
                         <div className="text-center w-full px-1">
                           <span className={cn(
                             "text-xs md:text-sm font-semibold block line-clamp-2 leading-tight mb-1",
-                            selectedDishType === dishType ? "text-primary" : "text-foreground"
+                            selectedCategory === cat.id ? "text-primary" : "text-foreground"
                           )}>
-                            {dishType}
-                  </span>
+                            {cat.name}
+                          </span>
                           <Badge 
-                            variant={selectedDishType === dishType ? "default" : "secondary"}
+                            variant={selectedCategory === cat.id ? "default" : "secondary"}
                             className="text-[10px] h-5 px-2 font-medium"
                           >
-                            {count}
+                            {totalInCategory}
                           </Badge>
-                  </div>
-                </button>
+                        </div>
+                      </button>
                     );
                   })}
                 </div>
@@ -3332,53 +3331,84 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
 
               {/* Right Content - Dishes Grid */}
               <div className="flex-1 px-3 md:px-4 py-4 md:py-6 min-w-0 overflow-y-auto overflow-x-hidden pb-20 md:pb-6">
-                {/* Horizontal Category Tabs - Sticky */}
+                {/* Horizontal Dish Type Tabs - Sticky (65's, Chilli, Fry, etc.) */}
                 <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm pb-4 mb-2 border-b shadow-md -mx-3 md:-mx-4 px-3 md:px-4" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
                   <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide px-1 pt-3">
-                    {categories.map((cat) => {
-                      const totalInCategory = getDishCountForCategory(cat.id);
+                    {/* All dish types option */}
+                    <button
+                      onClick={() => { handleInteraction(); setSelectedDishType('all'); }}
+                      className="flex flex-col items-center gap-1.5 transition-all flex-shrink-0"
+                      data-testid="tab-dishtype-all"
+                    >
+                      <div className={cn(
+                        "relative w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden border-3 transition-all flex items-center justify-center",
+                        selectedDishType === 'all' 
+                          ? "border-primary shadow-[0_8px_16px_rgba(255,107,53,0.4)] scale-105 ring-2 ring-primary/20 bg-primary/20" 
+                          : "border-border/50 hover:scale-102 bg-card"
+                      )}>
+                        <LayoutGrid className={cn(
+                          "w-8 h-8 md:w-10 md:h-10",
+                          selectedDishType === 'all' ? "text-primary" : "text-muted-foreground"
+                        )} />
+                      </div>
+                      <div className="text-center">
+                        <span className={cn(
+                          "text-xs md:text-sm font-bold block whitespace-nowrap mb-0.5",
+                          selectedDishType === 'all' ? "text-primary" : "text-muted-foreground"
+                        )}>
+                          All
+                        </span>
+                        <Badge 
+                          variant={selectedDishType === 'all' ? "default" : "secondary"}
+                          className="text-[10px] h-5 px-2 font-medium"
+                        >
+                          {filteredItems.length}
+                        </Badge>
+                      </div>
+                    </button>
+                    
+                    {/* Dish type options (65's, Chilli, Fry, etc.) */}
+                    {dishTypes.map((dishType) => {
+                      const count = getDishCountForDishType(dishType);
+                      const dishTypeImage = DISH_TYPE_IMAGES[dishType] || DISH_TYPE_IMAGES['default'];
                       
                       return (
-                <button
-                          key={cat.id}
-                          onClick={() => {
-                            handleInteraction();
-                            setSelectedCategory(cat.id);
-                            setSelectedDishType('all');
-                          }}
+                        <button
+                          key={dishType}
+                          onClick={() => { handleInteraction(); setSelectedDishType(dishType); }}
                           className="flex flex-col items-center gap-1.5 transition-all flex-shrink-0"
-                          data-testid={`tab-category-${cat.id}`}
+                          data-testid={`tab-dishtype-${dishType.toLowerCase()}`}
                         >
                           <div className={cn(
                             "relative w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden border-3 transition-all",
-                            selectedCategory === cat.id 
+                            selectedDishType === dishType 
                               ? "border-primary shadow-[0_8px_16px_rgba(255,107,53,0.4)] scale-105 ring-2 ring-primary/20" 
                               : "border-border/50 hover:scale-102"
                           )}>
                             <img 
-                              src={getCategoryImageUrl(cat.id)}
-                              alt={cat.name}
+                              src={dishTypeImage}
+                              alt={dishType}
                               className="w-full h-full object-cover"
                             />
-                            {selectedCategory === cat.id && (
+                            {selectedDishType === dishType && (
                               <div className="absolute inset-0 bg-gradient-to-t from-primary/20 to-transparent pointer-events-none" />
                             )}
-                  </div>
+                          </div>
                           <div className="text-center">
                             <span className={cn(
                               "text-xs md:text-sm font-bold block whitespace-nowrap mb-0.5",
-                              selectedCategory === cat.id ? "text-primary" : "text-muted-foreground"
+                              selectedDishType === dishType ? "text-primary" : "text-muted-foreground"
                             )}>
-                              {cat.name}
-                  </span>
+                              {dishType}
+                            </span>
                             <Badge 
-                              variant={selectedCategory === cat.id ? "default" : "secondary"}
+                              variant={selectedDishType === dishType ? "default" : "secondary"}
                               className="text-[10px] h-5 px-2 font-medium"
                             >
-                              {totalInCategory}
+                              {count}
                             </Badge>
-                  </div>
-                </button>
+                          </div>
+                        </button>
                       );
                     })}
                   </div>
