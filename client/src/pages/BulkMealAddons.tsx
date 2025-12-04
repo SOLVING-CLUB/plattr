@@ -65,7 +65,7 @@ export default function BulkMealsAddons() {
   }
 
   return (
-    <div className="min-h-screen bg-white pb-32">
+    <div className="min-h-screen bg-white pb-24">
       {/* Header */}
       <div className="bg-white px-4 py-4 border-b border-gray-100 sticky top-0 z-50">
         <button 
