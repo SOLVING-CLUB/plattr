@@ -2080,26 +2080,30 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
           height: "300px",
         }}
       />
-      {/* Header Section with Location and Cart */}
-      <div className="relative z-10 px-4 pt-12 pb-6">
-        {/* Back Button */}
-        <Button
-          variant="ghost"
-          size="sm"
-          className="mb-6 text-white hover:text-white hover:bg-white/20"
-          onClick={() => {
-            if (currentStep > 1) {
-              handleBackStep();
-            } else {
-              navigate("/");
-            }
-          }}
-          data-testid="button-back"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back
-        </Button>
+      {/* Sticky Back Button Header */}
+      <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm shadow-sm">
+        <div className="px-4 pt-12 pb-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-[#06352A] hover:text-[#06352A] hover:bg-gray-100"
+            onClick={() => {
+              if (currentStep > 1) {
+                handleBackStep();
+              } else {
+                navigate("/");
+              }
+            }}
+            data-testid="button-back"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back
+          </Button>
+        </div>
+      </div>
 
+      {/* Header Section with Location and Cart */}
+      <div className="relative z-10 px-4 pt-4 pb-6">
         {/* Location and Cart */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">

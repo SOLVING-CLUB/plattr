@@ -490,18 +490,22 @@ export default function Menu() {
 
   return (
     <div className="min-h-screen pb-24 relative bg-[#FDF8F3]">
-      {/* Header Section */}
-      <div className="relative z-10 px-4 pt-12 pb-4">
-        {/* Back Button */}
-        <button
-          className="mb-6 flex items-center gap-2 text-[#06352A] font-medium"
-          onClick={() => setLocation("/")}
-          data-testid="button-back"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back
-        </button>
+      {/* Sticky Back Button Header */}
+      <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm shadow-sm">
+        <div className="px-4 pt-12 pb-3">
+          <button
+            className="flex items-center gap-2 text-[#06352A] font-medium"
+            onClick={() => setLocation("/")}
+            data-testid="button-back"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back
+          </button>
+        </div>
+      </div>
 
+      {/* Header Section */}
+      <div className="relative z-10 px-4 pt-4 pb-4">
         {/* Location and Cart */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
