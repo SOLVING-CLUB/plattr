@@ -2101,7 +2101,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
   };
 
   return (
-    <div className="min-h-screen pb-40 relative bg-gray-50">
+    <div className="min-h-screen pb-24 relative bg-gray-50">
       {/* Green Geometric Background Header */}
       <div
         className="absolute top-0 left-0 right-0 z-0"
@@ -3500,7 +3500,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
 
         {/* Step 5: Cart Details */}
         {currentStep === 5 && (
-          <div className="pb-20">
+          <div className="pb-4">
             {/* Sticky Cart Total Bar Section - below back navigation (top: 40px) */}
             <div 
               className="sticky z-40 bg-white border-b border-gray-200 -mx-4 px-4 py-3 mb-4"
