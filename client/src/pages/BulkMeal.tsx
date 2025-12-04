@@ -1179,40 +1179,37 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                             <span className="text-primary font-bold text-lg" data-testid={`text-dish-price-${dish.id}`}>
                               ₹{parseFloat(dish.price as string).toFixed(0)}
                             </span>
-                        <div className="relative">
-                          <Input
-                            type="number"
-                            inputMode="numeric"
-                            pattern="[0-9]*"
-                                list={`quantity-options-${dishId}`}
-                                value={quantities[dishId] !== undefined ? quantities[dishId] : 5}
-                                onFocus={(e) => {
-                                  handleInteraction();
-                                  e.target.select();
-                                }}
-                            onChange={(e) => {
-                                  handleInteraction();
-                              const value = e.target.value;
-                              if (value === "") {
-                                    setQuantities(prev => ({ ...prev, [dishId]: 0 }));
-                              } else {
-                                const numValue = parseInt(value);
-                                if (!isNaN(numValue)) {
-                                      setQuantities(prev => ({ ...prev, [dishId]: numValue }));
-                                }
-                              }
-                            }}
-                            className="w-[60px] sm:w-[70px] h-7 text-[10px] sm:text-xs border-gray-300 text-center px-2"
+                        <Select
+                          value={String(quantities[dishId] !== undefined ? quantities[dishId] : 5)}
+                          onValueChange={(value) => {
+                            handleInteraction();
+                            setQuantities(prev => ({ ...prev, [dishId]: parseInt(value) }));
+                          }}
+                        >
+                          <SelectTrigger 
+                            className="w-[60px] sm:w-[70px] h-7 text-[10px] sm:text-xs border-gray-300 px-2"
                             style={{ fontFamily: "Sweet Sans Pro" }}
-                                data-testid={`input-quantity-${dishId}`}
-                            min="5"
-                          />
-                              <datalist id={`quantity-options-${dishId}`}>
+                            data-testid={`input-quantity-${dishId}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleInteraction();
+                            }}
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent 
+                            position="popper" 
+                            side="bottom" 
+                            align="end"
+                            className="min-w-[60px]"
+                          >
                             {[5, 10, 15, 20, 25, 30, 35, 40, 45, 50].map((qty) => (
-                              <option key={qty} value={qty} />
+                              <SelectItem key={qty} value={String(qty)}>
+                                {qty}
+                              </SelectItem>
                             ))}
-                          </datalist>
-                        </div>
+                          </SelectContent>
+                        </Select>
                       </div>
                       <Button
                             size="sm"
