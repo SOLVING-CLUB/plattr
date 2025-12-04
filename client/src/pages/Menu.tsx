@@ -180,6 +180,14 @@ const DISH_TYPE_IMAGES: Record<string, string> = {
 export default function Menu() {
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<"home" | "menu" | "profile">("menu");
+  const [scrollY, setScrollY] = useState(0);
+
+  // Track scroll position for sticky header
+  useEffect(() => {
+    const handleScroll = () => setScrollY(window.scrollY);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
   const [selectedMealCategory, setSelectedMealCategory] = useState<string>("hi-tea");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
@@ -491,10 +499,17 @@ export default function Menu() {
   return (
     <div className="min-h-screen pb-24 relative bg-[#FDF8F3]">
       {/* Sticky Back Button Header */}
-      <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm shadow-sm">
+      <div 
+        className="sticky top-0 z-50 transition-all duration-200"
+        style={{
+          backgroundColor: scrollY > 50 ? 'rgba(255, 255, 255, 0.95)' : 'transparent',
+          backdropFilter: scrollY > 50 ? 'blur(8px)' : 'none',
+          boxShadow: scrollY > 50 ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+        }}
+      >
         <div className="px-4 pt-12 pb-3">
           <button
-            className="flex items-center gap-2 text-[#06352A] font-medium"
+            className={`flex items-center gap-2 font-medium ${scrollY > 50 ? "text-[#06352A]" : "text-[#06352A]"}`}
             onClick={() => setLocation("/")}
             data-testid="button-back"
           >

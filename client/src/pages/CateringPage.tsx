@@ -949,6 +949,14 @@ export default function CateringOrder() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<"home" | "menu" | "profile">("home");
   const [selectedService, setSelectedService] = useState<ServiceType>("catering");
+  const [scrollY, setScrollY] = useState(0);
+
+  // Track scroll position for sticky header
+  useEffect(() => {
+    const handleScroll = () => setScrollY(window.scrollY);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [slideCount, setSlideCount] = useState(0);
@@ -1132,12 +1140,19 @@ export default function CateringOrder() {
       />
 
       {/* Sticky Back Button Header */}
-      <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm shadow-sm">
+      <div 
+        className="sticky top-0 z-50 transition-all duration-200"
+        style={{
+          backgroundColor: scrollY > 50 ? 'rgba(255, 255, 255, 0.95)' : 'transparent',
+          backdropFilter: scrollY > 50 ? 'blur(8px)' : 'none',
+          boxShadow: scrollY > 50 ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+        }}
+      >
         <div className="px-4 pt-12 pb-3">
           <Button
             variant="ghost"
             size="sm"
-            className="text-[#06352A] hover:text-[#06352A] hover:bg-gray-100"
+            className={scrollY > 50 ? "text-[#06352A] hover:text-[#06352A] hover:bg-gray-100" : "text-white hover:text-white hover:bg-white/20"}
             onClick={() => setLocation("/")}
             data-testid="button-back"
           >
