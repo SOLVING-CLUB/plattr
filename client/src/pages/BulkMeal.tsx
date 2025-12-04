@@ -1238,8 +1238,8 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
           </div>
         </div>
       </div>
-      {/* Floating Cart Button - Shows when items are in cart and input is not focused */}
-      {cart.length > 0 && !isInputFocused && createPortal(
+      {/* Floating Cart Button - Shows when items are in cart and input is not focused and dish detail is closed */}
+      {cart.length > 0 && !isInputFocused && !dishDetailOpen && createPortal(
         <div 
           className="fixed left-4 right-4 flex items-center justify-between px-4 py-3 shadow-lg"
           style={{ 
