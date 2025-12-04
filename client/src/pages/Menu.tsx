@@ -190,7 +190,7 @@ export default function Menu() {
   }, []);
   const [selectedMealCategory, setSelectedMealCategory] = useState<string>("hi-tea");
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedDishType, setSelectedDishType] = useState<string>("all");
   const [dietaryMode, setDietaryMode] = useState<'all' | 'veg' | 'egg' | 'non-veg'>('all');
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 500]);
