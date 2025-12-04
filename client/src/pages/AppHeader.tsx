@@ -18,14 +18,14 @@ export default function AppHeader({
 }: AppHeaderProps) {
   return (
     <header 
-      className="h-24"
+      className="h-40"
       style={{
         backgroundImage: `url(${headerBg})`,
         backgroundSize: 'cover',
-        backgroundPosition: 'center',
+        backgroundPosition: 'center top',
       }}
     >
-      <div className="h-full px-4 flex items-end justify-between pb-3">
+      <div className="h-full px-4 flex items-end justify-between pb-4">
         <Button 
           variant="ghost" 
           className="gap-2 font-medium text-foreground hover:bg-black/10"
