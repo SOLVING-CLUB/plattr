@@ -342,11 +342,14 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
   }, [allCategoriesFromDb, categoryIdsForMealType]);
 
   // Set first category as selected when categories load or when meal type changes
+  // Keep 'all' as valid selection - only reset if it's an invalid category ID
   useEffect(() => {
     if (categories.length > 0) {
-      const firstCategoryId = categories[0].id;
+      // Don't reset if 'all' is selected - it's a valid filter option
+      if (selectedCategory === 'all') return;
+      // Only reset if the current selection is not found in available categories
       if (!selectedCategory || !categories.find(c => c.id === selectedCategory)) {
-        setSelectedCategory(firstCategoryId);
+        setSelectedCategory('all');
       }
     }
   }, [categories, selectedCategory, mealType]);
