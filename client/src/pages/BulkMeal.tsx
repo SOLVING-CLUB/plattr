@@ -939,8 +939,8 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
 
           {/* CategoryPage-style Layout */}
           <div className="flex gap-0 flex-1 w-full max-w-full">
-            {/* Left Sidebar - Category Filters (Starters, Sides, Mains, etc.) */}
-            <aside className="w-24 md:w-32 border-r bg-card/50 backdrop-blur-sm flex-shrink-0 overflow-y-auto pb-36 md:pb-6">
+            {/* Left Sidebar - Category Filters (Starters, Sides, Mains, etc.) - Sticky with internal scroll */}
+            <aside className="w-24 md:w-32 border-r bg-card/50 backdrop-blur-sm flex-shrink-0 sticky top-0 self-start" style={{ maxHeight: 'calc(100vh - 180px)', overflowY: 'auto' }}>
               <div className="flex flex-col py-3">
                 {/* Always show "All" option */}
                 <button
