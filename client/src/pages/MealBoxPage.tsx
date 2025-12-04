@@ -3914,7 +3914,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
 
         {/* Step 6: Add-Ons */}
         {currentStep === 6 && (
-          <div className="pb-24" data-testid="step-6-addons">
+          <div className="pb-4" data-testid="step-6-addons">
             {/* Progress Bar */}
             <div className="mb-6">
               <div className="flex gap-2">
