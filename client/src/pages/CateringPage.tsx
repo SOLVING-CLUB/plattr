@@ -1132,12 +1132,12 @@ export default function CateringOrder() {
       />
 
       {/* Header Section with Location and Cart */}
-      <div className="relative z-10 px-4 pt-4 pb-6">
+      <div className="relative z-10 px-4 pt-12 pb-6">
         {/* Back Button */}
         <Button
           variant="ghost"
           size="sm"
-          className="mb-4 text-white hover:text-white hover:bg-white/20"
+          className="mb-6 text-white hover:text-white hover:bg-white/20"
           onClick={() => setLocation("/")}
           data-testid="button-back"
         >
