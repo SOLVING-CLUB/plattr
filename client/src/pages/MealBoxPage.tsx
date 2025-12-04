@@ -2847,8 +2847,8 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
         {/* Step 4: Choose Food Category */}
         {currentStep === 4 && (
         <div>
-            {/* Sticky Proceed Card Section - below back navigation (top: 90px) */}
-            <div className="sticky -mx-4 px-4 pt-0 pb-2 bg-white" style={{ top: "90px", zIndex: 55 }}>
+            {/* Sticky Proceed Card Section - below back navigation (top: 92px) */}
+            <div className="sticky -mx-4 px-4 pt-0 pb-2 bg-white" style={{ top: "92px", zIndex: 55 }}>
               <div className="flex items-center justify-between p-4 rounded-lg" style={{ backgroundColor: "#1A9952" }}>
               <div className="flex items-center gap-3">
                 <img src={mealBoxImage} alt="Meal Box" className="w-12 h-12 object-contain" />
@@ -2881,8 +2881,8 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
               </div>
             </div>
 
-            {/* Sticky Search Bar Section - below proceed card (top: 150px) */}
-            <div className="sticky bg-white pb-3 pt-3 -mx-4 px-4" style={{ top: "150px", zIndex: 60 }}>
+            {/* Sticky Search Bar Section - below proceed card (top: 188px) */}
+            <div className="sticky bg-white pb-3 pt-3 -mx-4 px-4" style={{ top: "188px", zIndex: 60 }}>
               <div className="flex items-center gap-2 bg-white px-4 py-3 border border-gray-200" style={{ borderRadius: "10px" }}>
                 <Search className="w-6 h-6 text-gray-500" />
                 <input
