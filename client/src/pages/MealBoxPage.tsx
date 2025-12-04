@@ -2881,8 +2881,8 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
               </div>
             </div>
 
-            {/* Sticky Search Bar Section - below back navigation (top: 52px, z-[60] to overcome stacking context) */}
-            <div className="sticky bg-white pb-3 pt-3 -mx-4 px-4" style={{ top: "52px", zIndex: 60 }}>
+            {/* Sticky Search Bar Section - starts exactly at back navigation end (top: 44px) */}
+            <div className="sticky bg-white pb-3 pt-3 -mx-4 px-4" style={{ top: "44px", zIndex: 60 }}>
               <div className="flex items-center gap-2 bg-white px-4 py-3 border border-gray-200" style={{ borderRadius: "10px" }}>
                 <Search className="w-6 h-6 text-gray-500" />
                 <input
