@@ -855,40 +855,7 @@ export default function Menu() {
               {/* Horizontal Dish Type Tabs - Sticky (65's, Chilli, Fry, etc.) */}
               <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm pb-4 mb-2 border-b shadow-md -mx-3 md:-mx-4 px-3 md:px-4" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
                 <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide px-1 pt-3">
-                  {/* All dish types option */}
-                  <button
-                    onClick={() => setSelectedDishType('all')}
-                    className="flex flex-col items-center gap-1.5 transition-all flex-shrink-0"
-                    data-testid="tab-dishtype-all"
-                  >
-                    <div className={cn(
-                      "relative w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden border-3 transition-all flex items-center justify-center",
-                      selectedDishType === 'all' 
-                        ? "border-primary shadow-[0_8px_16px_rgba(255,107,53,0.4)] scale-105 ring-2 ring-primary/20 bg-primary/20" 
-                        : "border-border/50 hover:scale-102 bg-card"
-                    )}>
-                      <LayoutGrid className={cn(
-                        "w-8 h-8 md:w-10 md:h-10",
-                        selectedDishType === 'all' ? "text-primary" : "text-muted-foreground"
-                      )} />
-                    </div>
-                    <div className="text-center">
-                      <span className={cn(
-                        "text-xs md:text-sm font-bold block whitespace-nowrap mb-0.5",
-                        selectedDishType === 'all' ? "text-primary" : "text-muted-foreground"
-                      )}>
-                        All
-                      </span>
-                      <Badge 
-                        variant={selectedDishType === 'all' ? "default" : "secondary"}
-                        className="text-[10px] h-5 px-2 font-medium"
-                      >
-                        {dishes.length}
-                      </Badge>
-                    </div>
-                  </button>
-                  
-                  {/* Dish type options (65's, Chilli, Fry, etc.) */}
+                  {/* Dish type options (65's, Chilli, Fry, etc.) - No separate "All" here, sidebar "All" covers both */}
                   {dishTypes.map((dishType) => {
                     const count = getDishCountForDishType(dishType);
                     const dishTypeImage = DISH_TYPE_IMAGES[dishType] || DISH_TYPE_IMAGES['default'];
