@@ -832,8 +832,9 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
       <div ref={sentinelRef} style={{ height: "1px" }} />
       {/* Sticky Search Bar and Meal Category Container - Outside header for proper sticky behavior */}
       <div 
-        className="sticky top-0 z-40 px-4 pb-2 pt-4 transition-all duration-200" 
+        className="sticky z-40 px-4 pb-2 pt-4 transition-all duration-200" 
         style={{ 
+          top: '94px',
           backgroundColor: isStuck ? "white" : "transparent",
           boxShadow: isStuck ? "0 2px 4px rgba(0,0,0,0.1)" : "none"
         }}
