@@ -2231,30 +2231,34 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
       {/* Content below green background */}
       <div className="relative z-10 px-4" style={{ marginTop: "20px" }}>
         
-        {/* Back Navigation - For all steps (non-sticky) */}
+        {/* Back Navigation - Sticky for steps 4 & 5, non-sticky for others */}
         {currentStep > 1 && (
-          <button
-            onClick={handleBackStep}
-            className="flex items-center justify-between mb-4 text-gray-700 hover-elevate active-elevate-2 px-2 py-1 rounded-md w-full"
-            style={{ fontFamily: "Sweet Sans Pro" }}
-            data-testid="button-back-step"
+          <div 
+            className={`-mx-4 px-4 ${(currentStep === 4 || currentStep === 5) ? 'sticky top-0 z-50 bg-white pt-3 pb-2' : ''}`}
           >
-            <div className="flex items-center gap-2">
-              <ArrowLeft className="w-4 h-4" />
-              <span className="font-medium text-xs sm:text-sm">
-                {currentStep === 2 ? "Choose Portion Size" : 
-                 currentStep === 3 ? "Choose Meal Preference" :
-                 currentStep === 4 ? "Choose Meal Type" :
-                 currentStep === 5 ? "Build Your MealBox" :
-                 currentStep === 6 ? "Select Add-Ons" :
-                 currentStep === 7 ? "Proceed to Payment" :
-                 ""}
-              </span>
-            </div>
-            {(currentStep === 4 || currentStep === 5) && (
-              <Check className="w-4 h-4 text-green-600" />
-            )}
-          </button>
+            <button
+              onClick={handleBackStep}
+              className="flex items-center justify-between text-gray-700 hover-elevate active-elevate-2 px-2 py-1 rounded-md w-full"
+              style={{ fontFamily: "Sweet Sans Pro" }}
+              data-testid="button-back-step"
+            >
+              <div className="flex items-center gap-2">
+                <ArrowLeft className="w-4 h-4" />
+                <span className="font-medium text-xs sm:text-sm">
+                  {currentStep === 2 ? "Choose Portion Size" : 
+                   currentStep === 3 ? "Choose Meal Preference" :
+                   currentStep === 4 ? "Choose Meal Type" :
+                   currentStep === 5 ? "Build Your MealBox" :
+                   currentStep === 6 ? "Select Add-Ons" :
+                   currentStep === 7 ? "Proceed to Payment" :
+                   ""}
+                </span>
+              </div>
+              {(currentStep === 4 || currentStep === 5) && (
+                <Check className="w-4 h-4 text-green-600" />
+              )}
+            </button>
+          </div>
         )}
 
         {/* Header with Title and Box Image - Only show on step 1 */}
@@ -2843,8 +2847,8 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
         {/* Step 4: Choose Food Category */}
         {currentStep === 4 && (
         <div className="space-y-6">
-            {/* Sticky Proceed Card - below header (top: 80px) */}
-            <div className="sticky z-40 -mx-4 px-4 py-2 bg-white" style={{ top: "80px" }}>
+            {/* Sticky Proceed Card Section - below back navigation (top: 48px) */}
+            <div className="sticky z-40 -mx-4 px-4 py-3 bg-white" style={{ top: "48px" }}>
               <div className="flex items-center justify-between p-4 rounded-lg" style={{ backgroundColor: "#1A9952" }}>
               <div className="flex items-center gap-3">
                 <img src={mealBoxImage} alt="Meal Box" className="w-12 h-12 object-contain" />
@@ -2877,8 +2881,8 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
               </div>
             </div>
 
-            {/* Sticky Search Bar - below proceed card (top: 180px) */}
-            <div className="sticky z-30 bg-white pb-2 -mx-4 px-4 pt-2" style={{ top: "180px" }}>
+            {/* Sticky Search Bar Section - below proceed card (top: 140px) */}
+            <div className="sticky z-30 bg-white pb-3 -mx-4 px-4 pt-2" style={{ top: "140px" }}>
               <div className="flex items-center gap-2 bg-white px-4 py-3 border border-gray-200" style={{ borderRadius: "10px" }}>
                 <Search className="w-6 h-6 text-gray-500" />
                 <input
@@ -3580,12 +3584,12 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
         {/* Step 5: Cart Details */}
         {currentStep === 5 && (
           <div className="pb-24">
-            {/* Sticky Cart Total Bar - below header (top: 80px) */}
+            {/* Sticky Cart Total Bar Section - below back navigation (top: 48px) */}
             <div 
               className="sticky z-40 bg-white border-b border-gray-200 -mx-4 px-4 py-3 mb-4"
               style={{ 
                 boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-                top: "80px"
+                top: "48px"
               }}
             >
               <div className="flex items-center justify-between">
