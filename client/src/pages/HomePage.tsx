@@ -579,7 +579,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen pb-24">
+    <div className="min-h-screen pb-44">
       <AppHeader 
         cartCount={cartCount}
         onLocationClick={handleLocationClick}
@@ -593,7 +593,7 @@ export default function Home() {
         <SpotlightFeaturesSection />
       </div>
 
-      <div className="mt-6">
+      <div className="mt-6 mb-4">
         <SmartMenuConciergeSection onTryNow={handleTryMenuConcierge} />
       </div>
     
