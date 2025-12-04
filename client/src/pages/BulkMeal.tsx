@@ -1080,8 +1080,8 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                           />
                         </div>
                         <span className={cn(
-                          "text-sm font-medium whitespace-nowrap",
-                          selectedDishType === dishType ? "text-[#1A9952]" : "text-gray-700"
+                          "text-xs md:text-sm font-semibold whitespace-nowrap",
+                          selectedDishType === dishType ? "text-primary" : "text-foreground"
                         )}>
                           {dishType}
                         </span>
