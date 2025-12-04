@@ -1072,7 +1072,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                         style={{ borderRadius: '10px' }}
                         data-testid={`tab-dishtype-${dishType.toLowerCase()}`}
                       >
-                        <div className="relative w-7 h-7 rounded-full overflow-hidden flex-shrink-0">
+                        <div className="relative w-7 h-7 overflow-hidden flex-shrink-0" style={{ borderRadius: '6px' }}>
                           <img 
                             src={dishTypeImage}
                             alt={dishType}
