@@ -834,7 +834,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
       <div 
         className="sticky z-40 px-4 pb-2 pt-4 transition-all duration-200" 
         style={{ 
-          top: '94px',
+          top: '92px',
           backgroundColor: isStuck ? "white" : "transparent",
           boxShadow: isStuck ? "0 2px 4px rgba(0,0,0,0.1)" : "none"
         }}
@@ -960,7 +960,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
           {/* CategoryPage-style Layout */}
           <div className="flex gap-0 flex-1 w-full max-w-full">
             {/* Left Sidebar - Category Filters (Starters, Sides, Mains, etc.) - Sticky with internal scroll */}
-            <aside className="w-20 md:w-24 border-r bg-card/50 backdrop-blur-sm flex-shrink-0 sticky self-start" style={{ top: '244px', maxHeight: 'calc(100vh - 244px)', overflowY: 'auto' }}>
+            <aside className="w-20 md:w-24 border-r bg-card/50 backdrop-blur-sm flex-shrink-0 sticky self-start" style={{ top: '250px', maxHeight: 'calc(100vh - 250px)', overflowY: 'auto' }}>
               <div className="flex flex-col py-3">
                 {/* Always show "All" option */}
                 <button
