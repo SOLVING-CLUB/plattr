@@ -871,49 +871,37 @@ export default function Menu() {
             {/* Right Content - Dishes Grid */}
             <div className="flex-1 px-3 md:px-4 py-4 md:py-6 min-w-0 overflow-y-auto overflow-x-hidden pb-20 md:pb-6">
               {/* Horizontal Dish Type Tabs - Sticky (65's, Chilli, Fry, etc.) */}
-              <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm pb-4 mb-2 border-b shadow-md -mx-3 md:-mx-4 px-3 md:px-4" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
-                <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide px-1 pt-3">
-                  {/* Dish type options (65's, Chilli, Fry, etc.) - No separate "All" here, sidebar "All" covers both */}
+              <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm pb-3 mb-2 -mx-3 md:-mx-4 px-3 md:px-4" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide px-1 pt-2">
+                  {/* Dish type options (65's, Chilli, Fry, etc.) - Compact pill design */}
                   {dishTypes.map((dishType) => {
-                    const count = getDishCountForDishType(dishType);
                     const dishTypeImage = DISH_TYPE_IMAGES[dishType] || DISH_TYPE_IMAGES['default'];
                     
                     return (
                       <button
                         key={dishType}
                         onClick={() => setSelectedDishType(dishType)}
-                        className="flex flex-col items-center gap-1.5 transition-all flex-shrink-0"
+                        className={cn(
+                          "flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all flex-shrink-0",
+                          selectedDishType === dishType 
+                            ? "border-[#1A9952] bg-white shadow-sm" 
+                            : "border-gray-200 bg-white hover:border-gray-300"
+                        )}
                         data-testid={`tab-dishtype-${dishType.toLowerCase()}`}
                       >
-                        <div className={cn(
-                          "relative w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden border-3 transition-all",
-                          selectedDishType === dishType 
-                            ? "border-primary shadow-[0_8px_16px_rgba(255,107,53,0.4)] scale-105 ring-2 ring-primary/20" 
-                            : "border-border/50 hover:scale-102"
-                        )}>
+                        <div className="relative w-7 h-7 rounded-full overflow-hidden flex-shrink-0">
                           <img 
                             src={dishTypeImage}
                             alt={dishType}
                             className="w-full h-full object-cover"
                           />
-                          {selectedDishType === dishType && (
-                            <div className="absolute inset-0 bg-gradient-to-t from-primary/20 to-transparent pointer-events-none" />
-                          )}
                         </div>
-                        <div className="text-center">
-                          <span className={cn(
-                            "text-xs md:text-sm font-bold block whitespace-nowrap mb-0.5",
-                            selectedDishType === dishType ? "text-primary" : "text-muted-foreground"
-                          )}>
-                            {dishType}
-                          </span>
-                          <Badge 
-                            variant={selectedDishType === dishType ? "default" : "secondary"}
-                            className="text-[10px] h-5 px-2 font-medium"
-                          >
-                            {count}
-                          </Badge>
-                        </div>
+                        <span className={cn(
+                          "text-sm font-medium whitespace-nowrap",
+                          selectedDishType === dishType ? "text-[#1A9952]" : "text-gray-700"
+                        )}>
+                          {dishType}
+                        </span>
                       </button>
                     );
                   })}
