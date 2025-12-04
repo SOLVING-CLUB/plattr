@@ -2104,7 +2104,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
             <MapPin className="w-5 h-5 text-white" />
-            <span className="text-white font-bold text-base sm:text-lg" style={{ fontFamily: "Sweet Sans Pro" }}>
+            <span className="text-white font-semibold text-[18px]" style={{ fontFamily: "Sweet Sans Pro" }}>
               Bengaluru, KA
             </span>
           </div>
@@ -2113,7 +2113,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
             onClick={() => toast({ title: "Cart", description: "Cart coming soon!" })}
             data-testid="button-cart"
           >
-            <ShoppingCart className="w-6 h-6 text-white" />
+            <ShoppingCart className="w-5 h-5 text-white" />
           </button>
         </div>
 

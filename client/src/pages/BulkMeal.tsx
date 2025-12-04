@@ -682,7 +682,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
             <MapPin className="w-5 h-5 text-white" />
-            <span className="text-white font-bold text-lg" style={{ fontFamily: "Sweet Sans Pro" }}>
+            <span className="text-white font-semibold text-[18px]" style={{ fontFamily: "Sweet Sans Pro" }}>
               Bengaluru, KA
             </span>
           </div>
@@ -691,7 +691,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
             onClick={() => toast({ title: "Cart", description: "Cart coming soon!" })}
             data-testid="button-cart"
           >
-            <ShoppingCart className="w-6 h-6 text-white" />
+            <ShoppingCart className="w-5 h-5 text-white" />
             {cart.length > 0 && (
               <div 
                 className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold"

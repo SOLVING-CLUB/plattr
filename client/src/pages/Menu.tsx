@@ -506,7 +506,7 @@ export default function Menu() {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <MapPin className="w-5 h-5 text-[#06352A]" />
-            <span className="text-[#06352A] font-bold text-lg" style={{ fontFamily: "Sweet Sans Pro" }}>
+            <span className="text-[#06352A] font-semibold text-[18px]" style={{ fontFamily: "Sweet Sans Pro" }}>
               Bengaluru, KA
             </span>
           </div>
@@ -514,7 +514,7 @@ export default function Menu() {
             className="p-2 rounded-full hover:bg-gray-100 transition-colors relative"
             data-testid="button-cart"
           >
-            <ShoppingCart className="w-6 h-6 text-[#06352A]" />
+            <ShoppingCart className="w-5 h-5 text-[#06352A]" />
           </button>
         </div>
 

@@ -34,7 +34,8 @@ export default function AppHeader({
         >
           <MapPin className="w-5 h-5" />
           <span
-            className="ml-[0px] mr-[0px] pl-[0px] pr-[0px] text-left pt-[0px] pb-[0px] font-semibold text-[18px]">{location}</span>
+            className="ml-[0px] mr-[0px] pl-[0px] pr-[0px] text-left pt-[0px] pb-[0px] font-semibold text-[18px]"
+            style={{ fontFamily: "Sweet Sans Pro" }}>{location}</span>
         </Button>
 
         <Button 
