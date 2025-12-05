@@ -47,6 +47,7 @@ import NameScreen from "@/pages/NameScreen";
 import TestAuthPage from "@/pages/TestAuthPage";
 import TestOtpPasswordPage from "@/pages/TestOtpPasswordPage";
 import LocationPage from "@/pages/LocationPage";
+import MapConfirmationPage from "@/pages/MapConfirmationPage";
 import SplashScreen from "@/components/SplashScreen";
 import { useAuth } from "@/hooks/useAuth";
 import { CartProvider } from "@/context/CartContex";
@@ -180,6 +181,7 @@ function Router() {
   const GuardedEditProfile = withAuthGuard(EditProfile);
   const GuardedSavedAddresses = withAuthGuard(SavedAddresses);
   const GuardedLocationPage = withAuthGuard(LocationPage);
+  const GuardedMapConfirmationPage = withAuthGuard(MapConfirmationPage);
   const GuardedPaymentMethods = withAuthGuard(PaymentMethods);
   const GuardedHelpPage = withAuthGuard(HelpPage);
   const GuardedAboutPage = withAuthGuard(AboutPage);
@@ -241,6 +243,7 @@ function Router() {
       <Route path="/edit-profile" component={GuardedEditProfile} />
       <Route path="/saved-addresses" component={GuardedSavedAddresses} />
       <Route path="/location" component={GuardedLocationPage} />
+      <Route path="/location/map" component={GuardedMapConfirmationPage} />
       <Route path="/payment-methods" component={GuardedPaymentMethods} />
       <Route path="/help" component={GuardedHelpPage} />
       <Route path="/about" component={GuardedAboutPage} />

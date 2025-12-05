@@ -96,71 +96,11 @@ export default function LocationPage() {
     setLocation("/");
   };
 
-  const handleUseCurrentLocation = async () => {
-    if (!navigator.geolocation) {
-      toast({
-        title: "Location Not Supported",
-        description: "Your browser doesn't support location services.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsDetecting(true);
-
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-        
-        // Try to reverse geocode using a free API
-        try {
-          const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
-          );
-          const data = await response.json();
-          
-          const locationData: LocationData = {
-            label: data.address?.suburb || data.address?.neighbourhood || data.address?.city || "Current Location",
-            addressLine: data.display_name || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
-            lat: latitude,
-            lng: longitude,
-            type: "detected",
-          };
-          
-          saveLocationAndNavigate(locationData);
-        } catch (error) {
-          // Fallback if geocoding fails
-          const locationData: LocationData = {
-            label: "Current Location",
-            addressLine: `Lat: ${latitude.toFixed(4)}, Lng: ${longitude.toFixed(4)}`,
-            lat: latitude,
-            lng: longitude,
-            type: "detected",
-          };
-          saveLocationAndNavigate(locationData);
-        }
-        
-        setIsDetecting(false);
-      },
-      (error) => {
-        setIsDetecting(false);
-        let message = "Unable to get your location.";
-        if (error.code === error.PERMISSION_DENIED) {
-          message = "Please enable location permissions in your browser settings.";
-        } else if (error.code === error.POSITION_UNAVAILABLE) {
-          message = "Location information is unavailable.";
-        } else if (error.code === error.TIMEOUT) {
-          message = "Location request timed out.";
-        }
-        toast({
-          title: "Location Error",
-          description: message,
-          variant: "destructive",
-        });
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
+  const handleUseCurrentLocation = () => {
+    // Navigate to map confirmation page
+    setLocation("/location/map");
   };
+
 
   const handleSelectSavedAddress = (address: SavedAddress) => {
     const locationData: LocationData = {
