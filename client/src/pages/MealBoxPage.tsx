@@ -1046,45 +1046,14 @@ import upmaImage from '@assets/image_1760599771826.png';
 import breadToastImage from '@assets/image_1760599797811.png';
 import southIndianPlatterImage from '@assets/image_1760599912464.png';
 
-// Map meal_type to category_ids based on user's specification
-const MEAL_TYPE_CATEGORIES: Record<string, string[]> = {
-  // Breakfast (meal_type) - used when "breakfast" tab is selected
-  'breakfast': [
-    'sides-and-accompaniments',
-    'bakery',
-    'sweets',
-    'beverages',
-    'desserts',
-    'salads',
-    'breakfast',
-    'snacks'
-  ],
-  // Snacks (meal_type) - used when "hi-tea" tab is selected
-  'snacks': [
-    'sides-and-accompaniments',
-    'chaats',
-    'snacks',
-    'bakery',
-    'sweets',
-    'beverages',
-    'desserts',
-    'salads',
-    'breakfast'
-  ],
-  // Lunch & Dinner (meal_type) - used when "lunch" or "dinner" tab is selected
-  'lunch-dinner': [
-    'starters',
-    'sides-and-accompaniments',
-    'main-course',
-    'chaats',
-    'snacks',
-    'sweets',
-    'beverages',
-    'desserts',
-    'salads',
-    'soup',
-    'after-meal'
-  ]
+// Helper function to filter categories by meal_type from database
+// The database meal_type column contains comma-separated values like "tiffins, snacks, lunch-dinner"
+const filterCategoriesByMealType = (categories: any[], mealTypeFilter: string): any[] => {
+  return categories.filter(cat => {
+    const mealType = (cat as any).meal_type || cat.mealType || '';
+    // Check if the category's meal_type contains the selected filter
+    return mealType.toLowerCase().includes(mealTypeFilter.toLowerCase());
+  });
 };
 
 // Fallback images for categories
@@ -1647,13 +1616,15 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
     return ["veg", "egg", "non-veg"];
   };
   
-  // Map meal type to meal_type filter for Supabase
+  // Map UI meal type selection to database meal_type filter value
+  // Database meal_type column contains: "tiffins", "snacks", "lunch-dinner" (comma-separated)
+  // Note: "breakfast" tab maps to "tiffins" in database, "lunch" and "dinner" both map to "lunch-dinner"
   const getMealTypeFilter = (mealType: MealType): string => {
     const mapping: Record<MealType, string> = {
-      "hi-tea": "snacks",        // Hi-Tea → Snacks
-      "breakfast": "breakfast",  // Breakfast → Breakfast
-      "lunch": "lunch-dinner",   // Lunch → Lunch & Dinner
-      "dinner": "lunch-dinner",  // Dinner → Lunch & Dinner
+      "hi-tea": "snacks",        // Hi-Tea tab → filter by "snacks" in meal_type
+      "breakfast": "tiffins",    // Breakfast tab → filter by "tiffins" in meal_type
+      "lunch": "lunch-dinner",   // Lunch tab → filter by "lunch-dinner" in meal_type
+      "dinner": "lunch-dinner",  // Dinner tab → filter by "lunch-dinner" in meal_type
     };
     return mapping[mealType] || "lunch-dinner";
   };
@@ -1665,22 +1636,13 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
     queryKey: ['/api/categories', 'all'],
   });
 
-  // Get category IDs for the current meal type - with safety check
-  const categoryIdsForMealType = useMemo(() => {
-    if (!mealType) return [];
-    const ids = MEAL_TYPE_CATEGORIES[mealType];
-    if (Array.isArray(ids) && ids.length > 0) {
-      return ids;
-    }
-    return [];
-  }, [mealType]);
-
-  // Filter and order categories based on frontend mapping
+  // Filter categories dynamically from database meal_type column
+  // This replaces the hardcoded MEAL_TYPE_CATEGORIES mapping
   const categories = useMemo(() => {
-    return categoryIdsForMealType
-      .map(id => allCategoriesFromDb.find(cat => cat.id === id))
-      .filter(Boolean) as CategoryType[];
-  }, [allCategoriesFromDb, categoryIdsForMealType]);
+    if (!mealType || allCategoriesFromDb.length === 0) return [];
+    return filterCategoriesByMealType(allCategoriesFromDb, mealType)
+      .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0)) as CategoryType[];
+  }, [allCategoriesFromDb, mealType]);
 
   // Set first category as selected when categories load or when meal type changes
   // Keep 'all' as valid selection - only reset if it's an invalid category ID
@@ -1695,52 +1657,22 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
     }
   }, [categories, selectedCategory, mealType, currentStep]);
 
-  // Fetch ALL dishes for the current meal type's categories (for accurate category counts)
-  // Use the frontend-defined category IDs - fetch dishes for each category separately and merge
-  // For counts, we want all dishes regardless of dietary tab, so use 'all' for dietary filter
-  const dietaryForAllDishes = 'all';
-  
-  // Get all unique category IDs across all meal types (for fixed hooks)
-  const allPossibleCategoryIds = useMemo(() => {
-    const allIds = new Set<string>();
-    Object.values(MEAL_TYPE_CATEGORIES).forEach(ids => {
-      ids.forEach(id => allIds.add(id));
-    });
-    return Array.from(allIds);
-  }, []);
-  
-  // Create fixed queries for all possible categories (to avoid hooks violation)
-  // Only enable queries for categories in the current meal type
-  const allDishesQueries = allPossibleCategoryIds.map(catId => {
-    const isEnabled = categoryIdsForMealType.includes(catId) && currentStep === 4;
-    return useQuery<Dish[]>({
-      queryKey: ['/api/dishes', mealType, catId, dietaryForAllDishes],
-      enabled: isEnabled && !!mealType,
-    });
+  // OPTIMIZATION: Lazy-load category counts in background after page renders
+  // This query fetches all dishes for the meal type but is non-blocking
+  const { data: allDishesForCounts = [] } = useQuery<Dish[]>({
+    queryKey: ['/api/dishes', mealType, 'all', 'all'],
+    enabled: !!mealType && currentStep === 4,
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+    refetchOnWindowFocus: false,
   });
   
-  // Merge all dishes from all categories (only from enabled queries)
+  // Filter to available dishes only
   const allDishes = useMemo(() => {
-    const merged: Dish[] = [];
-    const seenIds = new Set<string>();
-    
-    allPossibleCategoryIds.forEach((catId, index) => {
-      if (categoryIdsForMealType.includes(catId)) {
-        const query = allDishesQueries[index];
-        const dishes = query.data || [];
-        dishes.forEach(dish => {
-          // Filter by isAvailable
-          const isAvailable = (dish as any).is_available !== false && dish.isAvailable !== false;
-          if (isAvailable && !seenIds.has(dish.id)) {
-            seenIds.add(dish.id);
-            merged.push(dish);
-          }
-        });
-      }
+    return allDishesForCounts.filter(dish => {
+      const isAvailable = (dish as any).is_available !== false && dish.isAvailable !== false;
+      return isAvailable;
     });
-    
-    return merged;
-  }, [allDishesQueries.map((q, i) => categoryIdsForMealType.includes(allPossibleCategoryIds[i]) ? q.data : null).join(','), categoryIdsForMealType.join(',')]);
+  }, [allDishesForCounts]);
 
   // Fetch dishes for selected category (for display)
   const { data: dishes = [], isLoading: isLoadingDishes } = useQuery<Dish[]>({
