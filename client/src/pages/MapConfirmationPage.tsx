@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { addressService } from "@/lib/supabase-service";
+import { useQueryClient } from "@tanstack/react-query";
 
 const LOCATION_STORAGE_KEY = "activeLocation";
 const RECENT_LOCATIONS_KEY = "recentLocations";
@@ -61,6 +62,7 @@ type LabelOption = "Home" | "Work" | "Other";
 export default function MapConfirmationPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [position, setPosition] = useState<[number, number]>([12.9716, 77.5946]);
   const [initialCenter, setInitialCenter] = useState<[number, number]>([12.9716, 77.5946]);
   const [address, setAddress] = useState("");
@@ -198,6 +200,9 @@ export default function MapConfirmationPage() {
       const newRecents = [locationData, ...recents.filter(r => r.addressLine !== address)].slice(0, 5);
       localStorage.setItem(RECENT_LOCATIONS_KEY, JSON.stringify(newRecents));
 
+      // Invalidate addresses cache so LocationPage refreshes
+      queryClient.invalidateQueries({ queryKey: ["addresses"] });
+
       toast({
         title: "Address Saved",
         description: `"${label}" has been added to your address book`,
@@ -205,7 +210,7 @@ export default function MapConfirmationPage() {
       });
 
       setShowLabelModal(false);
-      setLocation("/");
+      setLocation("/location");
     } catch (error: any) {
       console.error("Save address error:", error);
       toast({
