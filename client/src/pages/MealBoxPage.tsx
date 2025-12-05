@@ -1631,6 +1631,18 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
 
   const mealType = getMealTypeFilter(selectedMealType);
 
+  // Get priority category ID based on meal type
+  const getPriorityCategoryId = (mealTypeFilter: string): string => {
+    const priorityMap: Record<string, string> = {
+      "lunch-dinner": "main-course",
+      "tiffins": "breakfast",
+      "snacks": "snacks",
+    };
+    return priorityMap[mealTypeFilter] || "";
+  };
+
+  const priorityCategoryId = getPriorityCategoryId(mealType);
+
   // Fetch ALL categories from database
   const { data: allCategoriesFromDb = [] } = useQuery<CategoryType[]>({
     queryKey: ['/api/categories', 'all'],
@@ -1640,9 +1652,15 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
   // This replaces the hardcoded MEAL_TYPE_CATEGORIES mapping
   const categories = useMemo(() => {
     if (!mealType || allCategoriesFromDb.length === 0) return [];
-    return filterCategoriesByMealType(allCategoriesFromDb, mealType)
-      .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0)) as CategoryType[];
-  }, [allCategoriesFromDb, mealType]);
+    const filtered = filterCategoriesByMealType(allCategoriesFromDb, mealType);
+    return filtered.sort((a, b) => {
+      // Priority category always comes first
+      if (a.id === priorityCategoryId) return -1;
+      if (b.id === priorityCategoryId) return 1;
+      // Then sort by displayOrder
+      return (a.displayOrder || 0) - (b.displayOrder || 0);
+    }) as CategoryType[];
+  }, [allCategoriesFromDb, mealType, priorityCategoryId]);
 
   // Set first category as selected when categories load or when meal type changes
   // Keep 'all' as valid selection - only reset if it's an invalid category ID
@@ -1796,38 +1814,58 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
   };
 
   // Filter items based on category, dish type, allowed types for current dietary tab, and exclude already selected items
-  const filteredItems = foodItems.filter(item => {
-    // Category filter - check if dish belongs to selected category
-    // Skip category filter if 'all' is selected (show all categories)
-    if (selectedCategory && selectedCategory !== 'all') {
-      const dish = dishes.find(d => d.id === item.id);
-      if (dish) {
-        const dishCategoryId = (dish as any).category_id || dish.categoryId;
-        if (dishCategoryId !== selectedCategory) return false;
-      } else {
-        return false;
-      }
-    }
-    
-    // Dish type filter
-    if (selectedDishType !== 'all') {
-      const dish = dishes.find(d => d.id === item.id);
-      if (dish) {
-        const dishDishType = (dish as any).dish_type || dish.dishType;
-        if (dishDishType !== selectedDishType) return false;
-      }
-    }
-    
-    // Only show items allowed for current plate type
-    const allowedTypes = getAllowedItemTypes();
-    if (!allowedTypes.includes(item.type)) return false;
-    
-    // Exclude already selected items (no duplicates) based on current dietary tab
-    const excludedIds = getExcludedItemIds();
-    if (excludedIds.has(item.id)) return false;
-    
-    return true;
-  });
+  const filteredItems = useMemo(() => {
+    return foodItems
+      .filter(item => {
+        // Category filter - check if dish belongs to selected category
+        // Skip category filter if 'all' is selected (show all categories)
+        if (selectedCategory && selectedCategory !== 'all') {
+          const dish = dishes.find(d => d.id === item.id);
+          if (dish) {
+            const dishCategoryId = (dish as any).category_id || dish.categoryId;
+            if (dishCategoryId !== selectedCategory) return false;
+          } else {
+            return false;
+          }
+        }
+        
+        // Dish type filter
+        if (selectedDishType !== 'all') {
+          const dish = dishes.find(d => d.id === item.id);
+          if (dish) {
+            const dishDishType = (dish as any).dish_type || dish.dishType;
+            if (dishDishType !== selectedDishType) return false;
+          }
+        }
+        
+        // Only show items allowed for current plate type
+        const allowedTypes = getAllowedItemTypes();
+        if (!allowedTypes.includes(item.type)) return false;
+        
+        // Exclude already selected items (no duplicates) based on current dietary tab
+        const excludedIds = getExcludedItemIds();
+        if (excludedIds.has(item.id)) return false;
+        
+        return true;
+      })
+      .sort((a, b) => {
+        // When viewing "All", priority category dishes come first
+        if (selectedCategory === 'all' && priorityCategoryId) {
+          const dishA = dishes.find(d => d.id === a.id);
+          const dishB = dishes.find(d => d.id === b.id);
+          const aCategoryId = dishA ? ((dishA as any).category_id || dishA.categoryId) : '';
+          const bCategoryId = dishB ? ((dishB as any).category_id || dishB.categoryId) : '';
+          const aIsPriority = aCategoryId === priorityCategoryId;
+          const bIsPriority = bCategoryId === priorityCategoryId;
+          
+          if (aIsPriority && !bIsPriority) return -1;
+          if (!aIsPriority && bIsPriority) return 1;
+        }
+        
+        // Default: sort by name
+        return a.name.localeCompare(b.name);
+      });
+  }, [foodItems, dishes, selectedCategory, selectedDishType, priorityCategoryId]);
 
   // Check if all slots for current dietary tab are filled
   const currentPlateSelections = getCurrentPlateSelections();
