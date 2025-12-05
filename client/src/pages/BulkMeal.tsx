@@ -399,7 +399,10 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
   }, [dishes, selectedCategory, visibleCategoryIds]);
 
   // Use allUniqueDishTypes when "All" is selected, otherwise use fetched dish types
-  const dishTypes = selectedCategory === 'all' ? allUniqueDishTypes : fetchedDishTypes;
+  // Filter out empty strings from fetched dish types (API may return [""] for categories with no dish types)
+  const dishTypes = selectedCategory === 'all' 
+    ? allUniqueDishTypes 
+    : fetchedDishTypes.filter(dt => dt && dt.trim() !== '');
 
   // Reset dish type filter when category changes
   useEffect(() => {
