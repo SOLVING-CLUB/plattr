@@ -1598,7 +1598,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
           className="fixed bottom-[90px] left-0 right-0 z-40 px-4"
         >
           <button
-            onClick={() => navigate("/bulk-meals/cart")}
+            onClick={() => navigate("/bulk-meals-cart")}
             className="w-full flex items-center justify-between px-4 py-3 rounded-xl"
             style={{ 
               backgroundColor: '#1A9952',
