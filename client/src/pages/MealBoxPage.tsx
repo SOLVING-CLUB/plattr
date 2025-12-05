@@ -1174,22 +1174,53 @@ const DISH_TYPE_IMAGES: Record<string, string> = {
   'default': idliImage1,
 };
 
-// Helper to get dish image
+// Helper to get dish image - handles both camelCase and snake_case from Supabase
 const getDishImage = (dish: Dish): string => {
-  if (dish.imageUrl) {
-    const supabaseUrl = getSupabaseImageUrl(dish.imageUrl);
-    if (supabaseUrl && supabaseUrl.startsWith("http")) {
+  // Handle both camelCase (imageUrl) and snake_case (image_url) from Supabase
+  const imageUrlFromDb = dish.imageUrl || (dish as any).image_url;
+  
+  // First, try to use the Supabase image URL from the database if it exists
+  if (imageUrlFromDb && imageUrlFromDb.trim() !== '') {
+    const supabaseUrl = getSupabaseImageUrl(imageUrlFromDb);
+    // If it's a valid Supabase URL (not a placeholder), use it
+    if (supabaseUrl && !supabaseUrl.includes('placeholder') && supabaseUrl.startsWith('http')) {
       return supabaseUrl;
     }
   }
 
+  // Otherwise, fall back to local assets based on dish name
   const name = dish.name.toLowerCase();
-  if (name.includes("dosa")) return masalaDosaImage;
-  if (name.includes("idli") || name.includes("idly")) return idliImage1;
-  if (name.includes("vada")) return vadaImage1;
-  if (name.includes("biryani")) return biryaniImage1;
-  if (name.includes("samosa")) return samosaImage;
-  return thaliImage;
+  
+  // Paneer dishes
+  if (name.includes('paneer tikka') || name.includes('achari paneer')) return platterImage;
+  if (name.includes('paneer')) return platterImage;
+  if (name.includes('tikka')) return platterImage;
+  
+  // South Indian
+  if (name.includes('dosa')) return masalaDosaImage;
+  if (name.includes('idli') || name.includes('idly')) return idliImage1;
+  if (name.includes('vada') || name.includes('medu')) return vadaImage1;
+  if (name.includes('uttapam')) return uttapamImage;
+  if (name.includes('pongal')) return pongalImage;
+  
+  // North Indian Tiffins
+  if (name.includes('aloo paratha') || name.includes('paratha')) return alooParathaImage;
+  if (name.includes('chole bhature') || name.includes('bhature')) return choleBhatureImage;
+  if (name.includes('poha')) return pohaImage;
+  if (name.includes('upma')) return upmaImage;
+  if (name.includes('bread toast') || name.includes('toast')) return breadToastImage;
+  
+  // Snacks
+  if (name.includes('samosa')) return samosaImage;
+  if (name.includes('pakora') || name.includes('bajji')) return vadaImage1;
+  
+  // Lunch/Dinner
+  if (name.includes('biryani')) return biryaniImage1;
+  if (name.includes('thali') || name.includes('meal')) return thaliImage;
+  if (name.includes('curry') || name.includes('masala')) return platterImage;
+  
+  // Default fallback
+  return platterImage;
 };
 
 // Map meal category to meal_type filter for Supabase
