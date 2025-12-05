@@ -947,85 +947,82 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
 
         {/* Dish Selection Section */}
         <div className="space-y-2">
-          {/* Header */}
-          <div className="mb-4">
+          {/* Header with Filters in Single Row */}
+          <div className="flex items-center justify-between gap-2 mb-4">
             <h2 
-              className="font-bold text-[14px] mb-3"
+              className="font-bold text-[14px] flex-shrink-0"
               style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}
             >
               Choose Food Category
             </h2>
             
-            {/* Inline Filters Row */}
-            <div className="flex items-center gap-2 flex-wrap">
-              {/* Dietary Filter Pills */}
-              <div className="flex items-center gap-1.5">
-                <button
-                  onClick={() => { handleInteraction(); setDietaryMode('all'); }}
-                  className={cn(
-                    "flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all",
-                    dietaryMode === 'all'
-                      ? "bg-[#06352A] text-white"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                  )}
-                  style={{ fontFamily: "Sweet Sans Pro" }}
-                  data-testid="filter-dietary-all"
-                >
-                  <Sparkles className="w-3 h-3" />
-                  All
-                </button>
-                <button
-                  onClick={() => { handleInteraction(); setDietaryMode('veg'); }}
-                  className={cn(
-                    "flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all",
-                    dietaryMode === 'veg'
-                      ? "bg-[#1A9952] text-white"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                  )}
-                  style={{ fontFamily: "Sweet Sans Pro" }}
-                  data-testid="filter-dietary-veg"
-                >
-                  <Leaf className="w-3 h-3" />
-                  Veg
-                </button>
-                <button
-                  onClick={() => { handleInteraction(); setDietaryMode('egg'); }}
-                  className={cn(
-                    "flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all",
-                    dietaryMode === 'egg'
-                      ? "bg-[#F59E0B] text-white"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                  )}
-                  style={{ fontFamily: "Sweet Sans Pro" }}
-                  data-testid="filter-dietary-egg"
-                >
-                  <Egg className="w-3 h-3" />
-                  Egg
-                </button>
-                <button
-                  onClick={() => { handleInteraction(); setDietaryMode('non-veg'); }}
-                  className={cn(
-                    "flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all",
-                    dietaryMode === 'non-veg'
-                      ? "bg-[#DC2626] text-white"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                  )}
-                  style={{ fontFamily: "Sweet Sans Pro" }}
-                  data-testid="filter-dietary-nonveg"
-                >
-                  <Drumstick className="w-3 h-3" />
-                  Non-Veg
-                </button>
-              </div>
+            {/* Filters & Sort - Single Row */}
+            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
+              <button
+                onClick={() => { handleInteraction(); setDietaryMode('all'); }}
+                className={cn(
+                  "flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium transition-all flex-shrink-0",
+                  dietaryMode === 'all'
+                    ? "bg-[#06352A] text-white"
+                    : "bg-gray-100 text-gray-600"
+                )}
+                style={{ fontFamily: "Sweet Sans Pro" }}
+                data-testid="filter-dietary-all"
+              >
+                <Sparkles className="w-2.5 h-2.5" />
+                All
+              </button>
+              <button
+                onClick={() => { handleInteraction(); setDietaryMode('veg'); }}
+                className={cn(
+                  "flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium transition-all flex-shrink-0",
+                  dietaryMode === 'veg'
+                    ? "bg-[#1A9952] text-white"
+                    : "bg-gray-100 text-gray-600"
+                )}
+                style={{ fontFamily: "Sweet Sans Pro" }}
+                data-testid="filter-dietary-veg"
+              >
+                <Leaf className="w-2.5 h-2.5" />
+                Veg
+              </button>
+              <button
+                onClick={() => { handleInteraction(); setDietaryMode('egg'); }}
+                className={cn(
+                  "flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium transition-all flex-shrink-0",
+                  dietaryMode === 'egg'
+                    ? "bg-[#F59E0B] text-white"
+                    : "bg-gray-100 text-gray-600"
+                )}
+                style={{ fontFamily: "Sweet Sans Pro" }}
+                data-testid="filter-dietary-egg"
+              >
+                <Egg className="w-2.5 h-2.5" />
+                Egg
+              </button>
+              <button
+                onClick={() => { handleInteraction(); setDietaryMode('non-veg'); }}
+                className={cn(
+                  "flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium transition-all flex-shrink-0",
+                  dietaryMode === 'non-veg'
+                    ? "bg-[#DC2626] text-white"
+                    : "bg-gray-100 text-gray-600"
+                )}
+                style={{ fontFamily: "Sweet Sans Pro" }}
+                data-testid="filter-dietary-nonveg"
+              >
+                <Drumstick className="w-2.5 h-2.5" />
+                Non-Veg
+              </button>
 
               {/* Sort Dropdown */}
               <Select value={sortOption} onValueChange={(value) => setSortOption(value as typeof sortOption)}>
                 <SelectTrigger 
-                  className="w-auto h-7 px-2.5 text-[11px] bg-white border-gray-200 rounded-full gap-1" 
+                  className="w-auto h-6 px-2 text-[10px] bg-white border-gray-200 rounded-full gap-0.5 flex-shrink-0" 
                   style={{ fontFamily: "Sweet Sans Pro" }}
                   data-testid="select-sort"
                 >
-                  <ArrowUpDown className="w-3 h-3" />
+                  <ArrowUpDown className="w-2.5 h-2.5" />
                   <SelectValue placeholder="Sort" />
                 </SelectTrigger>
                 <SelectContent>
