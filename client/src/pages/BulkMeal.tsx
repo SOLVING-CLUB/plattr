@@ -326,9 +326,12 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
   const mealType = getMealTypeFilter(selectedMealCategory);
 
   // Fetch ALL categories from database
-  const { data: allCategoriesFromDb = [] } = useQuery<CategoryType[]>({
+  const { data: allCategoriesFromDb = [], isLoading: isLoadingCategories } = useQuery<CategoryType[]>({
     queryKey: ['/api/categories', 'all'],
   });
+  
+  // Check if initial data is still loading (categories and first dishes query)
+  const isInitialLoading = isLoadingCategories;
 
   // Get category IDs for the current meal type - with safety check
   const categoryIdsForMealType = useMemo(() => {
@@ -360,60 +363,22 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
     }
   }, [categories, selectedCategory, mealType]);
 
-  // Fetch ALL dishes for the current meal type's categories (for accurate category counts)
-  // Use the frontend-defined category IDs - fetch dishes for each category separately and merge
-  // Include dietary filter (except 'egg' which is client-side name matching)
-  const dietaryForAllDishes = dietaryMode === 'egg' ? 'all' : dietaryMode;
-  
-  // Get all unique category IDs across all meal types (for fixed hooks)
-  const allPossibleCategoryIds = useMemo(() => {
-    const allIds = new Set<string>();
-    Object.values(MEAL_TYPE_CATEGORIES).forEach(ids => {
-      ids.forEach(id => allIds.add(id));
-    });
-    return Array.from(allIds);
-  }, []);
-  
-  // Create fixed queries for all possible categories (to avoid hooks violation)
-  // Only enable queries for categories in the current meal type
-  const allDishesQueries = allPossibleCategoryIds.map(catId => {
-    const isEnabled = categoryIdsForMealType.includes(catId);
-    return useQuery<Dish[]>({
-      queryKey: ['/api/dishes', mealType, catId, dietaryForAllDishes],
-      enabled: isEnabled && !!mealType,
-    });
+  // OPTIMIZATION: Lazy-load category counts in background after page renders
+  // This query fetches all dishes for the meal type but is non-blocking (loads after initial render)
+  const { data: allDishesForCounts = [] } = useQuery<Dish[]>({
+    queryKey: ['/api/dishes', mealType, 'all', 'all'],
+    enabled: !!mealType,
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes - counts don't change often
+    refetchOnWindowFocus: false,
   });
   
-  // Create a stable key for memoization based on query data lengths and loading states
-  const allDishesDataKey = allDishesQueries
-    .map((q, i) => categoryIdsForMealType.includes(allPossibleCategoryIds[i]) 
-      ? `${i}:${q.data?.length || 0}:${q.isLoading}` 
-      : `${i}:skip`)
-    .join('|');
-
-  // Merge all dishes from all categories (only from enabled queries)
+  // Filter to available dishes only
   const allDishes = useMemo(() => {
-    const merged: Dish[] = [];
-    const seenIds = new Set<string>();
-    
-    allPossibleCategoryIds.forEach((catId, index) => {
-      if (categoryIdsForMealType.includes(catId)) {
-        const query = allDishesQueries[index];
-        const dishes = query.data || [];
-        dishes.forEach(dish => {
-          // Filter by isAvailable
-          const isAvailable = (dish as any).is_available !== false && dish.isAvailable !== false;
-          if (isAvailable && !seenIds.has(dish.id)) {
-            seenIds.add(dish.id);
-            merged.push(dish);
-          }
-        });
-      }
+    return allDishesForCounts.filter(dish => {
+      const isAvailable = (dish as any).is_available !== false && dish.isAvailable !== false;
+      return isAvailable;
     });
-    
-    return merged;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allDishesDataKey, categoryIdsForMealType]);
+  }, [allDishesForCounts]);
 
   // Fetch dishes for selected category (for display)
   const { data: dishes = [], isLoading: isLoadingDishes } = useQuery<Dish[]>({
@@ -698,6 +663,88 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
     // Navigate to thank you page
     navigate("/bulk-meals-thank-you");
   };
+
+  // Show loading skeleton while initial data loads
+  if (isInitialLoading) {
+    return (
+      <div className="min-h-screen pb-24 relative">
+        {/* Blue Geometric Background Header */}
+        <div
+          className="absolute top-0 left-0 right-0 z-0"
+          style={{
+            backgroundImage: `url(${bulkMealsHeroPattern})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center top",
+            backgroundRepeat: "no-repeat",
+            height: "350px",
+          }}
+        />
+        {/* Header with Back Button */}
+        <div className="sticky top-0 z-50">
+          <div className="px-4 pt-12 pb-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-white hover:text-white hover:bg-white/20"
+              onClick={() => navigate("/")}
+              data-testid="button-back"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back
+            </Button>
+          </div>
+        </div>
+        {/* Loading Skeleton Content */}
+        <div className="relative z-10 px-4 pt-4 pb-6">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2">
+              <MapPin className="w-5 h-5 text-white" />
+              <span className="text-white font-semibold text-[18px]" style={{ fontFamily: "Sweet Sans Pro" }}>
+                Bengaluru, KA
+              </span>
+            </div>
+          </div>
+          {/* Service Tabs Skeleton */}
+          <div className="grid grid-cols-4 gap-2 mb-8">
+            {[1, 2, 3, 4].map((i) => (
+              <div
+                key={i}
+                className="aspect-square rounded-[10px] bg-white/80 animate-pulse"
+              />
+            ))}
+          </div>
+        </div>
+        {/* Main Content Skeleton */}
+        <div className="relative z-10 px-4">
+          <div className="bg-white rounded-2xl p-4 shadow-sm">
+            {/* Search Bar Skeleton */}
+            <div className="h-12 bg-gray-200 rounded-full animate-pulse mb-6" />
+            {/* Category Pills Skeleton */}
+            <div className="flex gap-2 mb-6 overflow-x-auto">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div
+                  key={i}
+                  className="h-10 w-24 bg-gray-200 rounded-full animate-pulse flex-shrink-0"
+                />
+              ))}
+            </div>
+            {/* Dish Grid Skeleton */}
+            <div className="grid grid-cols-2 gap-3">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="rounded-xl overflow-hidden bg-gray-100 animate-pulse">
+                  <div className="aspect-square bg-gray-200" />
+                  <div className="p-3 space-y-2">
+                    <div className="h-4 bg-gray-200 rounded w-3/4" />
+                    <div className="h-3 bg-gray-200 rounded w-1/2" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen pb-24 relative">
