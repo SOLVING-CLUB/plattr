@@ -1592,6 +1592,40 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
         </DrawerContent>
       </Drawer>
 
+      {/* Floating Cart Bar - Green bar above bottom nav */}
+      {cart.length > 0 && (
+        <div 
+          className="fixed bottom-[72px] left-0 right-0 z-40 px-4 pb-2"
+          style={{ paddingBottom: 'env(safe-area-inset-bottom, 8px)' }}
+        >
+          <button
+            onClick={() => navigate("/bulk-meals/cart")}
+            className="w-full flex items-center justify-between px-4 py-3 rounded-xl"
+            style={{ 
+              backgroundColor: '#1A9952',
+              boxShadow: '0 -2px 10px rgba(0, 0, 0, 0.15)'
+            }}
+            data-testid="button-floating-cart"
+          >
+            <div className="flex items-center gap-3">
+              <div 
+                className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold"
+                style={{ backgroundColor: '#F5E9DB', color: '#1A9952' }}
+              >
+                {cart.reduce((sum, item) => sum + item.quantity, 0)}
+              </div>
+              <span className="text-white font-semibold" style={{ fontFamily: "Sweet Sans Pro" }}>
+                Item added to cart
+              </span>
+            </div>
+            <div className="flex items-center gap-1 text-white font-semibold" style={{ fontFamily: "Sweet Sans Pro" }}>
+              <span>View Cart</span>
+              <ChevronDown className="w-4 h-4 rotate-[-90deg]" />
+            </div>
+          </button>
+        </div>
+      )}
+
       <FloatingNav activeTab={activeTab} onTabChange={handleTabChange} />
     </div>
   );
