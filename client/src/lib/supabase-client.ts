@@ -284,12 +284,14 @@ export function mapApiRouteToSupabase(route: string[]): { table: string; options
       };
       
     case '/api/dish-types':
-      // This requires a separate query - get dishes and extract unique dish_type
+      // Route format: ['/api/dish-types', categoryId]
+      // Category is at position 1 for this route (not position 2)
+      const dishTypesCategoryId = mealType; // mealType is route[1] which is the categoryId for this endpoint
       return {
         table: 'dishes',
         options: {
           select: 'dish_type',
-          filter: { 'category_id': `eq.${categoryId}` }
+          filter: dishTypesCategoryId ? { 'category_id': `eq.${dishTypesCategoryId}` } : {}
         }
       };
       

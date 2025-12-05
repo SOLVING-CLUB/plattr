@@ -332,18 +332,7 @@ export default function CategoryPage() {
     queryKey: ['/api/categories', 'all'],
   });
 
-  // Filter and order categories based on frontend mapping
-  const categories = useMemo(() => {
-    const categoryIds = MEAL_TYPE_CATEGORIES[mealType] || [];
-    
-    // Map category IDs to actual category objects
-    return categoryIds
-      .map(id => allCategoriesFromDb.find(cat => cat.id === id))
-      .filter(Boolean) as CategoryType[];
-  }, [allCategoriesFromDb, mealType]);
-
-  // Fetch ALL dishes for the current meal type's categories (for accurate category counts)
-  // Use the frontend-defined category IDs instead of querying the database
+  // Get category IDs for this meal type from frontend mapping
   const categoryIdsForMealType = MEAL_TYPE_CATEGORIES[mealType] || [];
   
   // Fetch dishes for each category and merge them
@@ -375,6 +364,43 @@ export default function CategoryPage() {
     
     return merged;
   }, [allDishesQueries.map(q => q.data).join(',')]);
+  
+  // Calculate dish counts per category from actual dish data
+  const categoryDishCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    
+    allDishes.forEach(dish => {
+      const categoryId = (dish as any).category_id || dish.categoryId;
+      if (categoryId) {
+        // Apply egg filter if needed (since egg filtering is client-side)
+        if (dietaryMode === 'egg') {
+          if (dish.name.toLowerCase().includes('egg')) {
+            counts[categoryId] = (counts[categoryId] || 0) + 1;
+          }
+        } else {
+          counts[categoryId] = (counts[categoryId] || 0) + 1;
+        }
+      }
+    });
+    
+    return counts;
+  }, [allDishes, dietaryMode]);
+  
+  // Filter and order categories based on frontend mapping AND actual dish counts
+  // Only show categories that have at least 1 dish for this meal type
+  const categories = useMemo(() => {
+    const categoryIds = MEAL_TYPE_CATEGORIES[mealType] || [];
+    
+    // Map category IDs to actual category objects, filtering out those with 0 dishes
+    return categoryIds
+      .map(id => allCategoriesFromDb.find(cat => cat.id === id))
+      .filter((cat): cat is CategoryType => {
+        if (!cat) return false;
+        // Only include categories that have dishes
+        const count = categoryDishCounts[cat.id] || 0;
+        return count > 0;
+      });
+  }, [allCategoriesFromDb, mealType, categoryDishCounts]);
 
   // Fetch dishes for selected category (for display)
   // Include dietary filter in query key so it refetches when filter changes
@@ -714,36 +740,9 @@ export default function CategoryPage() {
 
   const hasActiveFilters = priceRange[0] !== 0 || priceRange[1] !== 500;
 
-  // Get total dish count for a category (from all dishes, respecting filters)
+  // Get total dish count for a category (from pre-calculated counts)
   const getDishCountForCategory = (categoryId: string): number => {
-    const count = allDishes.filter(d => {
-      // Handle both camelCase and snake_case from database
-      const dishCategoryId = (d as any).category_id || d.categoryId;
-      
-      // Filter by category
-      if (dishCategoryId !== categoryId) return false;
-      
-      // Apply dietary filter (egg is client-side)
-      if (dietaryMode === 'egg') {
-        if (!d.name.toLowerCase().includes('egg')) return false;
-      }
-      
-      return true;
-    }).length;
-    
-    // Debug logging - show unique category IDs in the dataset
-    const categoryIdSet = new Set(allDishes.map(d => (d as any).category_id || d.categoryId));
-    const uniqueCategoryIds = Array.from(categoryIdSet);
-    console.log(`[getDishCountForCategory] Looking for: "${categoryId}", Found: ${count}`, {
-      allDishesTotal: allDishes.length,
-      uniqueCategoryIds,
-      sampleDishes: allDishes.slice(0, 5).map(d => ({ 
-        name: d.name, 
-        categoryId: (d as any).category_id || d.categoryId 
-      }))
-    });
-    
-    return count;
+    return categoryDishCounts[categoryId] || 0;
   };
   
   // Get dish count for a specific dish type
