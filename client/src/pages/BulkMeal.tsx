@@ -303,13 +303,31 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
   // Check if initial data is still loading (categories and first dishes query)
   const isInitialLoading = isLoadingCategories;
 
+  // Get priority category ID based on meal type
+  const getPriorityCategoryId = (mealTypeFilter: string): string => {
+    const priorityMap: Record<string, string> = {
+      "lunch-dinner": "main-course",
+      "tiffins": "breakfast",
+      "snacks": "snacks",
+    };
+    return priorityMap[mealTypeFilter] || "";
+  };
+
+  const priorityCategoryId = getPriorityCategoryId(mealType);
+
   // Filter categories dynamically from database meal_type column
-  // This replaces the hardcoded MEAL_TYPE_CATEGORIES mapping
+  // Priority category appears first, then others sorted by displayOrder
   const categories = useMemo(() => {
     if (!mealType || allCategoriesFromDb.length === 0) return [];
-    return filterCategoriesByMealType(allCategoriesFromDb, mealType)
-      .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0)) as CategoryType[];
-  }, [allCategoriesFromDb, mealType]);
+    const filtered = filterCategoriesByMealType(allCategoriesFromDb, mealType);
+    return filtered.sort((a, b) => {
+      // Priority category always comes first
+      if (a.id === priorityCategoryId) return -1;
+      if (b.id === priorityCategoryId) return 1;
+      // Then sort by displayOrder
+      return (a.displayOrder || 0) - (b.displayOrder || 0);
+    }) as CategoryType[];
+  }, [allCategoriesFromDb, mealType, priorityCategoryId]);
 
   // Set first category as selected when categories load or when meal type changes
   // Keep 'all' as valid selection - only reset if it's an invalid category ID
@@ -422,6 +440,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
   }, [dishTypeCounts]);
 
   // Filter and sort dishes (uses debounced search for better performance)
+  // When "All" is selected, priority category dishes appear first
   const filteredAndSortedDishes = useMemo(() => {
     return dishes
       .filter(dish => {
@@ -459,6 +478,18 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
         return true;
       })
       .sort((a, b) => {
+        // When viewing "All", priority category dishes come first
+        if (selectedCategory === 'all' && priorityCategoryId) {
+          const aCategoryId = (a as any).category_id || a.categoryId;
+          const bCategoryId = (b as any).category_id || b.categoryId;
+          const aIsPriority = aCategoryId === priorityCategoryId;
+          const bIsPriority = bCategoryId === priorityCategoryId;
+          
+          if (aIsPriority && !bIsPriority) return -1;
+          if (!aIsPriority && bIsPriority) return 1;
+        }
+        
+        // Then apply the selected sort option
         const priceA = parseFloat(a.price as string);
         const priceB = parseFloat(b.price as string);
         
@@ -475,7 +506,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
             return 0;
         }
       });
-  }, [dishes, debouncedSearchQuery, selectedDishType, dietaryMode, priceRange, sortOption]);
+  }, [dishes, debouncedSearchQuery, selectedDishType, dietaryMode, priceRange, sortOption, selectedCategory, priorityCategoryId]);
 
   const hasActiveFilters = priceRange[0] !== 0 || priceRange[1] !== 500;
 
