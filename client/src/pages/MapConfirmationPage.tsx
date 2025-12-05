@@ -23,48 +23,43 @@ const customIcon = new L.Icon({
   popupAnchor: [0, -48],
 });
 
-// Component to handle map events for draggable marker
-function DraggableMarker({ 
-  position, 
-  onPositionChange 
+// Component to handle map events and update position on pan/zoom
+function MapEventHandler({ 
+  onPositionChange,
+  initialCenter
 }: { 
-  position: [number, number]; 
   onPositionChange: (pos: [number, number]) => void;
+  initialCenter: [number, number];
 }) {
-  const markerRef = useRef<L.Marker>(null);
-
-  useMapEvents({
-    click(e) {
-      onPositionChange([e.latlng.lat, e.latlng.lng]);
+  const map = useMapEvents({
+    moveend() {
+      const center = map.getCenter();
+      onPositionChange([center.lat, center.lng]);
     },
   });
 
-  return (
-    <Marker
-      draggable={true}
-      position={position}
-      ref={markerRef}
-      icon={customIcon}
-      eventHandlers={{
-        dragend() {
-          const marker = markerRef.current;
-          if (marker != null) {
-            const latlng = marker.getLatLng();
-            onPositionChange([latlng.lat, latlng.lng]);
-          }
-        },
-      }}
-    />
-  );
+  // Set initial view
+  useEffect(() => {
+    map.setView(initialCenter, 17);
+  }, []);
+  
+  return null;
 }
 
-// Component to recenter map
-function MapController({ center }: { center: [number, number] }) {
+// Component to recenter map when needed
+function MapRecenter({ center, shouldRecenter, onRecenterComplete }: { 
+  center: [number, number]; 
+  shouldRecenter: boolean;
+  onRecenterComplete: () => void;
+}) {
   const map = useMapEvents({});
   
   useEffect(() => {
-    map.setView(center, map.getZoom());
-  }, [center, map]);
+    if (shouldRecenter) {
+      map.setView(center, 17);
+      onRecenterComplete();
+    }
+  }, [shouldRecenter, center, map, onRecenterComplete]);
   
   return null;
 }
@@ -81,11 +76,13 @@ export default function MapConfirmationPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [position, setPosition] = useState<[number, number]>([12.9716, 77.5946]); // Default Bangalore
+  const [initialCenter, setInitialCenter] = useState<[number, number]>([12.9716, 77.5946]);
   const [address, setAddress] = useState("");
   const [areaName, setAreaName] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [showTooltip, setShowTooltip] = useState(true);
   const [isGeocoding, setIsGeocoding] = useState(false);
+  const [shouldRecenter, setShouldRecenter] = useState(false);
 
   // Get current location on mount
   useEffect(() => {
@@ -94,6 +91,7 @@ export default function MapConfirmationPage() {
         (pos) => {
           const newPos: [number, number] = [pos.coords.latitude, pos.coords.longitude];
           setPosition(newPos);
+          setInitialCenter(newPos);
           reverseGeocode(newPos[0], newPos[1]);
           setIsLoading(false);
         },
@@ -162,6 +160,7 @@ export default function MapConfirmationPage() {
         (pos) => {
           const newPos: [number, number] = [pos.coords.latitude, pos.coords.longitude];
           setPosition(newPos);
+          setShouldRecenter(true);
           reverseGeocode(newPos[0], newPos[1]);
         },
         (error) => {
@@ -249,7 +248,7 @@ export default function MapConfirmationPage() {
       {/* Map */}
       <div className="absolute inset-0 bottom-[180px]">
         <MapContainer
-          center={position}
+          center={initialCenter}
           zoom={17}
           style={{ height: "100%", width: "100%", position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
           zoomControl={false}
@@ -258,9 +257,27 @@ export default function MapConfirmationPage() {
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          <DraggableMarker position={position} onPositionChange={handlePositionChange} />
-          <MapController center={position} />
+          <MapEventHandler 
+            onPositionChange={handlePositionChange} 
+            initialCenter={initialCenter}
+          />
+          <MapRecenter 
+            center={position} 
+            shouldRecenter={shouldRecenter}
+            onRecenterComplete={() => setShouldRecenter(false)}
+          />
         </MapContainer>
+        
+        {/* Fixed Center Pin */}
+        <div 
+          className="absolute left-1/2 top-1/2 z-[500] pointer-events-none"
+          style={{ transform: 'translate(-50%, -100%)' }}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 36" width="36" height="48">
+            <path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24C24 5.4 18.6 0 12 0z" fill="#1A9952"/>
+            <circle cx="12" cy="12" r="5" fill="white"/>
+          </svg>
+        </div>
 
         {/* Tooltip */}
         {showTooltip && (
