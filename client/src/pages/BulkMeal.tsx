@@ -947,32 +947,94 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
 
         {/* Dish Selection Section */}
         <div className="space-y-2">
-          {/* Header with Sort and Filter */}
-          <div className="flex items-center justify-between mb-6">
+          {/* Header */}
+          <div className="mb-4">
             <h2 
-              className="font-bold text-[14px]"
+              className="font-bold text-[14px] mb-3"
               style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}
             >
               Choose Food Category
             </h2>
-            <div className="flex items-center gap-2">
-              <button 
-                className="flex items-center gap-1 px-3 py-1.5 border border-gray-300 rounded-md hover-elevate active-elevate-2 bg-white"
-                data-testid="button-sort"
-                onClick={() => setSortDialogOpen(true)}
-              >
-                <ArrowUpDown className="w-4 h-4" />
-                <span className="font-medium text-[12px]" style={{ fontFamily: "Sweet Sans Pro" }}>Sort</span>
-              </button>
+            
+            {/* Inline Filters Row */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Dietary Filter Pills */}
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => { handleInteraction(); setDietaryMode('all'); }}
+                  className={cn(
+                    "flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all",
+                    dietaryMode === 'all'
+                      ? "bg-[#06352A] text-white"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  )}
+                  style={{ fontFamily: "Sweet Sans Pro" }}
+                  data-testid="filter-dietary-all"
+                >
+                  <Sparkles className="w-3 h-3" />
+                  All
+                </button>
+                <button
+                  onClick={() => { handleInteraction(); setDietaryMode('veg'); }}
+                  className={cn(
+                    "flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all",
+                    dietaryMode === 'veg'
+                      ? "bg-[#1A9952] text-white"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  )}
+                  style={{ fontFamily: "Sweet Sans Pro" }}
+                  data-testid="filter-dietary-veg"
+                >
+                  <Leaf className="w-3 h-3" />
+                  Veg
+                </button>
+                <button
+                  onClick={() => { handleInteraction(); setDietaryMode('egg'); }}
+                  className={cn(
+                    "flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all",
+                    dietaryMode === 'egg'
+                      ? "bg-[#F59E0B] text-white"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  )}
+                  style={{ fontFamily: "Sweet Sans Pro" }}
+                  data-testid="filter-dietary-egg"
+                >
+                  <Egg className="w-3 h-3" />
+                  Egg
+                </button>
+                <button
+                  onClick={() => { handleInteraction(); setDietaryMode('non-veg'); }}
+                  className={cn(
+                    "flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all",
+                    dietaryMode === 'non-veg'
+                      ? "bg-[#DC2626] text-white"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  )}
+                  style={{ fontFamily: "Sweet Sans Pro" }}
+                  data-testid="filter-dietary-nonveg"
+                >
+                  <Drumstick className="w-3 h-3" />
+                  Non-Veg
+                </button>
+              </div>
 
-              <button 
-                className="flex items-center gap-1 px-3 py-1.5 border border-gray-300 rounded-md hover-elevate active-elevate-2 bg-white"
-                data-testid="button-filter"
-                onClick={() => setFilterDialogOpen(true)}
-              >
-                <SlidersHorizontal className="w-4 h-4" />
-                <span className="font-medium text-[12px]" style={{ fontFamily: "Sweet Sans Pro" }}>Filter</span>
-              </button>
+              {/* Sort Dropdown */}
+              <Select value={sortOption} onValueChange={(value) => setSortOption(value as typeof sortOption)}>
+                <SelectTrigger 
+                  className="w-auto h-7 px-2.5 text-[11px] bg-white border-gray-200 rounded-full gap-1" 
+                  style={{ fontFamily: "Sweet Sans Pro" }}
+                  data-testid="select-sort"
+                >
+                  <ArrowUpDown className="w-3 h-3" />
+                  <SelectValue placeholder="Sort" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="price-low">Price: Low → High</SelectItem>
+                  <SelectItem value="price-high">Price: High → Low</SelectItem>
+                  <SelectItem value="name-az">Name: A → Z</SelectItem>
+                  <SelectItem value="name-za">Name: Z → A</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
