@@ -1,15 +1,14 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
   ChevronLeft, 
   MapPin, 
   Navigation, 
   Search, 
-  Clock,
-  Loader2,
-  ChevronRight
+  Plus,
+  ChevronDown,
+  MoreVertical
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { addressService } from "@/lib/supabase-service";
@@ -36,38 +35,17 @@ interface LocationData {
 const LOCATION_STORAGE_KEY = "activeLocation";
 const RECENT_LOCATIONS_KEY = "recentLocations";
 
-// Popular areas in Bangalore for quick selection
-const popularAreas = [
-  { label: "Koramangala", addressLine: "Koramangala, Bengaluru, Karnataka" },
-  { label: "Indiranagar", addressLine: "Indiranagar, Bengaluru, Karnataka" },
-  { label: "HSR Layout", addressLine: "HSR Layout, Bengaluru, Karnataka" },
-  { label: "Whitefield", addressLine: "Whitefield, Bengaluru, Karnataka" },
-  { label: "Marathahalli", addressLine: "Marathahalli, Bengaluru, Karnataka" },
-  { label: "JP Nagar", addressLine: "JP Nagar, Bengaluru, Karnataka" },
-  { label: "Electronic City", addressLine: "Electronic City, Bengaluru, Karnataka" },
-  { label: "BTM Layout", addressLine: "BTM Layout, Bengaluru, Karnataka" },
-];
-
 export default function LocationPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [isDetecting, setIsDetecting] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState<LocationData | null>(null);
   const [recentLocations, setRecentLocations] = useState<LocationData[]>([]);
   const [activeTab, setActiveTab] = useState<"home" | "menu" | "profile">("home");
+  const [showAllAddresses, setShowAllAddresses] = useState(false);
 
-  // Load saved location and recents from localStorage
+  // Load recents from localStorage
   useEffect(() => {
-    const savedLocation = localStorage.getItem(LOCATION_STORAGE_KEY);
-    if (savedLocation) {
-      try {
-        setSelectedLocation(JSON.parse(savedLocation));
-      } catch (e) {
-        console.error("Error parsing saved location:", e);
-      }
-    }
-
     const savedRecents = localStorage.getItem(RECENT_LOCATIONS_KEY);
     if (savedRecents) {
       try {
@@ -149,7 +127,6 @@ export default function LocationPage() {
             type: "detected",
           };
           
-          setSelectedLocation(locationData);
           saveLocationAndNavigate(locationData);
         } catch (error) {
           // Fallback if geocoding fails
@@ -160,7 +137,6 @@ export default function LocationPage() {
             lng: longitude,
             type: "detected",
           };
-          setSelectedLocation(locationData);
           saveLocationAndNavigate(locationData);
         }
         
@@ -196,193 +172,219 @@ export default function LocationPage() {
     saveLocationAndNavigate(locationData);
   };
 
-  const handleSelectPopularArea = (area: { label: string; addressLine: string }) => {
-    const locationData: LocationData = {
-      label: area.label,
-      addressLine: area.addressLine,
-      type: "manual",
-    };
-    saveLocationAndNavigate(locationData);
-  };
-
   const handleSelectRecent = (location: LocationData) => {
     saveLocationAndNavigate(location);
   };
 
-  // Filter popular areas based on search
-  const filteredAreas = searchQuery
-    ? popularAreas.filter(
-        (area) =>
-          area.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          area.addressLine.toLowerCase().includes(searchQuery.toLowerCase())
+  const handleAddNewAddress = () => {
+    setLocation("/saved-addresses");
+  };
+
+  // Filter addresses based on search
+  const filteredAddresses = searchQuery
+    ? savedAddresses.filter(
+        (addr) =>
+          addr.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          addr.address.toLowerCase().includes(searchQuery.toLowerCase())
       )
-    : popularAreas;
+    : savedAddresses;
+
+  const displayedAddresses = showAllAddresses ? filteredAddresses : filteredAddresses.slice(0, 3);
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24">
+    <div className="min-h-screen bg-[#F5F5F5] pb-24">
       {/* Header */}
-      <div className="bg-white px-5 pt-16 pb-4 shadow-sm">
-        <button
-          onClick={() => setLocation("/")}
-          className="flex items-center gap-1 text-[#1A9952] mb-4"
-          data-testid="button-back-home"
-        >
-          <ChevronLeft className="w-5 h-5" />
-          <span className="font-medium">Back</span>
-        </button>
+      <div className="bg-white px-4 pt-16 pb-4">
+        <div className="flex items-center gap-3 mb-4">
+          <button
+            onClick={() => setLocation("/")}
+            className="p-1"
+            data-testid="button-back-home"
+          >
+            <ChevronLeft className="w-6 h-6 text-[#1C1C1C]" />
+          </button>
+          <h1
+            className="text-lg font-semibold text-[#1C1C1C]"
+            style={{ fontFamily: "'Sweet Sans Pro', sans-serif" }}
+            data-testid="text-page-title"
+          >
+            Select your location
+          </h1>
+        </div>
 
-        <h1
-          className="text-2xl font-bold text-[#1C1C1C] mb-1"
-          style={{ fontFamily: "'Sweet Sans Pro', sans-serif" }}
-          data-testid="text-page-title"
-        >
-          Choose your location
-        </h1>
-        <p className="text-gray-500 text-sm">
-          Select a delivery location to see available options
-        </p>
-      </div>
-
-      {/* Current Location Button */}
-      <div className="px-4 mt-4">
-        <button
-          onClick={handleUseCurrentLocation}
-          disabled={isDetecting}
-          className="w-full bg-white rounded-xl p-4 shadow-sm flex items-center gap-4 border border-gray-100 hover:border-[#1A9952] transition-colors disabled:opacity-70"
-          data-testid="button-use-current-location"
-        >
-          <div className="w-12 h-12 bg-[#1A9952]/10 rounded-full flex items-center justify-center flex-shrink-0">
-            {isDetecting ? (
-              <Loader2 className="w-6 h-6 text-[#1A9952] animate-spin" />
-            ) : (
-              <Navigation className="w-6 h-6 text-[#1A9952]" />
-            )}
-          </div>
-          <div className="flex-1 text-left">
-            <h3 className="font-semibold text-[#1C1C1C]" style={{ fontFamily: "'Sweet Sans Pro', sans-serif" }}>
-              {isDetecting ? "Detecting location..." : "Use current location"}
-            </h3>
-            <p className="text-gray-500 text-sm">Using GPS</p>
-          </div>
-          <ChevronRight className="w-5 h-5 text-gray-400" />
-        </button>
-      </div>
-
-      {/* Search Bar */}
-      <div className="px-4 mt-4">
+        {/* Search Bar */}
         <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search for area, street name..."
-            className="w-full pl-12 pr-4 py-4 bg-white border-gray-200 rounded-xl shadow-sm"
+            placeholder="Search an area or address"
+            className="w-full pl-4 pr-12 py-3 bg-white border border-gray-200 rounded-lg text-[15px]"
             style={{ fontFamily: "'Sweet Sans Pro', sans-serif" }}
             data-testid="input-location-search"
           />
+          <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
         </div>
       </div>
 
-      {/* Recent Locations */}
+      {/* Quick Action Buttons */}
+      <div className="bg-white px-4 py-4 mt-2">
+        <div className="flex gap-3">
+          {/* Use Current Location */}
+          <button
+            onClick={handleUseCurrentLocation}
+            disabled={isDetecting}
+            className="flex-1 flex flex-col items-start p-3 border border-gray-200 rounded-lg hover:border-[#1A9952] transition-colors disabled:opacity-60"
+            data-testid="button-use-current-location"
+          >
+            <div className="w-8 h-8 rounded-full bg-[#FFF3E0] flex items-center justify-center mb-2">
+              <Navigation className="w-4 h-4 text-[#FF5722]" />
+            </div>
+            <span 
+              className="text-[13px] font-medium text-[#1C1C1C] leading-tight"
+              style={{ fontFamily: "'Sweet Sans Pro', sans-serif" }}
+            >
+              {isDetecting ? "Detecting..." : "Use Current Location"}
+            </span>
+          </button>
+
+          {/* Add New Address */}
+          <button
+            onClick={handleAddNewAddress}
+            className="flex-1 flex flex-col items-start p-3 border border-gray-200 rounded-lg hover:border-[#1A9952] transition-colors"
+            data-testid="button-add-new-address"
+          >
+            <div className="w-8 h-8 rounded-full bg-[#FFF3E0] flex items-center justify-center mb-2">
+              <Plus className="w-4 h-4 text-[#FF5722]" />
+            </div>
+            <span 
+              className="text-[13px] font-medium text-[#1C1C1C] leading-tight"
+              style={{ fontFamily: "'Sweet Sans Pro', sans-serif" }}
+            >
+              Add New Address
+            </span>
+          </button>
+        </div>
+      </div>
+
+      {/* Saved Addresses */}
+      <div className="bg-white px-4 py-4 mt-2">
+        <h2 
+          className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4"
+          style={{ fontFamily: "'Sweet Sans Pro', sans-serif" }}
+        >
+          Saved Addresses
+        </h2>
+
+        {isLoadingAddresses ? (
+          <div className="space-y-4">
+            {[1, 2].map((i) => (
+              <div key={i} className="flex gap-3 animate-pulse">
+                <div className="w-10 h-10 bg-gray-200 rounded-full" />
+                <div className="flex-1">
+                  <div className="h-4 bg-gray-200 rounded w-1/3 mb-2" />
+                  <div className="h-3 bg-gray-200 rounded w-full" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filteredAddresses.length === 0 ? (
+          <div className="py-6 text-center">
+            <MapPin className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+            <p className="text-gray-500 text-sm">No saved addresses yet</p>
+            <button
+              onClick={handleAddNewAddress}
+              className="mt-3 text-[#1A9952] font-medium text-sm"
+            >
+              Add your first address
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="space-y-1">
+              {displayedAddresses.map((address) => (
+                <button
+                  key={address.id}
+                  onClick={() => handleSelectSavedAddress(address)}
+                  className="w-full flex items-start gap-3 py-3 border-b border-gray-100 last:border-b-0 text-left hover:bg-gray-50 transition-colors"
+                  data-testid={`button-saved-${address.id}`}
+                >
+                  <div className="flex flex-col items-center mt-1">
+                    <Navigation className="w-5 h-5 text-gray-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 
+                        className="font-semibold text-[#1C1C1C] text-[15px]"
+                        style={{ fontFamily: "'Sweet Sans Pro', sans-serif" }}
+                      >
+                        {address.label}
+                      </h3>
+                      {address.isDefault && (
+                        <span className="text-[10px] bg-[#1A9952] text-white px-1.5 py-0.5 rounded">
+                          Default
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-gray-500 text-[13px] mt-0.5 line-clamp-2">
+                      {address.landmark ? `${address.address}, ${address.landmark}` : address.address}
+                    </p>
+                  </div>
+                  <MoreVertical className="w-5 h-5 text-gray-400 mt-1 flex-shrink-0" />
+                </button>
+              ))}
+            </div>
+
+            {filteredAddresses.length > 3 && (
+              <button
+                onClick={() => setShowAllAddresses(!showAllAddresses)}
+                className="w-full flex items-center justify-center gap-1 py-3 text-[#1A9952] font-medium text-sm"
+                data-testid="button-view-all-addresses"
+              >
+                {showAllAddresses ? "Show less" : "View all"}
+                <ChevronDown className={`w-4 h-4 transition-transform ${showAllAddresses ? "rotate-180" : ""}`} />
+              </button>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Recently Searched */}
       {recentLocations.length > 0 && !searchQuery && (
-        <div className="px-4 mt-6">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
-            <Clock className="w-4 h-4" />
-            Recent
+        <div className="bg-white px-4 py-4 mt-2">
+          <h2 
+            className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4"
+            style={{ fontFamily: "'Sweet Sans Pro', sans-serif" }}
+          >
+            Recently Searched
           </h2>
-          <div className="space-y-2">
+
+          <div className="space-y-1">
             {recentLocations.slice(0, 3).map((location, index) => (
               <button
                 key={index}
                 onClick={() => handleSelectRecent(location)}
-                className="w-full bg-white rounded-xl p-4 shadow-sm flex items-center gap-3 border border-gray-100 hover:border-[#1A9952] transition-colors text-left"
+                className="w-full flex items-start gap-3 py-3 border-b border-gray-100 last:border-b-0 text-left hover:bg-gray-50 transition-colors"
                 data-testid={`button-recent-${index}`}
               >
-                <MapPin className="w-5 h-5 text-gray-400 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-[#1C1C1C] truncate">{location.label}</h3>
-                  <p className="text-gray-500 text-sm truncate">{location.addressLine}</p>
+                <div className="flex flex-col items-center mt-1">
+                  <MapPin className="w-5 h-5 text-gray-400" />
                 </div>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Saved Addresses */}
-      {savedAddresses.length > 0 && !searchQuery && (
-        <div className="px-4 mt-6">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-              Saved Addresses
-            </h2>
-            <button
-              onClick={() => setLocation("/saved-addresses")}
-              className="text-[#1A9952] text-sm font-medium"
-              data-testid="button-manage-addresses"
-            >
-              Manage
-            </button>
-          </div>
-          <div className="space-y-2">
-            {savedAddresses.slice(0, 3).map((address) => (
-              <button
-                key={address.id}
-                onClick={() => handleSelectSavedAddress(address)}
-                className="w-full bg-white rounded-xl p-4 shadow-sm flex items-center gap-3 border border-gray-100 hover:border-[#1A9952] transition-colors text-left"
-                data-testid={`button-saved-${address.id}`}
-              >
-                <MapPin className="w-5 h-5 text-[#1A9952] flex-shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-medium text-[#1C1C1C]">{address.label}</h3>
-                    {address.isDefault && (
-                      <span className="text-xs bg-[#1A9952] text-white px-2 py-0.5 rounded">
-                        Default
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-gray-500 text-sm truncate">
-                    {address.landmark ? `${address.address}, ${address.landmark}` : address.address}
+                  <h3 
+                    className="font-semibold text-[#1C1C1C] text-[15px]"
+                    style={{ fontFamily: "'Sweet Sans Pro', sans-serif" }}
+                  >
+                    {location.label}
+                  </h3>
+                  <p className="text-gray-500 text-[13px] mt-0.5 line-clamp-2">
+                    {location.addressLine}
                   </p>
                 </div>
-                <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
               </button>
             ))}
           </div>
         </div>
       )}
-
-      {/* Popular Areas / Search Results */}
-      <div className="px-4 mt-6">
-        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
-          {searchQuery ? "Search Results" : "Popular Areas in Bangalore"}
-        </h2>
-        {filteredAreas.length > 0 ? (
-          <div className="space-y-2">
-            {filteredAreas.map((area, index) => (
-              <button
-                key={index}
-                onClick={() => handleSelectPopularArea(area)}
-                className="w-full bg-white rounded-xl p-4 shadow-sm flex items-center gap-3 border border-gray-100 hover:border-[#1A9952] transition-colors text-left"
-                data-testid={`button-area-${index}`}
-              >
-                <MapPin className="w-5 h-5 text-gray-400 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-[#1C1C1C]">{area.label}</h3>
-                  <p className="text-gray-500 text-sm truncate">{area.addressLine}</p>
-                </div>
-                <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div className="bg-white rounded-xl p-8 text-center">
-            <MapPin className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500">No areas found for "{searchQuery}"</p>
-          </div>
-        )}
-      </div>
 
       {/* Floating Nav */}
       <FloatingNav activeTab={activeTab} onTabChange={handleTabChange} />
