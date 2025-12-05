@@ -2923,171 +2923,82 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
               </div>
             </div>
 
-            {/* Header with Sort and Filter */}
-            <div className="flex items-center justify-between mb-4">
-              <h2 
-                className="font-bold text-[14px]"
-                style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}
-              >
-                Choose Food Category
-              </h2>
-              <div className="flex items-center gap-2">
-                {/* Sort Button with Dropdown */}
-                <div className="relative">
-                  <button 
-                    onClick={() => {
-                      setShowSortDropdown(!showSortDropdown);
-                      setShowFilterDropdown(false);
-                    }}
-                    className="flex items-center gap-1 px-3 py-1.5 border border-gray-300 rounded-md hover-elevate active-elevate-2 bg-white"
-                    data-testid="button-sort"
-                  >
-                    <ArrowUpDown className="w-4 h-4" />
-                    <span className="text-sm font-medium" style={{ fontFamily: "Sweet Sans Pro" }}>Sort</span>
-                  </button>
-                  
-                  {showSortDropdown && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
-                      <div className="py-1">
-                        <button
-                          onClick={() => {
-                            setSelectedSort("popular");
-                            setShowSortDropdown(false);
-                          }}
-                          className="w-full px-4 py-2 text-left text-sm hover-elevate"
-                          style={{ 
-                            fontFamily: "Sweet Sans Pro",
-                            backgroundColor: selectedSort === "popular" ? "#F0FDF4" : "white",
-                            color: selectedSort === "popular" ? "#1A9952" : "#06352A"
-                          }}
-                        >
-                          Popular
-                        </button>
-                        <button
-                          onClick={() => {
-                            setSelectedSort("price-low-high");
-                            setShowSortDropdown(false);
-                          }}
-                          className="w-full px-4 py-2 text-left text-sm hover-elevate"
-                          style={{ 
-                            fontFamily: "Sweet Sans Pro",
-                            backgroundColor: selectedSort === "price-low-high" ? "#F0FDF4" : "white",
-                            color: selectedSort === "price-low-high" ? "#1A9952" : "#06352A"
-                          }}
-                        >
-                          Price: Low to High
-                        </button>
-                        <button
-                          onClick={() => {
-                            setSelectedSort("price-high-low");
-                            setShowSortDropdown(false);
-                          }}
-                          className="w-full px-4 py-2 text-left text-sm hover-elevate"
-                          style={{ 
-                            fontFamily: "Sweet Sans Pro",
-                            backgroundColor: selectedSort === "price-high-low" ? "#F0FDF4" : "white",
-                            color: selectedSort === "price-high-low" ? "#1A9952" : "#06352A"
-                          }}
-                        >
-                          Price: High to Low
-                        </button>
-                        <button
-                          onClick={() => {
-                            setSelectedSort("rating");
-                            setShowSortDropdown(false);
-                          }}
-                          className="w-full px-4 py-2 text-left text-sm hover-elevate"
-                          style={{ 
-                            fontFamily: "Sweet Sans Pro",
-                            backgroundColor: selectedSort === "rating" ? "#F0FDF4" : "white",
-                            color: selectedSort === "rating" ? "#1A9952" : "#06352A"
-                          }}
-                        >
-                          Rating
-                        </button>
-                      </div>
-                    </div>
+            {/* Filters & Sort - Single Row */}
+            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide mb-4">
+                <button
+                  onClick={() => { handleInteraction(); setDietaryMode('all'); }}
+                  className={cn(
+                    "flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium transition-all flex-shrink-0",
+                    dietaryMode === 'all'
+                      ? "bg-[#06352A] text-white"
+                      : "bg-gray-100 text-gray-600"
                   )}
-                </div>
+                  style={{ fontFamily: "Sweet Sans Pro" }}
+                  data-testid="filter-dietary-all"
+                >
+                  <Sparkles className="w-2.5 h-2.5" />
+                  All
+                </button>
+                <button
+                  onClick={() => { handleInteraction(); setDietaryMode('veg'); }}
+                  className={cn(
+                    "flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium transition-all flex-shrink-0",
+                    dietaryMode === 'veg'
+                      ? "bg-[#1A9952] text-white"
+                      : "bg-gray-100 text-gray-600"
+                  )}
+                  style={{ fontFamily: "Sweet Sans Pro" }}
+                  data-testid="filter-dietary-veg"
+                >
+                  <Leaf className="w-2.5 h-2.5" />
+                  Veg
+                </button>
+                <button
+                  onClick={() => { handleInteraction(); setDietaryMode('egg'); }}
+                  className={cn(
+                    "flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium transition-all flex-shrink-0",
+                    dietaryMode === 'egg'
+                      ? "bg-[#F59E0B] text-white"
+                      : "bg-gray-100 text-gray-600"
+                  )}
+                  style={{ fontFamily: "Sweet Sans Pro" }}
+                  data-testid="filter-dietary-egg"
+                >
+                  <Egg className="w-2.5 h-2.5" />
+                  Egg
+                </button>
+                <button
+                  onClick={() => { handleInteraction(); setDietaryMode('non-veg'); }}
+                  className={cn(
+                    "flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium transition-all flex-shrink-0",
+                    dietaryMode === 'non-veg'
+                      ? "bg-[#DC2626] text-white"
+                      : "bg-gray-100 text-gray-600"
+                  )}
+                  style={{ fontFamily: "Sweet Sans Pro" }}
+                  data-testid="filter-dietary-nonveg"
+                >
+                  <Drumstick className="w-2.5 h-2.5" />
+                  Non-Veg
+                </button>
 
-                {/* Filter Button with Dropdown */}
-                <div className="relative">
-                  <button 
-                    onClick={() => {
-                      setShowFilterDropdown(!showFilterDropdown);
-                      setShowSortDropdown(false);
-                    }}
-                    className="flex items-center gap-1 px-3 py-1.5 border border-gray-300 rounded-md hover-elevate active-elevate-2 bg-white"
-                    data-testid="button-filter"
+                {/* Sort Dropdown */}
+                <Select value={sortOption} onValueChange={(value) => setSortOption(value as typeof sortOption)}>
+                  <SelectTrigger 
+                    className="w-auto h-6 px-2 text-[10px] bg-white border-gray-200 rounded-full gap-0.5 flex-shrink-0" 
+                    style={{ fontFamily: "Sweet Sans Pro" }}
+                    data-testid="select-sort"
                   >
-                    <SlidersHorizontal className="w-4 h-4" />
-                    <span className="text-sm font-medium" style={{ fontFamily: "Sweet Sans Pro" }}>Filter</span>
-                  </button>
-                  
-                  {showFilterDropdown && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
-                      <div className="py-1">
-                        <button
-                          onClick={() => {
-                            setSelectedFilter("all");
-                            setShowFilterDropdown(false);
-                          }}
-                          className="w-full px-4 py-2 text-left text-sm hover-elevate"
-                          style={{ 
-                            fontFamily: "Sweet Sans Pro",
-                            backgroundColor: selectedFilter === "all" ? "#F0FDF4" : "white",
-                            color: selectedFilter === "all" ? "#1A9952" : "#06352A"
-                          }}
-                        >
-                          All Items
-                        </button>
-                        <button
-                          onClick={() => {
-                            setSelectedFilter("veg-only");
-                            setShowFilterDropdown(false);
-                          }}
-                          className="w-full px-4 py-2 text-left text-sm hover-elevate"
-                          style={{ 
-                            fontFamily: "Sweet Sans Pro",
-                            backgroundColor: selectedFilter === "veg-only" ? "#F0FDF4" : "white",
-                            color: selectedFilter === "veg-only" ? "#1A9952" : "#06352A"
-                          }}
-                        >
-                          Veg Only
-                        </button>
-                        <button
-                          onClick={() => {
-                            setSelectedFilter("non-veg-only");
-                            setShowFilterDropdown(false);
-                          }}
-                          className="w-full px-4 py-2 text-left text-sm hover-elevate"
-                          style={{ 
-                            fontFamily: "Sweet Sans Pro",
-                            backgroundColor: selectedFilter === "non-veg-only" ? "#F0FDF4" : "white",
-                            color: selectedFilter === "non-veg-only" ? "#1A9952" : "#06352A"
-                          }}
-                        >
-                          Non-Veg Only
-                        </button>
-                        <button
-                          onClick={() => {
-                            setSelectedFilter("under-200");
-                            setShowFilterDropdown(false);
-                          }}
-                          className="w-full px-4 py-2 text-left text-sm hover-elevate"
-                          style={{ 
-                            fontFamily: "Sweet Sans Pro",
-                            backgroundColor: selectedFilter === "under-200" ? "#F0FDF4" : "white",
-                            color: selectedFilter === "under-200" ? "#1A9952" : "#06352A"
-                          }}
-                        >
-                          Under ₹200
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+                    <ArrowUpDown className="w-2.5 h-2.5" />
+                    <SelectValue placeholder="Sort" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="price-low">Price: Low → High</SelectItem>
+                    <SelectItem value="price-high">Price: High → Low</SelectItem>
+                    <SelectItem value="name-az">Name: A → Z</SelectItem>
+                    <SelectItem value="name-za">Name: Z → A</SelectItem>
+                  </SelectContent>
+                </Select>
             </div>
 
             {/* Helper text explaining template behavior */}
