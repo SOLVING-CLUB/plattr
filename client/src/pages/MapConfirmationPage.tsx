@@ -124,18 +124,28 @@ export default function MapConfirmationPage() {
       );
       const data = await response.json();
       
-      const area = data.address?.suburb || 
-                   data.address?.neighbourhood || 
-                   data.address?.village ||
-                   data.address?.city_district ||
-                   data.address?.city || 
-                   "Unknown Area";
+      // Broader fallback chain for area name to ensure it always updates
+      const addr = data.address || {};
+      const area = addr.suburb || 
+                   addr.neighbourhood || 
+                   addr.village ||
+                   addr.hamlet ||
+                   addr.town ||
+                   addr.city_district ||
+                   addr.city ||
+                   addr.municipality ||
+                   addr.county ||
+                   addr.road ||
+                   addr.state ||
+                   // Fallback: use first part of display_name
+                   (data.display_name ? data.display_name.split(',')[0].trim() : null) ||
+                   "Selected Location";
       
       setAreaName(area);
       setAddress(data.display_name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`);
     } catch (error) {
       console.error("Geocoding error:", error);
-      setAreaName("Unknown Area");
+      setAreaName("Selected Location");
       setAddress(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
     }
     setIsGeocoding(false);
@@ -275,15 +285,6 @@ export default function MapConfirmationPage() {
           <Crosshair className="w-5 h-5 text-[#1A9952]" />
         </button>
 
-        {/* Current Location Label on Map */}
-        <div className="absolute bottom-44 left-4 z-[1000]">
-          <div className="bg-white px-3 py-1.5 rounded-full shadow-md flex items-center gap-2 border border-gray-100">
-            <div className="w-2 h-2 bg-[#1A9952] rounded-full" />
-            <span className="text-xs font-medium text-gray-700" style={{ fontFamily: "'Sweet Sans Pro', sans-serif" }}>
-              Current Location
-            </span>
-          </div>
-        </div>
       </div>
 
       {/* Bottom Sheet */}
