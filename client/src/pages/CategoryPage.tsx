@@ -804,15 +804,7 @@ export default function CategoryPage() {
             </button>
             
             {/* Show dish type options if available - filter out those with 0 count */}
-            {(() => {
-              const filteredDishTypes = dishTypes.filter(dishType => {
-                const count = getDishCountForDishType(dishType);
-                console.log(`[SIDEBAR DEBUG] dishType="${dishType}", count=${count}, showing=${count > 0}`);
-                return count > 0;
-              });
-              console.log(`[SIDEBAR DEBUG] Total dishTypes: ${dishTypes.length}, After filter: ${filteredDishTypes.length}`);
-              return filteredDishTypes;
-            })().map((dishType) => {
+            {dishTypes.filter(dishType => getDishCountForDishType(dishType) > 0).map((dishType) => {
               const count = getDishCountForDishType(dishType);
               const dishTypeImage = DISH_TYPE_IMAGES[dishType] || DISH_TYPE_IMAGES['default'];
               
