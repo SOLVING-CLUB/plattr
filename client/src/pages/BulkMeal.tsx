@@ -219,18 +219,10 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
   const { cart, addedItems, addToCart, removeFromCart, enterCategory } = useCart();
   const [activeTab, setActiveTab] = useState<"home" | "menu" | "profile">("home");
   const [selectedService, setSelectedService] = useState<ServiceType>("bulk-meals");
-  const [scrollY, setScrollY] = useState(0);
 
   // Scroll to top on page load
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, []);
-
-  // Track scroll position for sticky header
-  useEffect(() => {
-    const handleScroll = () => setScrollY(window.scrollY);
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -720,19 +712,19 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
           height: "350px",
         }}
       />
-      {/* Sticky Back Button Header */}
+      {/* Sticky Back Button Header - uses isStuck from IntersectionObserver for performance */}
       <div 
         className="sticky top-0 z-50 transition-all duration-200"
         style={{
-          backgroundColor: scrollY > 50 ? 'white' : 'transparent',
-          boxShadow: scrollY > 50 ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+          backgroundColor: isStuck ? 'white' : 'transparent',
+          boxShadow: isStuck ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
         }}
       >
         <div className="px-4 pt-12 pb-3">
           <Button
             variant="ghost"
             size="sm"
-            className={scrollY > 50 ? "text-[#06352A] hover:text-[#06352A] hover:bg-gray-100" : "text-white hover:text-white hover:bg-white/20"}
+            className={isStuck ? "text-[#06352A] hover:text-[#06352A] hover:bg-gray-100" : "text-white hover:text-white hover:bg-white/20"}
             onClick={() => navigate("/")}
             data-testid="button-back"
           >
@@ -1053,6 +1045,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                         <img 
                           src={(cat.imageUrl && !cat.imageUrl.startsWith('/images/')) ? cat.imageUrl : (CATEGORY_IMAGES[cat.id] || idliImage1)}
                           alt={cat.name}
+                          loading="lazy"
                           className="w-full h-full object-cover"
                         />
                         {selectedCategory === cat.id && (
@@ -1105,6 +1098,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                           <img 
                             src={dishTypeImage}
                             alt={dishType}
+                            loading="lazy"
                             className="w-full h-full object-cover"
                           />
                         </div>
@@ -1163,6 +1157,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                           <img 
                             src={getDishImage(dish.name, dish.imageUrl || undefined, dish)}
                             alt={dish.name}
+                            loading="lazy"
                             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
