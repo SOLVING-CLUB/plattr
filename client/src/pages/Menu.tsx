@@ -162,7 +162,7 @@ export default function Menu() {
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-  const [selectedMealCategory, setSelectedMealCategory] = useState<string>("hi-tea");
+  const [selectedMealCategory, setSelectedMealCategory] = useState<string>("lunch-dinner");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedDishType, setSelectedDishType] = useState<string>("all");
