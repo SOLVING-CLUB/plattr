@@ -1,29 +1,15 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
-import L from "leaflet";
-import { ChevronLeft, Search, MapPin, X, Crosshair } from "lucide-react";
+import { MapContainer, TileLayer, useMapEvents } from "react-leaflet";
+import { ChevronLeft, Search, MapPin, X, Crosshair, Home, Briefcase, MoreHorizontal } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { addressService } from "@/lib/supabase-service";
 
 const LOCATION_STORAGE_KEY = "activeLocation";
 const RECENT_LOCATIONS_KEY = "recentLocations";
 
-// Custom marker icon
-const customIcon = new L.Icon({
-  iconUrl: "data:image/svg+xml;base64," + btoa(`
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 36" width="36" height="48">
-      <path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24C24 5.4 18.6 0 12 0z" fill="#1A9952"/>
-      <circle cx="12" cy="12" r="5" fill="white"/>
-    </svg>
-  `),
-  iconSize: [36, 48],
-  iconAnchor: [18, 48],
-  popupAnchor: [0, -48],
-});
-
-// Component to handle map events and update position on pan/zoom
 function MapEventHandler({ 
   onPositionChange,
   initialCenter
@@ -38,7 +24,6 @@ function MapEventHandler({
     },
   });
 
-  // Set initial view
   useEffect(() => {
     map.setView(initialCenter, 17);
   }, []);
@@ -46,7 +31,6 @@ function MapEventHandler({
   return null;
 }
 
-// Component to recenter map when needed
 function MapRecenter({ center, shouldRecenter, onRecenterComplete }: { 
   center: [number, number]; 
   shouldRecenter: boolean;
@@ -72,10 +56,12 @@ interface LocationData {
   type: "detected" | "manual" | "saved";
 }
 
+type LabelOption = "Home" | "Work" | "Other";
+
 export default function MapConfirmationPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [position, setPosition] = useState<[number, number]>([12.9716, 77.5946]); // Default Bangalore
+  const [position, setPosition] = useState<[number, number]>([12.9716, 77.5946]);
   const [initialCenter, setInitialCenter] = useState<[number, number]>([12.9716, 77.5946]);
   const [address, setAddress] = useState("");
   const [areaName, setAreaName] = useState("");
@@ -83,8 +69,12 @@ export default function MapConfirmationPage() {
   const [showTooltip, setShowTooltip] = useState(true);
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [shouldRecenter, setShouldRecenter] = useState(false);
+  
+  const [showLabelModal, setShowLabelModal] = useState(false);
+  const [showCustomInput, setShowCustomInput] = useState(false);
+  const [customLabel, setCustomLabel] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Get current location on mount
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -113,7 +103,6 @@ export default function MapConfirmationPage() {
     }
   }, []);
 
-  // Reverse geocode when position changes
   const reverseGeocode = async (lat: number, lng: number) => {
     setIsGeocoding(true);
     try {
@@ -122,7 +111,6 @@ export default function MapConfirmationPage() {
       );
       const data = await response.json();
       
-      // Broader fallback chain for area name to ensure it always updates
       const addr = data.address || {};
       const area = addr.suburb || 
                    addr.neighbourhood || 
@@ -135,7 +123,6 @@ export default function MapConfirmationPage() {
                    addr.county ||
                    addr.road ||
                    addr.state ||
-                   // Fallback: use first part of display_name
                    (data.display_name ? data.display_name.split(',')[0].trim() : null) ||
                    "Selected Location";
       
@@ -174,38 +161,75 @@ export default function MapConfirmationPage() {
     }
   };
 
-  const handleConfirm = () => {
-    const locationData: LocationData = {
-      label: areaName,
-      addressLine: address,
-      lat: position[0],
-      lng: position[1],
-      type: "detected",
-    };
+  const handleConfirmClick = () => {
+    setShowLabelModal(true);
+  };
 
-    // Save to localStorage
-    localStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify(locationData));
+  const handleSaveWithLabel = async (label: string) => {
+    setIsSaving(true);
+    
+    try {
+      await addressService.create({
+        label: label,
+        address: address,
+        landmark: areaName,
+        isDefault: false,
+      });
 
-    // Add to recents
-    const savedRecents = localStorage.getItem(RECENT_LOCATIONS_KEY);
-    let recents: LocationData[] = [];
-    if (savedRecents) {
-      try {
-        recents = JSON.parse(savedRecents);
-      } catch (e) {
-        console.error("Error parsing recents:", e);
+      const locationData: LocationData = {
+        label: areaName,
+        addressLine: address,
+        lat: position[0],
+        lng: position[1],
+        type: "saved",
+      };
+
+      localStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify(locationData));
+
+      const savedRecents = localStorage.getItem(RECENT_LOCATIONS_KEY);
+      let recents: LocationData[] = [];
+      if (savedRecents) {
+        try {
+          recents = JSON.parse(savedRecents);
+        } catch (e) {
+          console.error("Error parsing recents:", e);
+        }
       }
+      const newRecents = [locationData, ...recents.filter(r => r.addressLine !== address)].slice(0, 5);
+      localStorage.setItem(RECENT_LOCATIONS_KEY, JSON.stringify(newRecents));
+
+      toast({
+        title: "Address Saved",
+        description: `"${label}" has been added to your address book`,
+        variant: "success",
+      });
+
+      setShowLabelModal(false);
+      setLocation("/");
+    } catch (error: any) {
+      console.error("Save address error:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Could not save address. Please try again.",
+        variant: "destructive",
+      });
     }
-    const newRecents = [locationData, ...recents.filter(r => r.addressLine !== address)].slice(0, 5);
-    localStorage.setItem(RECENT_LOCATIONS_KEY, JSON.stringify(newRecents));
+    
+    setIsSaving(false);
+  };
 
-    toast({
-      title: "Location Updated",
-      description: `Delivering to ${areaName}`,
-      variant: "success",
-    });
+  const handleLabelSelect = (label: LabelOption) => {
+    if (label === "Other") {
+      setShowCustomInput(true);
+    } else {
+      handleSaveWithLabel(label);
+    }
+  };
 
-    setLocation("/");
+  const handleCustomLabelSubmit = () => {
+    if (customLabel.trim()) {
+      handleSaveWithLabel(customLabel.trim());
+    }
   };
 
   if (isLoading) {
@@ -301,7 +325,6 @@ export default function MapConfirmationPage() {
         >
           <Crosshair className="w-5 h-5 text-[#1A9952]" />
         </button>
-
       </div>
 
       {/* Bottom Sheet */}
@@ -329,7 +352,7 @@ export default function MapConfirmationPage() {
         </div>
 
         <Button
-          onClick={handleConfirm}
+          onClick={handleConfirmClick}
           disabled={isGeocoding}
           className="w-full bg-[#1A9952] hover:bg-[#158544] text-white py-6 rounded-xl font-semibold text-base disabled:opacity-60"
           style={{ fontFamily: "'Sweet Sans Pro', sans-serif" }}
@@ -338,6 +361,162 @@ export default function MapConfirmationPage() {
           Confirm & proceed
         </Button>
       </div>
+
+      {/* Label Selection Modal */}
+      {showLabelModal && (
+        <div className="fixed inset-0 z-[2000] flex items-end justify-center">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/50"
+            onClick={() => {
+              if (!isSaving) {
+                setShowLabelModal(false);
+                setShowCustomInput(false);
+                setCustomLabel("");
+              }
+            }}
+          />
+          
+          {/* Modal Content */}
+          <div className="relative bg-white w-full rounded-t-3xl p-6 pb-10 animate-in slide-in-from-bottom duration-300">
+            <div className="flex items-center justify-between mb-6">
+              <h2 
+                className="text-xl font-bold text-[#1C1C1C]"
+                style={{ fontFamily: "'Sweet Sans Pro', sans-serif" }}
+              >
+                Save address as
+              </h2>
+              <button
+                onClick={() => {
+                  if (!isSaving) {
+                    setShowLabelModal(false);
+                    setShowCustomInput(false);
+                    setCustomLabel("");
+                  }
+                }}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100"
+                disabled={isSaving}
+              >
+                <X className="w-5 h-5 text-gray-600" />
+              </button>
+            </div>
+
+            {/* Address Preview */}
+            <div className="bg-gray-50 rounded-xl p-4 mb-6">
+              <p className="font-semibold text-[#1C1C1C]" style={{ fontFamily: "'Sweet Sans Pro', sans-serif" }}>
+                {areaName}
+              </p>
+              <p className="text-gray-500 text-sm mt-1 line-clamp-2">
+                {address}
+              </p>
+            </div>
+
+            {/* Label Options */}
+            {!showCustomInput ? (
+              <div className="grid grid-cols-3 gap-3 mb-6">
+                <button
+                  onClick={() => handleLabelSelect("Home")}
+                  disabled={isSaving}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all border-gray-200 hover:border-gray-300 ${isSaving ? "opacity-50" : ""}`}
+                  data-testid="button-label-home"
+                >
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center bg-gray-100">
+                    <Home className="w-6 h-6 text-gray-600" />
+                  </div>
+                  <span 
+                    className="font-medium text-sm text-gray-700"
+                    style={{ fontFamily: "'Sweet Sans Pro', sans-serif" }}
+                  >
+                    Home
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => handleLabelSelect("Work")}
+                  disabled={isSaving}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all border-gray-200 hover:border-gray-300 ${isSaving ? "opacity-50" : ""}`}
+                  data-testid="button-label-work"
+                >
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center bg-gray-100">
+                    <Briefcase className="w-6 h-6 text-gray-600" />
+                  </div>
+                  <span 
+                    className="font-medium text-sm text-gray-700"
+                    style={{ fontFamily: "'Sweet Sans Pro', sans-serif" }}
+                  >
+                    Work
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => handleLabelSelect("Other")}
+                  disabled={isSaving}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all border-gray-200 hover:border-gray-300 ${isSaving ? "opacity-50" : ""}`}
+                  data-testid="button-label-other"
+                >
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center bg-gray-100">
+                    <MoreHorizontal className="w-6 h-6 text-gray-600" />
+                  </div>
+                  <span 
+                    className="font-medium text-sm text-gray-700"
+                    style={{ fontFamily: "'Sweet Sans Pro', sans-serif" }}
+                  >
+                    Other
+                  </span>
+                </button>
+              </div>
+            ) : (
+              /* Custom Label Input */
+              <div className="mb-6">
+                <label 
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                  style={{ fontFamily: "'Sweet Sans Pro', sans-serif" }}
+                >
+                  Enter a custom name
+                </label>
+                <Input
+                  value={customLabel}
+                  onChange={(e) => setCustomLabel(e.target.value)}
+                  placeholder="e.g., Mom's House, Gym, Office"
+                  className="w-full py-3 px-4 border-2 border-gray-200 rounded-xl focus:border-[#1A9952]"
+                  style={{ fontFamily: "'Sweet Sans Pro', sans-serif" }}
+                  autoFocus
+                  disabled={isSaving}
+                  data-testid="input-custom-label"
+                />
+                <div className="flex gap-3 mt-4">
+                  <Button
+                    onClick={() => setShowCustomInput(false)}
+                    variant="outline"
+                    className="flex-1 py-3 rounded-xl"
+                    disabled={isSaving}
+                  >
+                    Back
+                  </Button>
+                  <Button
+                    onClick={handleCustomLabelSubmit}
+                    disabled={!customLabel.trim() || isSaving}
+                    className="flex-1 bg-[#1A9952] hover:bg-[#158544] text-white py-3 rounded-xl"
+                    data-testid="button-save-custom-label"
+                  >
+                    {isSaving ? "Saving..." : "Save Address"}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Loading indicator */}
+            {isSaving && !showCustomInput && (
+              <div className="flex items-center justify-center gap-3 py-4">
+                <div className="w-5 h-5 border-2 border-[#1A9952] border-t-transparent rounded-full animate-spin" />
+                <span className="text-gray-600" style={{ fontFamily: "'Sweet Sans Pro', sans-serif" }}>
+                  Saving address...
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
