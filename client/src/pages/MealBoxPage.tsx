@@ -1341,8 +1341,8 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
     if (selectedAddress) {
       setAddressLine1(selectedAddress.address || "");
       setAddressLine2(selectedAddress.landmark || "");
-      setCity("Bengaluru");
-      setAddressState("Karnataka");
+      setCity("");
+      setAddressState("");
       setPincode("");
     }
   };
@@ -4220,6 +4220,9 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                     </option>
                   ))}
                 </select>
+                <p className="text-xs text-gray-500 mt-2" style={{ fontFamily: "Sweet Sans Pro" }}>
+                  Select a saved address above or enter a new address below
+                </p>
               </div>
 
               {/* Address Line 1 */}

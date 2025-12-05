@@ -44,8 +44,8 @@ export default function BulkMealsDelivery() {
     if (selectedAddress) {
       setAddressLine1(selectedAddress.address || "");
       setAddressLine2(selectedAddress.landmark || "");
-      setCity("Bengaluru");
-      setState("Karnataka");
+      setCity("");
+      setState("");
       setPincode("");
     }
   };
@@ -251,6 +251,9 @@ export default function BulkMealsDelivery() {
                 </option>
               ))}
             </select>
+            <p className="text-xs text-gray-500 mt-2" style={{ fontFamily: "Sweet Sans Pro" }}>
+              Select a saved address above or enter a new address below
+            </p>
           </div>
 
           {/* Address Line 1 */}
