@@ -1595,8 +1595,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
       {/* Floating Cart Bar - Green bar above bottom nav */}
       {cart.length > 0 && (
         <div 
-          className="fixed bottom-[72px] left-0 right-0 z-40 px-4 pb-2"
-          style={{ paddingBottom: 'env(safe-area-inset-bottom, 8px)' }}
+          className="fixed bottom-[90px] left-0 right-0 z-40 px-4"
         >
           <button
             onClick={() => navigate("/bulk-meals/cart")}
