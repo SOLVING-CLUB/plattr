@@ -1412,8 +1412,8 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
 
       {/* Dish Detail Drawer */}
       <Drawer open={dishDetailOpen} onOpenChange={setDishDetailOpen}>
-        <DrawerContent className="max-h-[85vh]">
-          <div className="mx-auto w-full max-w-2xl">
+        <DrawerContent className="max-h-[85vh] pt-safe">
+          <div className="mx-auto w-full max-w-2xl pt-6">
             <DrawerHeader className="text-left">
               <DrawerTitle className="text-2xl font-bold">{detailDish?.name}</DrawerTitle>
             </DrawerHeader>
