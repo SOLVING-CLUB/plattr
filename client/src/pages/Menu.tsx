@@ -341,12 +341,14 @@ export default function Menu() {
   };
 
   // Filter and sort dishes
+  // When searching, name matches are prioritized over description matches
   const filteredAndSortedDishes = useMemo(() => {
+    const query = searchQuery?.toLowerCase() || '';
+    
     return dishes
       .filter(dish => {
         // Search filter
         if (searchQuery) {
-          const query = searchQuery.toLowerCase();
           const nameMatch = dish.name.toLowerCase().includes(query);
           const descMatch = dish.description?.toLowerCase().includes(query);
           if (!nameMatch && !descMatch) {
@@ -378,6 +380,16 @@ export default function Menu() {
         return true;
       })
       .sort((a, b) => {
+        // When searching, prioritize name matches over description matches
+        if (searchQuery) {
+          const aNameMatch = a.name.toLowerCase().includes(query);
+          const bNameMatch = b.name.toLowerCase().includes(query);
+          
+          // Name matches come first
+          if (aNameMatch && !bNameMatch) return -1;
+          if (!aNameMatch && bNameMatch) return 1;
+        }
+        
         // When viewing "All", priority category dishes come first
         if (selectedCategory === 'all' && priorityCategoryId) {
           const aCategoryId = (a as any).category_id || a.categoryId;

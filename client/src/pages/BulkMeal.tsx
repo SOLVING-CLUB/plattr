@@ -448,12 +448,14 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
 
   // Filter and sort dishes (uses debounced search for better performance)
   // When "All" is selected, priority category dishes appear first
+  // When searching, name matches are prioritized over description matches
   const filteredAndSortedDishes = useMemo(() => {
+    const query = debouncedSearchQuery?.toLowerCase() || '';
+    
     return dishes
       .filter(dish => {
         // Search filter (using debounced query)
         if (debouncedSearchQuery) {
-          const query = debouncedSearchQuery.toLowerCase();
           const nameMatch = dish.name.toLowerCase().includes(query);
           const descMatch = dish.description?.toLowerCase().includes(query);
           if (!nameMatch && !descMatch) {
@@ -485,6 +487,16 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
         return true;
       })
       .sort((a, b) => {
+        // When searching, prioritize name matches over description matches
+        if (debouncedSearchQuery) {
+          const aNameMatch = a.name.toLowerCase().includes(query);
+          const bNameMatch = b.name.toLowerCase().includes(query);
+          
+          // Name matches come first
+          if (aNameMatch && !bNameMatch) return -1;
+          if (!aNameMatch && bNameMatch) return 1;
+        }
+        
         // When viewing "All", priority category dishes come first
         if (selectedCategory === 'all' && priorityCategoryId) {
           const aCategoryId = (a as any).category_id || a.categoryId;
