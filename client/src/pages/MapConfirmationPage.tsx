@@ -6,7 +6,6 @@ import { ChevronLeft, Search, MapPin, X, Crosshair } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import "leaflet/dist/leaflet.css";
 
 const LOCATION_STORAGE_KEY = "activeLocation";
 const RECENT_LOCATIONS_KEY = "recentLocations";
@@ -214,7 +213,7 @@ export default function MapConfirmationPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col">
+    <div className="fixed inset-0 bg-gray-100 flex flex-col">
       {/* Header with Search */}
       <div className="absolute top-0 left-0 right-0 z-[1000] pt-12 px-4">
         <div className="flex items-center gap-3">
@@ -238,11 +237,11 @@ export default function MapConfirmationPage() {
       </div>
 
       {/* Map */}
-      <div className="flex-1 relative">
+      <div className="absolute inset-0 bottom-[180px]">
         <MapContainer
           center={position}
           zoom={17}
-          style={{ height: "100%", width: "100%" }}
+          style={{ height: "100%", width: "100%", position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
           zoomControl={false}
         >
           <TileLayer
@@ -288,7 +287,7 @@ export default function MapConfirmationPage() {
       </div>
 
       {/* Bottom Sheet */}
-      <div className="bg-white rounded-t-3xl shadow-2xl px-5 py-6 pb-8 z-[1000]">
+      <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl px-5 py-6 pb-8 z-[1000]">
         <p 
           className="text-gray-500 text-sm mb-3"
           style={{ fontFamily: "'Sweet Sans Pro', sans-serif" }}
