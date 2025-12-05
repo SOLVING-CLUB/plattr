@@ -1611,7 +1611,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                 className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold"
                 style={{ backgroundColor: '#F5E9DB', color: '#1A9952' }}
               >
-                {cart.reduce((sum, item) => sum + item.quantity, 0)}
+                {cart.length}
               </div>
               <span className="text-white font-semibold" style={{ fontFamily: "Sweet Sans Pro" }}>
                 Item added to cart
