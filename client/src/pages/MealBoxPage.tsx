@@ -1048,14 +1048,11 @@ import southIndianPlatterImage from '@assets/image_1760599912464.png';
 
 // Helper function to filter categories by meal_type from database
 // The database meal_type column contains comma-separated values like "tiffins, snacks, lunch-dinner"
-// We need to split by comma and check if any token matches the filter (case-insensitive, trimmed)
 const filterCategoriesByMealType = (categories: any[], mealTypeFilter: string): any[] => {
-  const filterLower = mealTypeFilter.toLowerCase().trim();
   return categories.filter(cat => {
     const mealType = (cat as any).meal_type || cat.mealType || '';
-    // Split by comma, trim each token, and check for exact token match
-    const tokens = mealType.split(',').map((t: string) => t.toLowerCase().trim());
-    return tokens.includes(filterLower);
+    // Check if the category's meal_type contains the selected filter
+    return mealType.toLowerCase().includes(mealTypeFilter.toLowerCase());
   });
 };
 

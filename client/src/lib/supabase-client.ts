@@ -177,13 +177,16 @@ export function mapApiRouteToSupabase(route: string[]): { table: string; options
   const dbMealType = mealTypeMap[mealType || ''] || mealType;
   
   // Build base filter for dishes
-  // NOTE: meal_type filtering is done CLIENT-SIDE because the database has inconsistent data types:
-  // - Some rows have meal_type as JSON array: ["breakfast", "snacks"]
-  // - Other rows have meal_type as stringified JSON: "[\"breakfast\",\"snacks\"]"
-  // The PostgREST cs operator doesn't work correctly with this inconsistency.
-  // Instead, we fetch all dishes and filter by visible category_ids on the client.
   const buildDishFilters = (): Record<string, string> => {
     const filters: Record<string, string> = {};
+
+    // Filter by dishes.meal_type treating it as JSON array for compatibility
+    // PostgREST json array contains syntax: cs.["value"]
+    const dishesMealType = dishesMealTypeMap[mealType || ''] || mealType;
+    if (dishesMealType) {
+      const jsonArray = `[\"${dishesMealType}\"]`;
+      filters['meal_type'] = `cs.${jsonArray}`;
+    }
     
     // Add dietary filter (veg, non-veg) - note: egg filter is done client-side
     if (dietaryFilter && dietaryFilter !== 'all' && dietaryFilter !== 'egg') {
@@ -205,13 +208,22 @@ export function mapApiRouteToSupabase(route: string[]): { table: string; options
   
   switch (endpoint) {
     case '/api/categories':
-      // Always fetch ALL categories - filtering by meal_type is done client-side
-      // because the database stores comma-separated values like "tiffins, snacks, lunch-dinner"
-      // and PostgREST eq filter won't work correctly with comma-separated strings
+      // If fetching all categories, don't filter by meal_type
+      if (mealType === 'all') {
+        return {
+          table: 'categories',
+          options: {
+            select: '*',
+            order: 'display_order.asc'
+          }
+        };
+      }
+      // Otherwise filter by meal_type
       return {
         table: 'categories',
         options: {
           select: '*',
+          filter: { 'meal_type': `eq.${dbMealType}` },
           order: 'display_order.asc'
         }
       };
