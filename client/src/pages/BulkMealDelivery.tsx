@@ -30,25 +30,15 @@ export default function BulkMealsDelivery() {
   
   const handleSavedAddressChange = (addressId: string) => {
     setSelectedAddressId(addressId);
-    
-    if (!addressId) {
-      setAddressLine1("");
-      setAddressLine2("");
-      setCity("");
-      setState("");
-      setPincode("");
-      return;
-    }
-    
-    const selectedAddress = savedAddresses.find(addr => addr.id === addressId);
-    if (selectedAddress) {
-      setAddressLine1(selectedAddress.address || "");
-      setAddressLine2(selectedAddress.landmark || "");
-      setCity("");
-      setState("");
-      setPincode("");
-    }
+    setAddressLine1("");
+    setAddressLine2("");
+    setCity("");
+    setState("");
+    setPincode("");
   };
+  
+  const selectedAddress = savedAddresses.find(addr => addr.id === selectedAddressId);
+  const isAddressFieldsDisabled = !!selectedAddressId;
 
   useEffect(() => {
     if (cart.length === 0) {
@@ -251,103 +241,121 @@ export default function BulkMealsDelivery() {
                 </option>
               ))}
             </select>
-            <p className="text-xs text-gray-500 mt-2" style={{ fontFamily: "Sweet Sans Pro" }}>
-              Select a saved address above or enter a new address below
-            </p>
+            
+            {/* Show selected address details */}
+            {selectedAddress && (
+              <div 
+                className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg"
+                data-testid="selected-address-display"
+              >
+                <p className="text-sm font-semibold mb-1" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                  {selectedAddress.label}
+                </p>
+                <p className="text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#4B5563" }}>
+                  {selectedAddress.address}
+                  {selectedAddress.landmark && `, ${selectedAddress.landmark}`}
+                </p>
+              </div>
+            )}
           </div>
 
-          {/* Address Line 1 */}
-          <div>
-            <label className="block text-sm font-semibold mb-2" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-              Address Line 1
-            </label>
-            <input
-              type="text"
-              placeholder="Door No. 32, Jaya Prakash Nagar"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-              style={{ fontFamily: "Sweet Sans Pro" }}
-              data-testid="input-address-line1"
-              value={addressLine1}
-              onChange={(e) => setAddressLine1(e.target.value)}
-            />
-          </div>
+          {/* Manual Address Entry - Only show when no saved address selected */}
+          {!isAddressFieldsDisabled && (
+            <>
+              {/* Address Line 1 */}
+              <div>
+                <label className="block text-sm font-semibold mb-2" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                  Address Line 1
+                </label>
+                <input
+                  type="text"
+                  placeholder="Door No. 32, Jaya Prakash Nagar"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  style={{ fontFamily: "Sweet Sans Pro" }}
+                  data-testid="input-address-line1"
+                  value={addressLine1}
+                  onChange={(e) => setAddressLine1(e.target.value)}
+                />
+              </div>
 
-          {/* Address Line 2 */}
-          <div>
-            <label className="block text-sm font-semibold mb-2" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-              Address Line 2
-            </label>
-            <input
-              type="text"
-              placeholder="Near Metro Station, JP Nagar"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-              style={{ fontFamily: "Sweet Sans Pro" }}
-              data-testid="input-address-line2"
-              value={addressLine2}
-              onChange={(e) => setAddressLine2(e.target.value)}
-            />
-          </div>
+              {/* Address Line 2 */}
+              <div>
+                <label className="block text-sm font-semibold mb-2" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                  Address Line 2
+                </label>
+                <input
+                  type="text"
+                  placeholder="Near Metro Station, JP Nagar"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  style={{ fontFamily: "Sweet Sans Pro" }}
+                  data-testid="input-address-line2"
+                  value={addressLine2}
+                  onChange={(e) => setAddressLine2(e.target.value)}
+                />
+              </div>
 
-          {/* City */}
-          <div>
-            <label className="block text-sm font-semibold mb-2" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-              City
-            </label>
-            <input
-              type="text"
-              placeholder="Bengaluru"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-              style={{ fontFamily: "Sweet Sans Pro" }}
-              data-testid="input-city"
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-            />
-          </div>
+              {/* City */}
+              <div>
+                <label className="block text-sm font-semibold mb-2" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                  City
+                </label>
+                <input
+                  type="text"
+                  placeholder="Bengaluru"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  style={{ fontFamily: "Sweet Sans Pro" }}
+                  data-testid="input-city"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                />
+              </div>
 
-          {/* State */}
-          <div>
-            <label className="block text-sm font-semibold mb-2" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-              State
-            </label>
-            <input
-              type="text"
-              placeholder="Karnataka"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-              style={{ fontFamily: "Sweet Sans Pro" }}
-              data-testid="input-state"
-              value={state}
-              onChange={(e) => setState(e.target.value)}
-            />
-          </div>
+              {/* State */}
+              <div>
+                <label className="block text-sm font-semibold mb-2" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                  State
+                </label>
+                <input
+                  type="text"
+                  placeholder="Karnataka"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  style={{ fontFamily: "Sweet Sans Pro" }}
+                  data-testid="input-state"
+                  value={state}
+                  onChange={(e) => setState(e.target.value)}
+                />
+              </div>
 
-          {/* Pincode */}
-          <div>
-            <label className="block text-sm font-semibold mb-2" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-              Pincode
-            </label>
-            <input
-              type="text"
-              placeholder="450003"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-              style={{ fontFamily: "Sweet Sans Pro" }}
-              data-testid="input-pincode"
-              value={pincode}
-              onChange={(e) => setPincode(e.target.value)}
-            />
-          </div>
+              {/* Pincode */}
+              <div>
+                <label className="block text-sm font-semibold mb-2" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                  Pincode
+                </label>
+                <input
+                  type="text"
+                  placeholder="450003"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  style={{ fontFamily: "Sweet Sans Pro" }}
+                  data-testid="input-pincode"
+                  value={pincode}
+                  onChange={(e) => setPincode(e.target.value)}
+                />
+              </div>
 
-          {/* Save Address Checkbox */}
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              className="w-5 h-5 rounded border-2 border-gray-300"
-              style={{ accentColor: "#1A9952" }}
-              data-testid="checkbox-save-address"
-            />
-            <span className="text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-              Save Address for future use
-            </span>
-          </label>
+              {/* Save Address Checkbox */}
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="w-5 h-5 rounded border-2 border-gray-300"
+                  style={{ accentColor: "#1A9952" }}
+                  data-testid="checkbox-save-address"
+                />
+                <span className="text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                  Save Address for future use
+                </span>
+              </label>
+            </>
+          )}
         </div>
 
         {/* Select Payment Method Button */}
