@@ -247,6 +247,9 @@ export default function Menu() {
       const isAvailable = (dish as any).is_available !== false && dish.isAvailable !== false;
       if (!isAvailable) return false;
       
+      // If categories haven't loaded yet, don't filter by category
+      if (visibleCategoryIds.size === 0) return true;
+      
       // Filter by visible categories - only include dishes from categories visible in this meal type
       const dishCategoryId = (dish as any).category_id || dish.categoryId;
       return visibleCategoryIds.has(dishCategoryId);
@@ -273,6 +276,9 @@ export default function Menu() {
     return rawDishes.filter(dish => {
       const isAvailable = (dish as any).is_available !== false && dish.isAvailable !== false;
       if (!isAvailable) return false;
+      
+      // If categories haven't loaded yet, don't filter by category
+      if (visibleCategoryIds.size === 0) return true;
       
       const dishCategoryId = (dish as any).category_id || dish.categoryId;
       return visibleCategoryIds.has(dishCategoryId);
