@@ -255,6 +255,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
   };
   
   // Detect when sticky element becomes stuck
+  // Using rootMargin to trigger slightly before the sentinel leaves viewport for reliable detection
   useEffect(() => {
     const sentinel = sentinelRef.current;
     if (!sentinel) return;
@@ -264,7 +265,10 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
         // When sentinel is not visible, sticky element is stuck
         setIsStuck(!entry.isIntersecting);
       },
-      { threshold: 0 }
+      { 
+        threshold: 0,
+        rootMargin: '-1px 0px 0px 0px'
+      }
     );
 
     observer.observe(sentinel);
@@ -761,6 +765,8 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
           height: "350px",
         }}
       />
+      {/* Sentinel element for sticky detection - placed at top for reliable intersection detection */}
+      <div ref={sentinelRef} className="absolute top-0 left-0 right-0" style={{ height: "1px" }} />
       {/* Sticky Back Button Header - uses isStuck from IntersectionObserver for performance */}
       <div 
         className="sticky top-0 z-50 transition-all duration-200"
@@ -878,8 +884,6 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
           )}
         </div>
       </div>
-      {/* Sentinel element for sticky detection */}
-      <div ref={sentinelRef} style={{ height: "1px" }} />
       {/* Sticky Search Bar and Meal Category Container - Outside header for proper sticky behavior */}
       <div 
         className="sticky z-40 px-4 pb-2 pt-4 transition-all duration-200" 
