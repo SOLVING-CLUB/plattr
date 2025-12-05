@@ -332,49 +332,48 @@ export default function CategoryPage() {
     queryKey: ['/api/categories', 'all'],
   });
 
-  // Filter and order categories based on frontend mapping
-  const categories = useMemo(() => {
-    const categoryIds = MEAL_TYPE_CATEGORIES[mealType] || [];
-    
-    // Map category IDs to actual category objects
-    return categoryIds
-      .map(id => allCategoriesFromDb.find(cat => cat.id === id))
-      .filter(Boolean) as CategoryType[];
-  }, [allCategoriesFromDb, mealType]);
-
-  // Fetch ALL dishes for the current meal type's categories (for accurate category counts)
-  // Use the frontend-defined category IDs instead of querying the database
-  const categoryIdsForMealType = MEAL_TYPE_CATEGORIES[mealType] || [];
-  
-  // Fetch dishes for each category and merge them
   // Include dietary filter (except 'egg' which is client-side name matching)
   const dietaryForAllDishes = dietaryMode === 'egg' ? 'all' : dietaryMode;
   
-  // Fetch dishes for all categories in this meal type
-  const allDishesQueries = categoryIdsForMealType.map(catId =>
-    useQuery<Dish[]>({
-      queryKey: ['/api/dishes', mealType, catId, dietaryForAllDishes],
-      enabled: !!catId,
-    })
-  );
-  
-  // Merge all dishes from all categories
-  const allDishes = useMemo(() => {
-    const merged: Dish[] = [];
-    const seenIds = new Set<string>();
+  // Fetch ALL dishes for the current meal type (to get accurate category counts)
+  const { data: allDishesForMealType = [] } = useQuery<Dish[]>({
+    queryKey: ['/api/dishes', mealType, 'all', dietaryForAllDishes],
+  });
+
+  // Calculate dish counts per category from actual dish data
+  const categoryDishCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
     
-    allDishesQueries.forEach(query => {
-      const dishes = query.data || [];
-      dishes.forEach(dish => {
-        if (!seenIds.has(dish.id)) {
-          seenIds.add(dish.id);
-          merged.push(dish);
+    allDishesForMealType.forEach(dish => {
+      const categoryId = (dish as any).category_id || dish.categoryId;
+      if (categoryId) {
+        // Apply egg filter if needed
+        if (dietaryMode === 'egg') {
+          if (dish.name.toLowerCase().includes('egg')) {
+            counts[categoryId] = (counts[categoryId] || 0) + 1;
+          }
+        } else {
+          counts[categoryId] = (counts[categoryId] || 0) + 1;
         }
-      });
+      }
     });
     
-    return merged;
-  }, [allDishesQueries.map(q => q.data).join(',')]);
+    return counts;
+  }, [allDishesForMealType, dietaryMode]);
+
+  // Filter categories to only show those that have dishes for this meal type
+  const categories = useMemo(() => {
+    // Get category IDs that actually have dishes
+    const categoryIdsWithDishes = Object.keys(categoryDishCounts).filter(id => categoryDishCounts[id] > 0);
+    
+    // Map to actual category objects and filter only those with dishes
+    return allCategoriesFromDb
+      .filter(cat => categoryIdsWithDishes.includes(cat.id))
+      .sort((a, b) => ((a as any).display_order || a.displayOrder || 0) - ((b as any).display_order || b.displayOrder || 0));
+  }, [allCategoriesFromDb, categoryDishCounts]);
+
+  // All dishes for this meal type (used for counting)
+  const allDishes = allDishesForMealType;
 
   // Fetch dishes for selected category (for display)
   // Include dietary filter in query key so it refetches when filter changes
@@ -714,36 +713,9 @@ export default function CategoryPage() {
 
   const hasActiveFilters = priceRange[0] !== 0 || priceRange[1] !== 500;
 
-  // Get total dish count for a category (from all dishes, respecting filters)
+  // Get total dish count for a category (from pre-calculated counts)
   const getDishCountForCategory = (categoryId: string): number => {
-    const count = allDishes.filter(d => {
-      // Handle both camelCase and snake_case from database
-      const dishCategoryId = (d as any).category_id || d.categoryId;
-      
-      // Filter by category
-      if (dishCategoryId !== categoryId) return false;
-      
-      // Apply dietary filter (egg is client-side)
-      if (dietaryMode === 'egg') {
-        if (!d.name.toLowerCase().includes('egg')) return false;
-      }
-      
-      return true;
-    }).length;
-    
-    // Debug logging - show unique category IDs in the dataset
-    const categoryIdSet = new Set(allDishes.map(d => (d as any).category_id || d.categoryId));
-    const uniqueCategoryIds = Array.from(categoryIdSet);
-    console.log(`[getDishCountForCategory] Looking for: "${categoryId}", Found: ${count}`, {
-      allDishesTotal: allDishes.length,
-      uniqueCategoryIds,
-      sampleDishes: allDishes.slice(0, 5).map(d => ({ 
-        name: d.name, 
-        categoryId: (d as any).category_id || d.categoryId 
-      }))
-    });
-    
-    return count;
+    return categoryDishCounts[categoryId] || 0;
   };
   
   // Get dish count for a specific dish type
