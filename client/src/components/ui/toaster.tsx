@@ -41,14 +41,14 @@ export function Toaster() {
   // ContinueOrderBanner is at bottom-20 (80px from bottom)
   // FloatingCartButton is at bottom-[102px] (102px from bottom)
   // 
-  // If cart button exists: toast at bottom-[160px] (above cart button)
-  // If only banner exists: toast at bottom-32 (128px - above continue banner)
+  // If cart button exists: toast at bottom-[180px] (above cart button)
+  // If only banner exists: toast at bottom-40 (160px - above continue banner with gap)
   // If nothing exists: toast at bottom-20 (at banner position, above footer nav)
   const getPositionClass = () => {
     if (hasCartButton) {
-      return "bottom-[160px]"; // Above cart button
+      return "bottom-[180px]"; // Above cart button
     } else if (hasContinueBanner) {
-      return "bottom-32"; // Above continue banner
+      return "bottom-40"; // Above continue banner with more gap
     } else {
       return "bottom-20"; // At banner position (above footer nav)
     }
