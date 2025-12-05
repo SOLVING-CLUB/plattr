@@ -1,21 +1,50 @@
+import { useState, useEffect } from "react";
 import { MapPin, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import headerBg from "@assets/Hero_1763854193361.png";
 
 interface AppHeaderProps {
-  location?: string;
   cartCount?: number;
   onLocationClick?: () => void;
   onCartClick?: () => void;
 }
 
+const LOCATION_STORAGE_KEY = "activeLocation";
+
 export default function AppHeader({ 
-  location = "Bengaluru, KA", 
   cartCount = 0,
   onLocationClick,
   onCartClick 
 }: AppHeaderProps) {
+  const [locationLabel, setLocationLabel] = useState("Bengaluru, KA");
+
+  useEffect(() => {
+    const savedLocation = localStorage.getItem(LOCATION_STORAGE_KEY);
+    if (savedLocation) {
+      try {
+        const parsed = JSON.parse(savedLocation);
+        setLocationLabel(parsed.label || "Bengaluru, KA");
+      } catch (e) {
+        console.error("Error parsing saved location:", e);
+      }
+    }
+
+    // Listen for storage changes (when location is updated from LocationPage)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === LOCATION_STORAGE_KEY && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          setLocationLabel(parsed.label || "Bengaluru, KA");
+        } catch (error) {
+          console.error("Error parsing location from storage event:", error);
+        }
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
   return (
     <header 
       className="h-40"
@@ -35,7 +64,7 @@ export default function AppHeader({
           <MapPin className="w-5 h-5" />
           <span
             className="ml-[0px] mr-[0px] pl-[0px] pr-[0px] text-left pt-[0px] pb-[0px] font-semibold text-[18px]"
-            style={{ fontFamily: "Sweet Sans Pro" }}>{location}</span>
+            style={{ fontFamily: "Sweet Sans Pro" }}>{locationLabel}</span>
         </Button>
 
         <Button 

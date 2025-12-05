@@ -522,10 +522,7 @@ export default function Home() {
 
   const handleLocationClick = () => {
     console.log("Location selector clicked");
-    toast({
-      title: "Change Location",
-      description: "Location selection coming soon!",
-    });
+    setLocation("/location");
   };
 
   const handleCartClick = () => {
