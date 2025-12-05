@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useLocation } from "wouter";
+import Fuse from "fuse.js";
 import { ArrowLeft, MapPin, ShoppingCart, Search, Mic, ArrowUpDown, SlidersHorizontal, Star, Utensils, ChevronRight, UtensilsCrossed, Package, Truck, Building2, LayoutGrid, Leaf, Drumstick, Egg, Sparkles } from "lucide-react";
 import FloatingNav from "@/pages/FloatingNav";
 import { useQuery } from "@tanstack/react-query";
@@ -340,22 +341,39 @@ export default function Menu() {
     return count;
   };
 
+  // Fuse.js instance for fuzzy search (memoized)
+  const fuse = useMemo(() => {
+    return new Fuse(dishes, {
+      keys: [
+        { name: 'name', weight: 2 },
+        { name: 'description', weight: 1 }
+      ],
+      threshold: 0.4,
+      ignoreLocation: true,
+      includeScore: true,
+    });
+  }, [dishes]);
+
   // Filter and sort dishes
   // When searching, name matches are prioritized over description matches
+  // Fuzzy search handles minor spelling mistakes
   const filteredAndSortedDishes = useMemo(() => {
-    const query = searchQuery?.toLowerCase() || '';
+    let searchResults: typeof dishes = [];
+    let searchScores: Map<string, number> = new Map();
     
-    return dishes
+    // If searching, use Fuse.js for fuzzy matching
+    if (searchQuery && searchQuery.trim()) {
+      const fuseResults = fuse.search(searchQuery);
+      searchResults = fuseResults.map(r => r.item);
+      fuseResults.forEach(r => {
+        searchScores.set(r.item.id, r.score || 1);
+      });
+    } else {
+      searchResults = dishes;
+    }
+    
+    return searchResults
       .filter(dish => {
-        // Search filter
-        if (searchQuery) {
-          const nameMatch = dish.name.toLowerCase().includes(query);
-          const descMatch = dish.description?.toLowerCase().includes(query);
-          if (!nameMatch && !descMatch) {
-            return false;
-          }
-        }
-        
         // Dish type filter
         if (selectedDishType !== 'all') {
           const dishDishType = (dish as any).dish_type || dish.dishType;
@@ -380,14 +398,11 @@ export default function Menu() {
         return true;
       })
       .sort((a, b) => {
-        // When searching, prioritize name matches over description matches
-        if (searchQuery) {
-          const aNameMatch = a.name.toLowerCase().includes(query);
-          const bNameMatch = b.name.toLowerCase().includes(query);
-          
-          // Name matches come first
-          if (aNameMatch && !bNameMatch) return -1;
-          if (!aNameMatch && bNameMatch) return 1;
+        // When searching, sort by search relevance (lower score = better match)
+        if (searchQuery && searchQuery.trim()) {
+          const scoreA = searchScores.get(a.id) ?? 1;
+          const scoreB = searchScores.get(b.id) ?? 1;
+          if (scoreA !== scoreB) return scoreA - scoreB;
         }
         
         // When viewing "All", priority category dishes come first
@@ -417,7 +432,7 @@ export default function Menu() {
             return 0;
         }
       });
-  }, [dishes, searchQuery, selectedDishType, dietaryMode, priceRange, sortOption, selectedCategory, priorityCategoryId]);
+  }, [dishes, searchQuery, fuse, selectedDishType, dietaryMode, priceRange, sortOption, selectedCategory, priorityCategoryId]);
 
   const hasActiveFilters = priceRange[0] !== 0 || priceRange[1] !== 500;
 
