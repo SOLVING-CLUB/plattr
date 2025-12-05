@@ -1260,7 +1260,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                         <div className="p-3 md:p-4">
                           <h3 className="font-bold text-sm md:text-base mb-1 line-clamp-1" data-testid={`text-dish-name-${dish.id}`}>
                             {dish.name}
-                      </h3>
+                          </h3>
                           <div className="mb-3">
                             <p className="text-xs text-muted-foreground line-clamp-2" data-testid={`text-dish-description-${dish.id}`}>
                               {dish.description}
@@ -1278,61 +1278,61 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                                 ...more
                               </button>
                             )}
-                        </div>
+                          </div>
                           <div className="flex items-center justify-between gap-2 mb-2">
                             <span className="text-primary font-bold text-lg" data-testid={`text-dish-price-${dish.id}`}>
                               ₹{parseFloat(dish.price as string).toFixed(0)}
                             </span>
-                        <Select
-                          value={String(quantities[dishId] !== undefined ? quantities[dishId] : 5)}
-                          onValueChange={(value) => {
-                            handleInteraction();
-                            setQuantities(prev => ({ ...prev, [dishId]: parseInt(value) }));
-                          }}
-                        >
-                          <SelectTrigger 
-                            className="w-[60px] sm:w-[70px] h-7 text-[10px] sm:text-xs border-gray-300 px-2"
-                            style={{ fontFamily: "Sweet Sans Pro" }}
-                            data-testid={`input-quantity-${dishId}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleInteraction();
-                            }}
-                          >
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent 
-                            position="popper" 
-                            side="bottom" 
-                            align="end"
-                            className="min-w-[60px]"
-                          >
-                            {[5, 10, 15, 20, 25, 30, 35, 40, 45, 50].map((qty) => (
-                              <SelectItem key={qty} value={String(qty)}>
-                                {qty}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <Button
+                            <Select
+                              value={String(quantities[dishId] !== undefined ? quantities[dishId] : 5)}
+                              onValueChange={(value) => {
+                                handleInteraction();
+                                setQuantities(prev => ({ ...prev, [dishId]: parseInt(value) }));
+                              }}
+                            >
+                              <SelectTrigger 
+                                className="w-[60px] sm:w-[70px] h-7 text-[10px] sm:text-xs border-gray-300 px-2"
+                                style={{ fontFamily: "Sweet Sans Pro" }}
+                                data-testid={`input-quantity-${dishId}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleInteraction();
+                                }}
+                              >
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent 
+                                position="popper" 
+                                side="bottom" 
+                                align="end"
+                                className="min-w-[60px]"
+                              >
+                                {[5, 10, 15, 20, 25, 30, 35, 40, 45, 50].map((qty) => (
+                                  <SelectItem key={qty} value={String(qty)}>
+                                    {qty}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <Button
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleInteraction();
                               if (addedItems.has(dishId)) {
                                 handleRemoveFromCart(dishId);
-                          } else {
+                              } else {
                                 handleAddToCart(dishItem);
-                          }
-                        }}
+                              }
+                            }}
                             variant={addedItems.has(dishId) ? "secondary" : "default"}
                             className="w-full rounded-full px-4"
                             data-testid={`button-add-${dishId}`}
-                      >
+                          >
                             {addedItems.has(dishId) ? "Added" : "Add"}
-                      </Button>
-                    </div>
+                          </Button>
+                        </div>
                       </Card>
                     );
                   })}
