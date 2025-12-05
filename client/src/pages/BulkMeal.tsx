@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -237,6 +237,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
   const [slideCount, setSlideCount] = useState(0);
   const [selectedMealCategory, setSelectedMealCategory] = useState<string>("hi-tea");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedDishType, setSelectedDishType] = useState<string>("all");
   const [dietaryMode, setDietaryMode] = useState<'all' | 'veg' | 'egg' | 'non-veg'>('all');
@@ -311,6 +312,14 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
       observer.disconnect();
     };
   }, []);
+
+  // Debounce search query for better performance (300ms delay)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
   
   // Map meal category to meal_type filter for Supabase
   const getMealTypeFilter = (category: string): string => {
@@ -383,6 +392,13 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
     });
   });
   
+  // Create a stable key for memoization based on query data lengths and loading states
+  const allDishesDataKey = allDishesQueries
+    .map((q, i) => categoryIdsForMealType.includes(allPossibleCategoryIds[i]) 
+      ? `${i}:${q.data?.length || 0}:${q.isLoading}` 
+      : `${i}:skip`)
+    .join('|');
+
   // Merge all dishes from all categories (only from enabled queries)
   const allDishes = useMemo(() => {
     const merged: Dish[] = [];
@@ -404,7 +420,8 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
     });
     
     return merged;
-  }, [allDishesQueries.map((q, i) => categoryIdsForMealType.includes(allPossibleCategoryIds[i]) ? q.data : null).join(','), categoryIdsForMealType.join(',')]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allDishesDataKey, categoryIdsForMealType]);
 
   // Fetch dishes for selected category (for display)
   const { data: dishes = [], isLoading: isLoadingDishes } = useQuery<Dish[]>({
@@ -439,43 +456,50 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
     setSelectedDishType('all');
   }, [selectedCategory]);
 
-  // Get total dish count for a category
-  const getDishCountForCategory = (categoryId: string): number => {
-    const count = allDishes.filter(d => {
-      // Handle both camelCase and snake_case from database
+  // Pre-compute category counts for performance (memoized)
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    allDishes.forEach(d => {
       const dishCategoryId = (d as any).category_id || d.categoryId;
-      
-      // Filter by category
-      if (dishCategoryId !== categoryId) return false;
+      if (!dishCategoryId) return;
       
       // Apply dietary filter (egg is client-side)
-      if (dietaryMode === 'egg') {
-        if (!d.name.toLowerCase().includes('egg')) return false;
-      }
+      if (dietaryMode === 'egg' && !d.name.toLowerCase().includes('egg')) return;
       
-      return true;
-    }).length;
-    
-    return count;
-  };
-  
-  // Get dish count for a specific dish type
-  const getDishCountForDishType = (dishType: string): number => {
-    if (dishType === 'all') return dishes.length;
-    const count = dishes.filter(d => {
-      const dishDishType = (d as any).dish_type || d.dishType;
-      return dishDishType === dishType;
-    }).length;
-    return count;
-  };
+      counts[dishCategoryId] = (counts[dishCategoryId] || 0) + 1;
+    });
+    return counts;
+  }, [allDishes, dietaryMode]);
 
-  // Filter and sort dishes
+  // Get total dish count for a category (uses memoized counts)
+  const getDishCountForCategory = useCallback((categoryId: string): number => {
+    return categoryCounts[categoryId] || 0;
+  }, [categoryCounts]);
+
+  // Pre-compute dish type counts for performance (memoized)
+  const dishTypeCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: dishes.length };
+    dishes.forEach(d => {
+      const dishDishType = (d as any).dish_type || d.dishType;
+      if (dishDishType) {
+        counts[dishDishType] = (counts[dishDishType] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [dishes]);
+  
+  // Get dish count for a specific dish type (uses memoized counts)
+  const getDishCountForDishType = useCallback((dishType: string): number => {
+    return dishTypeCounts[dishType] || 0;
+  }, [dishTypeCounts]);
+
+  // Filter and sort dishes (uses debounced search for better performance)
   const filteredAndSortedDishes = useMemo(() => {
     return dishes
       .filter(dish => {
-        // Search filter
-        if (searchQuery) {
-          const query = searchQuery.toLowerCase();
+        // Search filter (using debounced query)
+        if (debouncedSearchQuery) {
+          const query = debouncedSearchQuery.toLowerCase();
           const nameMatch = dish.name.toLowerCase().includes(query);
           const descMatch = dish.description?.toLowerCase().includes(query);
           if (!nameMatch && !descMatch) {
@@ -523,7 +547,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
             return 0;
         }
       });
-  }, [dishes, searchQuery, selectedDishType, dietaryMode, priceRange, sortOption]);
+  }, [dishes, debouncedSearchQuery, selectedDishType, dietaryMode, priceRange, sortOption]);
 
   const hasActiveFilters = priceRange[0] !== 0 || priceRange[1] !== 500;
 
