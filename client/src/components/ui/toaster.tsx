@@ -25,24 +25,30 @@ export function Toaster() {
     })
   }, [location])
   
+  // Check if we're on the home page
+  const isHomePage = location === "/";
+  
   // Check if there's a floating cart button visible
-  // The cart button shows when there are items in the bulk meals cart
-  const hasCartButton = activeCategory === "bulk-meals" && cart.length > 0;
+  // The cart button shows when there are items in the bulk meals cart (on bulk meals pages)
+  const hasCartButton = activeCategory === "bulk-meals" && cart.length > 0 && !isHomePage;
   
   // Check if there's a continue order banner visible
   // Banner shows on home page when there's an active order
-  const hasContinueBanner = mealBoxProgress !== null || (activeCategory && cart.length > 0);
+  const hasContinueBanner = isHomePage && (mealBoxProgress !== null || (activeCategory && cart.length > 0));
   
   // Position toast above buttons/banners if present, otherwise at their position
-  // FloatingCartButton is at bottom-[102px], ContinueOrderBanner is at bottom-20
-  // If cart button exists: toast at bottom-[150px]
-  // If only banner exists: toast at bottom-[102px] 
-  // If nothing exists: toast at bottom-20 (where banner would be)
+  // FloatingNav is at bottom-4 (~70px height)
+  // ContinueOrderBanner is at bottom-20 (80px from bottom)
+  // FloatingCartButton is at bottom-[102px] (102px from bottom)
+  // 
+  // If cart button exists: toast at bottom-[160px] (above cart button)
+  // If only banner exists: toast at bottom-32 (128px - above continue banner)
+  // If nothing exists: toast at bottom-20 (at banner position, above footer nav)
   const getPositionClass = () => {
     if (hasCartButton) {
-      return "bottom-[150px]"; // Above cart button
+      return "bottom-[160px]"; // Above cart button
     } else if (hasContinueBanner) {
-      return "bottom-[102px]"; // Above continue banner (at cart button position)
+      return "bottom-32"; // Above continue banner
     } else {
       return "bottom-20"; // At banner position (above footer nav)
     }
