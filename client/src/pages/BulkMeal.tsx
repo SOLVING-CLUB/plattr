@@ -947,17 +947,8 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
 
         {/* Dish Selection Section */}
         <div className="space-y-2">
-          {/* Header with Filters in Single Row */}
-          <div className="flex items-center justify-between gap-2 mb-4">
-            <h2 
-              className="font-bold text-[14px] flex-shrink-0"
-              style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}
-            >
-              Choose Food Category
-            </h2>
-            
-            {/* Filters & Sort - Single Row */}
-            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
+          {/* Filters & Sort - Single Row */}
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide mb-4">
               <button
                 onClick={() => { handleInteraction(); setDietaryMode('all'); }}
                 className={cn(
@@ -1032,7 +1023,6 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                   <SelectItem value="name-za">Name: Z → A</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
           </div>
 
           {/* CategoryPage-style Layout */}
