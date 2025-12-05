@@ -1,3 +1,5 @@
+import { useEffect } from "react"
+import { useLocation } from "wouter"
 import { useToast } from "@/hooks/use-toast"
 import { useCart } from "@/context/CartContex"
 import {
@@ -11,8 +13,17 @@ import {
 } from "@/components/ui/toast"
 
 export function Toaster() {
-  const { toasts } = useToast()
+  const { toasts, dismiss } = useToast()
   const { cart, mealBoxProgress, activeCategory } = useCart()
+  const [location] = useLocation()
+  
+  // Dismiss all toasts when the page/route changes
+  useEffect(() => {
+    // Dismiss all active toasts on route change
+    toasts.forEach((toast) => {
+      dismiss(toast.id)
+    })
+  }, [location])
   
   // Check if there's a floating cart button visible
   // The cart button shows when there are items in the bulk meals cart
