@@ -174,7 +174,7 @@ export default function PaymentMethods() {
   if (modalState === "add-upi") {
     return (
       <div className="min-h-screen bg-white relative pb-24">
-        <div className="px-5 pt-12 pb-4">
+        <div className="px-5 pt-16 pb-4">
           <button 
             onClick={() => setModalState("none")}
             className="flex items-center gap-1 text-[#1C1C1C] mb-6"
@@ -234,7 +234,7 @@ export default function PaymentMethods() {
   if (modalState === "add-card") {
     return (
       <div className="min-h-screen bg-white relative pb-24">
-        <div className="px-5 pt-12 pb-4">
+        <div className="px-5 pt-16 pb-4">
           <button 
             onClick={() => setModalState("none")}
             className="flex items-center gap-1 text-[#1C1C1C] mb-6"
@@ -383,7 +383,7 @@ export default function PaymentMethods() {
       </div>
 
       {/* Header */}
-      <div className="px-5 pt-12 pb-4">
+      <div className="px-5 pt-16 pb-4">
         <button 
           onClick={() => setLocation("/profile")}
           className="flex items-center gap-1 text-[#1A9952] mb-4"

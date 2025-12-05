@@ -133,7 +133,7 @@ export default function Profile() {
         </div>
 
         {/* User Info */}
-        <div className="relative z-10 px-5 pt-12 pb-8">
+        <div className="relative z-10 px-5 pt-16 pb-8">
           {isLoading ? (
             <div className="space-y-2">
               <div className="h-7 bg-white/20 rounded animate-pulse" />
