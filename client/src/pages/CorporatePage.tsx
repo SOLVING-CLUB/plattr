@@ -1174,6 +1174,10 @@ export default function CorporateOrder() {
     setActiveTab(tab);
     if (tab === "home") {
       setLocation("/");
+    } else if (tab === "menu") {
+      setLocation("/menu");
+    } else if (tab === "profile") {
+      setLocation("/profile");
     }
   };
 
