@@ -51,14 +51,11 @@ import stuffedIcon from "@assets/Image49_1763904331978.png";
 
 // Helper function to filter categories by meal_type from database
 // The database meal_type column contains comma-separated values like "tiffins, snacks, lunch-dinner"
-// We need to split by comma and check if any token matches the filter (case-insensitive, trimmed)
 const filterCategoriesByMealType = (categories: any[], mealTypeFilter: string): any[] => {
-  const filterLower = mealTypeFilter.toLowerCase().trim();
   return categories.filter(cat => {
     const mealType = (cat as any).meal_type || cat.mealType || '';
-    // Split by comma, trim each token, and check for exact token match
-    const tokens = mealType.split(',').map((t: string) => t.toLowerCase().trim());
-    return tokens.includes(filterLower);
+    // Check if the category's meal_type contains the selected filter
+    return mealType.toLowerCase().includes(mealTypeFilter.toLowerCase());
   });
 };
 
@@ -225,11 +222,6 @@ export default function Menu() {
     }
   }, [categories, selectedCategory, mealType]);
 
-  // Get visible category IDs for the current meal type (needed early for filtering)
-  const visibleCategoryIds = useMemo(() => {
-    return new Set(categories.map(c => c.id));
-  }, [categories]);
-
   // OPTIMIZATION: Lazy-load category counts in background after page renders
   // This query fetches all dishes for the meal type but is non-blocking
   const { data: allDishesForCounts = [] } = useQuery<Dish[]>({
@@ -239,57 +231,30 @@ export default function Menu() {
     refetchOnWindowFocus: false,
   });
   
-  // Filter to available dishes only AND filter by visible categories
-  // This is needed because the server-side meal_type filter doesn't work correctly
-  // due to inconsistent data types in the database (some JSON arrays, some strings)
+  // Filter to available dishes only
   const allDishes = useMemo(() => {
     return allDishesForCounts.filter(dish => {
       const isAvailable = (dish as any).is_available !== false && dish.isAvailable !== false;
-      if (!isAvailable) return false;
-      
-      // If categories haven't loaded yet, don't filter by category
-      if (visibleCategoryIds.size === 0) return true;
-      
-      // Filter by visible categories - only include dishes from categories visible in this meal type
-      const dishCategoryId = (dish as any).category_id || dish.categoryId;
-      return visibleCategoryIds.has(dishCategoryId);
+      return isAvailable;
     });
-  }, [allDishesForCounts, visibleCategoryIds]);
+  }, [allDishesForCounts]);
 
   // Fetch dishes for selected category (for display)
-  const { data: rawDishes = [], isLoading: isLoadingDishes } = useQuery<Dish[]>({
+  const { data: dishes = [], isLoading: isLoadingDishes } = useQuery<Dish[]>({
     queryKey: ['/api/dishes', mealType, selectedCategory, dietaryMode],
     enabled: !!selectedCategory,
   });
-  
-  // Filter fetched dishes by visible categories (client-side)
-  // This ensures dishes from non-visible categories don't appear
-  const dishes = useMemo(() => {
-    if (selectedCategory !== 'all') {
-      // When a specific category is selected, trust the server filter
-      return rawDishes.filter(dish => {
-        const isAvailable = (dish as any).is_available !== false && dish.isAvailable !== false;
-        return isAvailable;
-      });
-    }
-    // When "All" is selected, filter by visible categories
-    return rawDishes.filter(dish => {
-      const isAvailable = (dish as any).is_available !== false && dish.isAvailable !== false;
-      if (!isAvailable) return false;
-      
-      // If categories haven't loaded yet, don't filter by category
-      if (visibleCategoryIds.size === 0) return true;
-      
-      const dishCategoryId = (dish as any).category_id || dish.categoryId;
-      return visibleCategoryIds.has(dishCategoryId);
-    });
-  }, [rawDishes, selectedCategory, visibleCategoryIds]);
 
   // Fetch dish types for selected category
   const { data: fetchedDishTypes = [] } = useQuery<string[]>({
     queryKey: ['/api/dish-types', selectedCategory],
     enabled: !!selectedCategory && selectedCategory !== 'all',
   });
+
+  // Get visible category IDs for the current meal type
+  const visibleCategoryIds = useMemo(() => {
+    return new Set(categories.map(c => c.id));
+  }, [categories]);
 
   // When "All" is selected, compute unique dish types ONLY from dishes in visible categories
   // This ensures subcategories like "Biryani" (main-course) don't appear in Hi-Tea
