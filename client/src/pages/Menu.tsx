@@ -251,18 +251,28 @@ export default function Menu() {
     enabled: !!selectedCategory && selectedCategory !== 'all',
   });
 
-  // When "All" is selected, compute all unique dish types from all dishes
+  // Get visible category IDs for the current meal type
+  const visibleCategoryIds = useMemo(() => {
+    return new Set(categories.map(c => c.id));
+  }, [categories]);
+
+  // When "All" is selected, compute unique dish types ONLY from dishes in visible categories
+  // This ensures subcategories like "Biryani" (main-course) don't appear in Hi-Tea
   const allUniqueDishTypes = useMemo(() => {
     if (selectedCategory !== 'all') return [];
     const types = new Set<string>();
     dishes.forEach(dish => {
+      // Only include dish types from dishes in visible categories
+      const dishCategoryId = (dish as any).category_id || dish.categoryId;
+      if (!visibleCategoryIds.has(dishCategoryId)) return;
+      
       const dishType = (dish as any).dish_type || dish.dishType;
       if (dishType && dishType.trim() !== '') {
         types.add(dishType);
       }
     });
     return Array.from(types).sort();
-  }, [dishes, selectedCategory]);
+  }, [dishes, selectedCategory, visibleCategoryIds]);
 
   // Use allUniqueDishTypes when "All" is selected, otherwise use fetched dish types
   const dishTypes = selectedCategory === 'all' ? allUniqueDishTypes : fetchedDishTypes;
