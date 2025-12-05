@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { MapContainer, TileLayer, useMapEvents } from "react-leaflet";
 import { ChevronLeft, Search, MapPin, X, Crosshair, Home, Briefcase, MoreHorizontal } from "lucide-react";
@@ -76,6 +76,18 @@ export default function MapConfirmationPage() {
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [customLabel, setCustomLabel] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Search functionality
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<Array<{
+    place_id: string;
+    display_name: string;
+    lat: string;
+    lon: string;
+  }>>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -141,6 +153,59 @@ export default function MapConfirmationPage() {
   const handlePositionChange = (newPos: [number, number]) => {
     setPosition(newPos);
     reverseGeocode(newPos[0], newPos[1]);
+  };
+
+  // Search for locations using Nominatim API
+  const searchLocations = async (query: string) => {
+    if (query.length < 3) {
+      setSearchResults([]);
+      setShowSearchResults(false);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=in&limit=5`
+      );
+      const data = await response.json();
+      setSearchResults(data);
+      setShowSearchResults(data.length > 0);
+    } catch (error) {
+      console.error("Search error:", error);
+      setSearchResults([]);
+    }
+    setIsSearching(false);
+  };
+
+  // Debounced search
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    
+    if (value.length >= 3) {
+      searchTimeoutRef.current = setTimeout(() => {
+        searchLocations(value);
+      }, 500);
+    } else {
+      setSearchResults([]);
+      setShowSearchResults(false);
+    }
+  };
+
+  // Handle selecting a search result
+  const handleSelectSearchResult = (result: { lat: string; lon: string; display_name: string }) => {
+    const newPos: [number, number] = [parseFloat(result.lat), parseFloat(result.lon)];
+    setPosition(newPos);
+    setShouldRecenter(true);
+    reverseGeocode(newPos[0], newPos[1]);
+    setSearchQuery("");
+    setSearchResults([]);
+    setShowSearchResults(false);
+    setShowTooltip(false);
   };
 
   const handleRecenterToCurrentLocation = () => {
@@ -264,15 +329,52 @@ export default function MapConfirmationPage() {
           </button>
           <div className="flex-1 relative">
             <Input
+              value={searchQuery}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              onFocus={() => searchResults.length > 0 && setShowSearchResults(true)}
               placeholder="Search an area or address"
               className="w-full pl-4 pr-12 py-3 bg-white border-0 rounded-lg shadow-md text-[15px]"
               style={{ fontFamily: "'Sweet Sans Pro', sans-serif" }}
               data-testid="input-search-map"
             />
-            <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            {isSearching ? (
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 border-2 border-[#1A9952] border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            )}
+            
+            {/* Search Results Dropdown */}
+            {showSearchResults && searchResults.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-lg overflow-hidden max-h-64 overflow-y-auto">
+                {searchResults.map((result) => (
+                  <button
+                    key={result.place_id}
+                    onClick={() => handleSelectSearchResult(result)}
+                    className="w-full flex items-start gap-3 p-3 hover:bg-gray-50 transition-colors text-left border-b border-gray-100 last:border-b-0"
+                    data-testid={`search-result-${result.place_id}`}
+                  >
+                    <MapPin className="w-5 h-5 text-[#1A9952] mt-0.5 flex-shrink-0" />
+                    <span 
+                      className="text-sm text-[#1C1C1C] line-clamp-2"
+                      style={{ fontFamily: "'Sweet Sans Pro', sans-serif" }}
+                    >
+                      {result.display_name}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
+      
+      {/* Backdrop to close search results */}
+      {showSearchResults && (
+        <div 
+          className="absolute inset-0 z-[999]" 
+          onClick={() => setShowSearchResults(false)}
+        />
+      )}
 
       {/* Map */}
       <div className="absolute inset-0 bottom-[180px]">
