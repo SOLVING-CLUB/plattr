@@ -335,35 +335,14 @@ export default function CategoryPage() {
   // Get category IDs for this meal type from frontend mapping
   const categoryIdsForMealType = MEAL_TYPE_CATEGORIES[mealType] || [];
   
-  // Fetch dishes for each category and merge them
-  // Include dietary filter (except 'egg' which is client-side name matching)
+  // Fetch ALL dishes for this meal type with a single query
+  // Using 'all' for category preserves the meal_type filter in the API
+  // This gives accurate counts of dishes per category for this meal type
   const dietaryForAllDishes = dietaryMode === 'egg' ? 'all' : dietaryMode;
   
-  // Fetch dishes for all categories in this meal type
-  const allDishesQueries = categoryIdsForMealType.map(catId =>
-    useQuery<Dish[]>({
-      queryKey: ['/api/dishes', mealType, catId, dietaryForAllDishes],
-      enabled: !!catId,
-    })
-  );
-  
-  // Merge all dishes from all categories
-  const allDishes = useMemo(() => {
-    const merged: Dish[] = [];
-    const seenIds = new Set<string>();
-    
-    allDishesQueries.forEach(query => {
-      const dishes = query.data || [];
-      dishes.forEach(dish => {
-        if (!seenIds.has(dish.id)) {
-          seenIds.add(dish.id);
-          merged.push(dish);
-        }
-      });
-    });
-    
-    return merged;
-  }, [allDishesQueries.map(q => q.data).join(',')]);
+  const { data: allDishes = [] } = useQuery<Dish[]>({
+    queryKey: ['/api/dishes', mealType, 'all', dietaryForAllDishes],
+  });
   
   // Calculate dish counts per category from actual dish data
   const categoryDishCounts = useMemo(() => {
@@ -426,10 +405,10 @@ export default function CategoryPage() {
         }))
       : []; // Loading: empty array
 
-  // Fetch dish types for selected category
+  // Fetch dish types for selected category (only if category exists in filtered list)
   const { data: dishTypes = [] } = useQuery<string[]>({
     queryKey: ['/api/dish-types', selectedCategory],
-    enabled: !!selectedCategory,
+    enabled: !!selectedCategory && categories.some(c => c.id === selectedCategory),
   });
 
   // Reset dish type filter when category changes
@@ -474,10 +453,14 @@ export default function CategoryPage() {
     }
   }, [apiCartItems, cartItemMap]);
 
-  // Set first category as selected when categories load
+  // Set first category as selected when categories load or when current selection becomes invalid
   useEffect(() => {
-    if (categories.length > 0 && !selectedCategory) {
-      setSelectedCategory(categories[0].id);
+    if (categories.length > 0) {
+      // Reset to first category if current selection is empty or not in filtered list
+      const currentSelectionValid = selectedCategory && categories.some(c => c.id === selectedCategory);
+      if (!currentSelectionValid) {
+        setSelectedCategory(categories[0].id);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categories]);
