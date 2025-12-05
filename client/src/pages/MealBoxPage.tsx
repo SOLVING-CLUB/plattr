@@ -1793,7 +1793,10 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
   }, [dishes, selectedCategory]);
 
   // Use allUniqueDishTypes when "All" is selected, otherwise use fetched dish types
-  const dishTypes = selectedCategory === 'all' ? allUniqueDishTypes : fetchedDishTypes;
+  // Filter out empty strings from fetched dish types (API may return [""] for categories with no dish types)
+  const dishTypes = selectedCategory === 'all' 
+    ? allUniqueDishTypes 
+    : fetchedDishTypes.filter(dt => dt && dt.trim() !== '');
 
   // Reset dish type filter when category changes
   useEffect(() => {
@@ -3340,44 +3343,46 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
 
               {/* Right Content - Dishes Grid */}
               <div className="flex-1 px-3 md:px-4 py-4 md:py-6 min-w-0 overflow-y-auto overflow-x-hidden pb-20 md:pb-6">
-                {/* Horizontal Dish Type Tabs - Sticky (65's, Chilli, Fry, etc.) */}
-                <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm pb-3 mb-2 -mx-3 md:-mx-4 px-3 md:px-4" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
-                  <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide px-1 pt-2">
-                    {/* Dish type options (65's, Chilli, Fry, etc.) - Compact pill design */}
-                    {dishTypes.map((dishType) => {
-                      const dishTypeImage = DISH_TYPE_IMAGES[dishType] || DISH_TYPE_IMAGES['default'];
-                      
-                      return (
-                        <button
-                          key={dishType}
-                          onClick={() => { handleInteraction(); setSelectedDishType(dishType); }}
-                          className={cn(
-                            "flex items-center gap-2 px-3 py-1.5 border transition-all flex-shrink-0",
-                            selectedDishType === dishType 
-                              ? "border-[#1A9952] bg-white shadow-sm" 
-                              : "border-gray-200 bg-white hover:border-gray-300"
-                          )}
-                          style={{ borderRadius: '10px' }}
-                          data-testid={`tab-dishtype-${dishType.toLowerCase()}`}
-                        >
-                          <div className="relative w-7 h-7 overflow-hidden flex-shrink-0" style={{ borderRadius: '6px' }}>
-                            <img 
-                              src={dishTypeImage}
-                              alt={dishType}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                          <span className={cn(
-                            "text-xs md:text-sm font-semibold whitespace-nowrap",
-                            selectedDishType === dishType ? "text-primary" : "text-foreground"
-                          )}>
-                            {dishType}
-                          </span>
-                        </button>
-                      );
-                    })}
+                {/* Horizontal Dish Type Tabs - Sticky (65's, Chilli, Fry, etc.) - Only show when there are dish types */}
+                {dishTypes.length > 0 && (
+                  <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm pb-3 mb-2 -mx-3 md:-mx-4 px-3 md:px-4" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+                    <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide px-1 pt-2">
+                      {/* Dish type options (65's, Chilli, Fry, etc.) - Compact pill design */}
+                      {dishTypes.map((dishType) => {
+                        const dishTypeImage = DISH_TYPE_IMAGES[dishType] || DISH_TYPE_IMAGES['default'];
+                        
+                        return (
+                          <button
+                            key={dishType}
+                            onClick={() => { handleInteraction(); setSelectedDishType(dishType); }}
+                            className={cn(
+                              "flex items-center gap-2 px-3 py-1.5 border transition-all flex-shrink-0",
+                              selectedDishType === dishType 
+                                ? "border-[#1A9952] bg-white shadow-sm" 
+                                : "border-gray-200 bg-white hover:border-gray-300"
+                            )}
+                            style={{ borderRadius: '10px' }}
+                            data-testid={`tab-dishtype-${dishType.toLowerCase()}`}
+                          >
+                            <div className="relative w-7 h-7 overflow-hidden flex-shrink-0" style={{ borderRadius: '6px' }}>
+                              <img 
+                                src={dishTypeImage}
+                                alt={dishType}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <span className={cn(
+                              "text-xs md:text-sm font-semibold whitespace-nowrap",
+                              selectedDishType === dishType ? "text-primary" : "text-foreground"
+                            )}>
+                              {dishType}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div className="mb-4">
                   <h2 className="text-xl font-bold font-serif" data-testid="text-section-title">
