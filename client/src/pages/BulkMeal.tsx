@@ -752,35 +752,16 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
         </div>
       </div>
 
-      {/* Header Section with Location and Cart */}
+      {/* Header Section with Location */}
       <div className="relative z-10 px-4 pt-4 pb-6">
-        {/* Location and Cart */}
-        <div className="flex items-center justify-between mb-6">
+        {/* Location */}
+        <div className="flex items-center mb-6">
           <div className="flex items-center gap-2">
             <MapPin className="w-5 h-5 text-white" />
             <span className="text-white font-semibold text-[18px]" style={{ fontFamily: "Sweet Sans Pro" }}>
               Bengaluru, KA
             </span>
           </div>
-          <button
-            className="p-2 rounded-full hover:bg-white/20 transition-colors relative"
-            onClick={() => toast({ title: "Cart", description: "Cart coming soon!" })}
-            data-testid="button-cart"
-          >
-            <ShoppingCart className="w-5 h-5 text-white" />
-            {cart.length > 0 && (
-              <div 
-                className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold"
-                style={{
-                  backgroundColor: "#1A9952",
-                  color: "white",
-                  fontFamily: "Sweet Sans Pro"
-                }}
-              >
-                {cart.length}
-              </div>
-            )}
-          </button>
         </div>
 
         {/* Service Navigation Tabs */}
@@ -1272,43 +1253,6 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
           </div>
         </div>
       </div>
-      {/* Floating Cart Button - Shows when items are in cart and input is not focused and dish detail is closed */}
-      {cart.length > 0 && !isInputFocused && !dishDetailOpen && createPortal(
-        <div 
-          className="fixed left-4 right-4 flex items-center justify-between px-4 py-3 shadow-lg"
-          style={{ 
-            bottom: "80px",
-            backgroundColor: "#1A9952",
-            borderRadius: "10px",
-            zIndex: 9999
-          }}
-        >
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
-              <span className="text-sm font-bold" style={{ fontFamily: "Sweet Sans Pro", color: "#1A9952" }}>
-                {cart.length}
-              </span>
-            </div>
-            <span className="text-white text-sm font-medium" style={{ fontFamily: "Sweet Sans Pro" }}>
-              Item added to cart
-            </span>
-          </div>
-          <Button
-            onClick={() => navigate("/bulk-meals-cart")}
-            className="px-4 py-1.5 text-sm font-semibold border-0 min-h-0 h-auto"
-            style={{
-              fontFamily: "Sweet Sans Pro",
-              backgroundColor: "white",
-              color: "#1A9952",
-              borderRadius: "6px"
-            }}
-            data-testid="button-view-cart"
-          >
-            View Cart →
-          </Button>
-        </div>,
-        document.body
-      )}
 
       {/* Filter Dialog */}
       <Dialog open={filterDialogOpen} onOpenChange={setFilterDialogOpen}>
