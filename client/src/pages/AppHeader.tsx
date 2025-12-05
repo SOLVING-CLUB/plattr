@@ -17,17 +17,20 @@ export default function AppHeader({
   onLocationClick,
   onCartClick 
 }: AppHeaderProps) {
-  const [locationLabel, setLocationLabel] = useState("Bengaluru, KA");
+  const [locationLabel, setLocationLabel] = useState("Select Address");
 
   useEffect(() => {
     const savedLocation = localStorage.getItem(LOCATION_STORAGE_KEY);
     if (savedLocation) {
       try {
         const parsed = JSON.parse(savedLocation);
-        setLocationLabel(parsed.label || "Bengaluru, KA");
+        setLocationLabel(parsed.label || "Select Address");
       } catch (e) {
         console.error("Error parsing saved location:", e);
+        setLocationLabel("Select Address");
       }
+    } else {
+      setLocationLabel("Select Address");
     }
 
     // Listen for storage changes (when location is updated from LocationPage)
@@ -35,10 +38,12 @@ export default function AppHeader({
       if (e.key === LOCATION_STORAGE_KEY && e.newValue) {
         try {
           const parsed = JSON.parse(e.newValue);
-          setLocationLabel(parsed.label || "Bengaluru, KA");
+          setLocationLabel(parsed.label || "Select Address");
         } catch (error) {
           console.error("Error parsing location from storage event:", error);
         }
+      } else if (e.key === LOCATION_STORAGE_KEY && !e.newValue) {
+        setLocationLabel("Select Address");
       }
     };
 
