@@ -8,12 +8,21 @@ import {
   Search, 
   Plus,
   ChevronDown,
-  MoreVertical
+  MoreVertical,
+  Edit2,
+  Trash2,
+  Star
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { addressService } from "@/lib/supabase-service";
 import { useToast } from "@/hooks/use-toast";
 import FloatingNav from "@/pages/FloatingNav";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface SavedAddress {
   id: string;
@@ -38,6 +47,7 @@ const RECENT_LOCATIONS_KEY = "recentLocations";
 export default function LocationPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [isDetecting, setIsDetecting] = useState(false);
   const [recentLocations, setRecentLocations] = useState<LocationData[]>([]);
@@ -60,6 +70,44 @@ export default function LocationPage() {
   const { data: savedAddresses = [], isLoading: isLoadingAddresses } = useQuery<SavedAddress[]>({
     queryKey: ["addresses"],
     queryFn: () => addressService.getAll(),
+  });
+
+  // Delete address mutation
+  const deleteAddressMutation = useMutation({
+    mutationFn: (id: string) => addressService.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["addresses"] });
+      toast({
+        title: "Address Deleted",
+        description: "The address has been removed",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Could not delete address",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Set default address mutation
+  const setDefaultMutation = useMutation({
+    mutationFn: (id: string) => addressService.update(id, { isDefault: true }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["addresses"] });
+      toast({
+        title: "Default Address Set",
+        description: "This address is now your default",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Could not set default address",
+        variant: "destructive",
+      });
+    },
   });
 
   const handleTabChange = (tab: "home" | "menu" | "profile") => {
@@ -242,35 +290,74 @@ export default function LocationPage() {
           <>
             <div className="space-y-1">
               {displayedAddresses.map((address) => (
-                <button
+                <div
                   key={address.id}
-                  onClick={() => handleSelectSavedAddress(address)}
-                  className="w-full flex items-start gap-3 py-3 border-b border-gray-100 last:border-b-0 text-left hover:bg-gray-50 transition-colors"
-                  data-testid={`button-saved-${address.id}`}
+                  className="flex items-start gap-3 py-3 border-b border-gray-100 last:border-b-0"
                 >
-                  <div className="flex flex-col items-center mt-1">
-                    <Navigation className="w-5 h-5 text-gray-400" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h3 
-                        className="font-semibold text-[#1C1C1C] text-[15px]"
-                        style={{ fontFamily: "'Sweet Sans Pro', sans-serif" }}
-                      >
-                        {address.label}
-                      </h3>
-                      {address.isDefault && (
-                        <span className="text-[10px] bg-[#1A9952] text-white px-1.5 py-0.5 rounded">
-                          Default
-                        </span>
-                      )}
+                  <button
+                    onClick={() => handleSelectSavedAddress(address)}
+                    className="flex-1 flex items-start gap-3 text-left hover:bg-gray-50 transition-colors rounded-lg -ml-2 -my-2 p-2"
+                    data-testid={`button-saved-${address.id}`}
+                  >
+                    <div className="flex flex-col items-center mt-1">
+                      <Navigation className="w-5 h-5 text-gray-400" />
                     </div>
-                    <p className="text-gray-500 text-[13px] mt-0.5 line-clamp-2">
-                      {address.landmark ? `${address.address}, ${address.landmark}` : address.address}
-                    </p>
-                  </div>
-                  <MoreVertical className="w-5 h-5 text-gray-400 mt-1 flex-shrink-0" />
-                </button>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h3 
+                          className="font-semibold text-[#1C1C1C] text-[15px]"
+                          style={{ fontFamily: "'Sweet Sans Pro', sans-serif" }}
+                        >
+                          {address.label}
+                        </h3>
+                        {address.isDefault && (
+                          <span className="text-[10px] bg-[#1A9952] text-white px-1.5 py-0.5 rounded">
+                            Default
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-gray-500 text-[13px] mt-0.5 line-clamp-2">
+                        {address.landmark ? `${address.address}, ${address.landmark}` : address.address}
+                      </p>
+                    </div>
+                  </button>
+                  
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button 
+                        className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                        data-testid={`button-options-${address.id}`}
+                      >
+                        <MoreVertical className="w-5 h-5 text-gray-400" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      {!address.isDefault && (
+                        <DropdownMenuItem 
+                          onClick={() => setDefaultMutation.mutate(address.id)}
+                          className="flex items-center gap-2"
+                        >
+                          <Star className="w-4 h-4" />
+                          Set as default
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuItem 
+                        onClick={() => setLocation(`/saved-addresses?edit=${address.id}`)}
+                        className="flex items-center gap-2"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                        Edit address
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => deleteAddressMutation.mutate(address.id)}
+                        className="flex items-center gap-2 text-red-600 focus:text-red-600"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Delete address
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               ))}
             </div>
 
