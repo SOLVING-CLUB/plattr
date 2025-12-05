@@ -1038,8 +1038,8 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                   </div>
                 </button>
 
-                {/* Show category options (Starters, Sides, Mains, etc.) - only show categories with dishes */}
-                {categories.filter(cat => getDishCountForCategory(cat.id) > 0).map((cat) => {
+                {/* Show category options (Starters, Sides, Mains, etc.) based on meal_type */}
+                {categories.map((cat) => {
                   const totalInCategory = getDishCountForCategory(cat.id);
                   
                   return (
