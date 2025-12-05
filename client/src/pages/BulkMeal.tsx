@@ -1024,25 +1024,16 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                   </div>
                   <div className="text-center w-full px-1">
                     <span className={cn(
-                      "text-xs md:text-sm font-semibold block line-clamp-1 leading-tight mb-1",
+                      "text-xs md:text-sm font-semibold block line-clamp-1 leading-tight",
                       selectedCategory === 'all' ? "text-primary" : "text-foreground"
                     )}>
                       All
                     </span>
-                    <Badge 
-                      variant={selectedCategory === 'all' ? "default" : "secondary"}
-                      className="text-[10px] h-5 px-2 font-medium"
-                    >
-                      {dishes.length}
-                    </Badge>
                   </div>
                 </button>
 
                 {/* Show category options (Starters, Sides, Mains, etc.) based on meal_type */}
-                {categories.map((cat) => {
-                  const totalInCategory = getDishCountForCategory(cat.id);
-                  
-                  return (
+                {categories.map((cat) => (
                     <button
                       key={cat.id}
                       onClick={() => { handleInteraction(); setSelectedCategory(cat.id); setSelectedDishType('all'); }}
@@ -1072,21 +1063,14 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                       </div>
                       <div className="text-center w-full px-1">
                         <span className={cn(
-                          "text-xs md:text-sm font-semibold block line-clamp-2 leading-tight mb-1",
+                          "text-xs md:text-sm font-semibold block line-clamp-2 leading-tight",
                           selectedCategory === cat.id ? "text-primary" : "text-foreground"
                         )}>
                           {cat.name}
                         </span>
-                        <Badge 
-                          variant={selectedCategory === cat.id ? "default" : "secondary"}
-                          className="text-[10px] h-5 px-2 font-medium"
-                        >
-                          {totalInCategory}
-                        </Badge>
                       </div>
                     </button>
-                  );
-                })}
+                ))}
               </div>
             </aside>
 
