@@ -3,6 +3,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { useAndroidBackButton } from "@/hooks/useAndroidBackButton";
+import { PageLoaderProvider, usePageLoader } from "@/components/PageLoader";
 import NotFound from "@/pages/not-found";
 import HomePage from "@/pages/HomePage";
 import AdminDashboard from "@/pages/AdminDashboard";
@@ -146,13 +147,27 @@ const withNeedsName = <P extends object>(Component: ComponentType<P>) => (props:
   </RequireNeedsName>
 );
 
-// Scroll to top on every route change
+// Scroll to top on every route change and show page loader
 function ScrollToTop() {
   const [location] = useLocation();
+  const { showLoader, hideLoader } = usePageLoader();
+  const previousLocation = useRef(location);
   
   useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-  }, [location]);
+    // Show loader when location changes
+    if (previousLocation.current !== location) {
+      showLoader();
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+      
+      // Hide loader after a short delay (simulates page load)
+      const timer = setTimeout(() => {
+        hideLoader();
+      }, 300);
+      
+      previousLocation.current = location;
+      return () => clearTimeout(timer);
+    }
+  }, [location, showLoader, hideLoader]);
   
   return null;
 }
@@ -320,18 +335,20 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <CartProvider>
-        <Toaster />
-        {showSplash && (
-          <div
-            className={`fixed inset-0 transition-opacity duration-500 ${
-              fadeOut ? "opacity-0 pointer-events-none" : "opacity-100"
-            }`}
-            style={{ zIndex: 10000 }}
-          >
-            <SplashScreen />
-          </div>
-        )}
-        <Router />
+        <PageLoaderProvider>
+          <Toaster />
+          {showSplash && (
+            <div
+              className={`fixed inset-0 transition-opacity duration-500 ${
+                fadeOut ? "opacity-0 pointer-events-none" : "opacity-100"
+              }`}
+              style={{ zIndex: 10000 }}
+            >
+              <SplashScreen />
+            </div>
+          )}
+          <Router />
+        </PageLoaderProvider>
       </CartProvider>
     </QueryClientProvider>
   );
