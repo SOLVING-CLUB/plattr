@@ -14,12 +14,41 @@ export default function BulkMealsDelivery() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<"home" | "menu" | "profile">("menu");
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
+  
+  const [selectedAddressId, setSelectedAddressId] = useState("");
+  const [addressLine1, setAddressLine1] = useState("");
+  const [addressLine2, setAddressLine2] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [pincode, setPincode] = useState("");
 
   // Fetch saved addresses
   const { data: savedAddresses = [] } = useQuery({
     queryKey: ["addresses"],
     queryFn: () => addressService.getAll(),
   });
+  
+  const handleSavedAddressChange = (addressId: string) => {
+    setSelectedAddressId(addressId);
+    
+    if (!addressId) {
+      setAddressLine1("");
+      setAddressLine2("");
+      setCity("");
+      setState("");
+      setPincode("");
+      return;
+    }
+    
+    const selectedAddress = savedAddresses.find(addr => addr.id === addressId);
+    if (selectedAddress) {
+      setAddressLine1(selectedAddress.address || "");
+      setAddressLine2(selectedAddress.landmark || "");
+      setCity("Bengaluru");
+      setState("Karnataka");
+      setPincode("");
+    }
+  };
 
   useEffect(() => {
     if (cart.length === 0) {
@@ -209,9 +238,11 @@ export default function BulkMealsDelivery() {
               Choose Saved Address (Optional)
             </label>
             <select
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-500"
-              style={{ fontFamily: "Sweet Sans Pro" }}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+              style={{ fontFamily: "Sweet Sans Pro", color: selectedAddressId ? "#06352A" : "#9CA3AF" }}
               data-testid="select-saved-address"
+              value={selectedAddressId}
+              onChange={(e) => handleSavedAddressChange(e.target.value)}
             >
               <option value="">Select Address (Optional)</option>
               {savedAddresses.map((address) => (
@@ -233,6 +264,8 @@ export default function BulkMealsDelivery() {
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
               style={{ fontFamily: "Sweet Sans Pro" }}
               data-testid="input-address-line1"
+              value={addressLine1}
+              onChange={(e) => setAddressLine1(e.target.value)}
             />
           </div>
 
@@ -247,6 +280,8 @@ export default function BulkMealsDelivery() {
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
               style={{ fontFamily: "Sweet Sans Pro" }}
               data-testid="input-address-line2"
+              value={addressLine2}
+              onChange={(e) => setAddressLine2(e.target.value)}
             />
           </div>
 
@@ -261,6 +296,8 @@ export default function BulkMealsDelivery() {
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
               style={{ fontFamily: "Sweet Sans Pro" }}
               data-testid="input-city"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
             />
           </div>
 
@@ -275,6 +312,8 @@ export default function BulkMealsDelivery() {
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
               style={{ fontFamily: "Sweet Sans Pro" }}
               data-testid="input-state"
+              value={state}
+              onChange={(e) => setState(e.target.value)}
             />
           </div>
 
@@ -289,6 +328,8 @@ export default function BulkMealsDelivery() {
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
               style={{ fontFamily: "Sweet Sans Pro" }}
               data-testid="input-pincode"
+              value={pincode}
+              onChange={(e) => setPincode(e.target.value)}
             />
           </div>
 

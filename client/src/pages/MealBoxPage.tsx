@@ -1310,12 +1310,42 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
   
   // Add-ons selection
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
+  
+  // Address form state
+  const [selectedAddressId, setSelectedAddressId] = useState("");
+  const [addressLine1, setAddressLine1] = useState("");
+  const [addressLine2, setAddressLine2] = useState("");
+  const [city, setCity] = useState("");
+  const [addressState, setAddressState] = useState("");
+  const [pincode, setPincode] = useState("");
 
   // Fetch saved addresses
   const { data: savedAddresses = [] } = useQuery({
     queryKey: ["addresses"],
     queryFn: () => addressService.getAll(),
   });
+  
+  const handleSavedAddressChange = (addressId: string) => {
+    setSelectedAddressId(addressId);
+    
+    if (!addressId) {
+      setAddressLine1("");
+      setAddressLine2("");
+      setCity("");
+      setAddressState("");
+      setPincode("");
+      return;
+    }
+    
+    const selectedAddress = savedAddresses.find(addr => addr.id === addressId);
+    if (selectedAddress) {
+      setAddressLine1(selectedAddress.address || "");
+      setAddressLine2(selectedAddress.landmark || "");
+      setCity("Bengaluru");
+      setAddressState("Karnataka");
+      setPincode("");
+    }
+  };
 
   // Restore MealBox progress on mount (only once)
   useEffect(() => {
@@ -4177,9 +4207,11 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                   Choose Saved Address (Optional)
                 </label>
                 <select
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-500"
-                  style={{ fontFamily: "Sweet Sans Pro" }}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  style={{ fontFamily: "Sweet Sans Pro", color: selectedAddressId ? "#06352A" : "#9CA3AF" }}
                   data-testid="select-saved-address"
+                  value={selectedAddressId}
+                  onChange={(e) => handleSavedAddressChange(e.target.value)}
                 >
                   <option value="">Select Address (Optional)</option>
                   {savedAddresses.map((address) => (
@@ -4201,6 +4233,8 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   style={{ fontFamily: "Sweet Sans Pro" }}
                   data-testid="input-address-line1"
+                  value={addressLine1}
+                  onChange={(e) => setAddressLine1(e.target.value)}
                 />
               </div>
 
@@ -4215,6 +4249,8 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   style={{ fontFamily: "Sweet Sans Pro" }}
                   data-testid="input-address-line2"
+                  value={addressLine2}
+                  onChange={(e) => setAddressLine2(e.target.value)}
                 />
               </div>
 
@@ -4229,6 +4265,8 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   style={{ fontFamily: "Sweet Sans Pro" }}
                   data-testid="input-city"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
                 />
               </div>
 
@@ -4243,6 +4281,8 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   style={{ fontFamily: "Sweet Sans Pro" }}
                   data-testid="input-state"
+                  value={addressState}
+                  onChange={(e) => setAddressState(e.target.value)}
                 />
               </div>
 
@@ -4257,6 +4297,8 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   style={{ fontFamily: "Sweet Sans Pro" }}
                   data-testid="input-pincode"
+                  value={pincode}
+                  onChange={(e) => setPincode(e.target.value)}
                 />
               </div>
 
