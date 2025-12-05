@@ -1,6 +1,6 @@
 import { useCart } from "@/context/CartContex";
 import { useLocation } from "wouter";
-import { Package, ChevronRight, X } from "lucide-react";
+import { ChevronRight, Truck, UtensilsCrossed } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const categoryLabels = {
@@ -17,110 +17,124 @@ const categoryRoutes = {
   "corporate": "/corporate"
 };
 
+type CategoryType = keyof typeof categoryLabels;
+
+interface BannerConfig {
+  type: "warning" | "continue";
+  category: CategoryType;
+}
+
 export default function ContinueOrderBanner() {
   const { activeCategory, cart, mealBoxProgress } = useCart();
   const [location, setLocation] = useLocation();
   const [isVisible, setIsVisible] = useState(false);
-  const [isDismissed, setIsDismissed] = useState(false);
+  const [bannerConfig, setBannerConfig] = useState<BannerConfig | null>(null);
 
   useEffect(() => {
-    // Only show banner on home page, not on any order pages
-    const isOnHomePage = location === "/";
+    // Don't show on order-related pages
     const isOnOrderPage = 
       location.startsWith("/mealbox") || 
       location.startsWith("/catering") || 
       location.startsWith("/corporate") || 
+      location.startsWith("/bulk-meals") ||
       location.startsWith("/categories") ||
       location.startsWith("/checkout") ||
-      location.startsWith("/payment");
+      location.startsWith("/payment") ||
+      location.startsWith("/profile") ||
+      location.startsWith("/orders") ||
+      location.startsWith("/cart");
     
-    // Don't show if on any order-related pages
-    if (isOnOrderPage || !isOnHomePage) {
+    if (isOnOrderPage) {
       setIsVisible(false);
       return;
     }
 
-    // Show banner if there's mealbox progress OR active category with cart items
+    // Determine which category has an active order
     const hasMealBoxProgress = mealBoxProgress !== null;
     const hasActiveCart = activeCategory && cart.length > 0;
-    const hasActiveOrder = hasMealBoxProgress || hasActiveCart;
     
-    if (hasActiveOrder && !isDismissed) {
-      setTimeout(() => setIsVisible(true), 100);
+    if (hasMealBoxProgress || hasActiveCart) {
+      const displayCategory = activeCategory || (hasMealBoxProgress ? "mealbox" : null);
+      
+      if (displayCategory) {
+        // Check if we're on home page - show "continue" style
+        // In future, could show "warning" style if user tries different category
+        setBannerConfig({
+          type: "continue",
+          category: displayCategory as CategoryType
+        });
+        setTimeout(() => setIsVisible(true), 100);
+      }
     } else {
       setIsVisible(false);
+      setBannerConfig(null);
     }
-  }, [activeCategory, cart.length, mealBoxProgress, isDismissed, location]);
-
-  // Determine which category to use for navigation
-  const displayCategory = activeCategory || (mealBoxProgress ? "mealbox" : null);
+  }, [activeCategory, cart.length, mealBoxProgress, location]);
 
   const handleContinue = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (displayCategory) {
-      setLocation(categoryRoutes[displayCategory]);
+    if (bannerConfig) {
+      setLocation(categoryRoutes[bannerConfig.category]);
     }
   };
 
-  const handleClose = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsDismissed(true);
-    setIsVisible(false);
-  };
-
-  // Don't show if dismissed or no active order
-  if (isDismissed || (!mealBoxProgress && (!activeCategory || cart.length === 0))) {
+  if (!bannerConfig || !isVisible) {
     return null;
   }
 
+  const isWarning = bannerConfig.type === "warning";
+  const backgroundColor = isWarning ? "#D97706" : "#1A9952";
+  const iconColor = isWarning ? "#D97706" : "#1A9952";
+  
+  // Choose icon based on category
+  const getIcon = () => {
+    switch (bannerConfig.category) {
+      case "bulk-meals":
+        return <Truck className="w-5 h-5" style={{ color: iconColor }} strokeWidth={2} />;
+      case "mealbox":
+      case "catering":
+      case "corporate":
+      default:
+        return <UtensilsCrossed className="w-5 h-5" style={{ color: iconColor }} strokeWidth={2} />;
+    }
+  };
+
+  const getMessage = () => {
+    if (isWarning) {
+      return `Please complete your ${categoryLabels[bannerConfig.category]} order first`;
+    }
+    return `Continue with your ${categoryLabels[bannerConfig.category]} order`;
+  };
+
   return (
     <div 
-      className={`fixed bottom-24 left-1/2 -translate-x-1/2 max-w-sm w-[calc(100%-2rem)] flex items-center justify-between px-4 py-3 rounded-[10px] shadow-lg transition-all duration-300 ${
+      onClick={handleContinue}
+      className={`fixed bottom-20 left-1/2 -translate-x-1/2 max-w-sm w-[calc(100%-2rem)] flex items-center gap-3 px-3 py-2.5 rounded-full shadow-lg cursor-pointer transition-all duration-300 ${
         isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'
       }`}
       style={{ 
-        backgroundColor: "#1A9952",
-        zIndex: 100
+        backgroundColor: backgroundColor,
+        zIndex: 45
       }}
       data-testid="banner-continue-order"
     >
-      {/* Left Icon - White circle with green box outline */}
-      <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center flex-shrink-0">
-        <Package className="w-5 h-5" style={{ color: "#1A9952" }} strokeWidth={2.5} />
+      {/* Left Icon - White circle with colored icon */}
+      <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center flex-shrink-0">
+        {getIcon()}
       </div>
 
-      {/* Text Content - Two lines */}
+      {/* Text Content */}
       <div 
-        className="flex-1 mx-3 cursor-pointer"
-        onClick={handleContinue}
+        className="flex-1"
         style={{ fontFamily: "Sweet Sans Pro" }}
       >
-        <div className="text-white text-sm font-medium leading-tight">
-          Continue with your {categoryLabels[displayCategory || "mealbox"]}
-        </div>
-        <div className="text-white text-sm font-medium leading-tight">
-          order
-        </div>
+        <span className="text-white text-sm font-medium">
+          {getMessage()}
+        </span>
       </div>
 
-      {/* Right Arrow Icon - White circle with green arrow */}
-      <div 
-        className="w-10 h-10 bg-white rounded-full flex items-center justify-center flex-shrink-0 cursor-pointer hover:bg-gray-100 transition-colors"
-        onClick={handleContinue}
-      >
-        <ChevronRight className="w-5 h-5" style={{ color: "#1A9952" }} strokeWidth={2.5} />
-      </div>
-
-      {/* Close Button - X icon */}
-      <button
-        onClick={handleClose}
-        className="w-6 h-6 flex items-center justify-center flex-shrink-0 ml-2 hover:bg-white/20 rounded-full transition-colors"
-        style={{ color: "white" }}
-        data-testid="button-close-banner"
-      >
-        <X className="w-4 h-4" strokeWidth={2.5} />
-      </button>
+      {/* Right Chevron */}
+      <ChevronRight className="w-5 h-5 text-white flex-shrink-0" strokeWidth={2} />
     </div>
   );
 }
-
