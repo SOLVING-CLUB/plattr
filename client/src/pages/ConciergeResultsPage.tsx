@@ -239,34 +239,23 @@ export default function ConciergeResultsPage() {
           try {
             console.log('Fetching dishes from Supabase for IDs:', dishIds);
             
-            // Build the 'in' filter for dish_id column (format: D-0001, D-0002, etc.)
+            // Build the 'in' filter for id column (format: D-0001, D-0002, etc.)
             // PostgREST requires string values to be double-quoted
             const quotedIds = dishIds.map((id: string) => `"${id}"`).join(',');
             const inFilter = `in.(${quotedIds})`;
             
             console.log('Supabase filter:', inFilter);
             
+            // Query by 'id' column which contains the dish IDs like D-0002, D-0003, etc.
             const dishesResult = await supabase.select<any>('dishes', {
               select: '*',
-              filter: { 'dish_id': inFilter },
+              filter: { 'id': inFilter },
             });
             
             console.log('Dishes fetched from Supabase:', dishesResult?.length || 0);
             
             if (dishesResult && dishesResult.length > 0) {
               selectedDishes = dishesResult;
-            } else {
-              // Fallback: try fetching by UUID id if dish_id didn't work
-              console.log('No matches by dish_id, trying by UUID id...');
-              const byIdResult = await supabase.select<any>('dishes', {
-                select: '*',
-                filter: { 'id': inFilter },
-              });
-              
-              if (byIdResult && byIdResult.length > 0) {
-                selectedDishes = byIdResult;
-                console.log('Found dishes by UUID:', byIdResult.length);
-              }
             }
           } catch (supabaseError: any) {
             console.error('Supabase query error:', supabaseError);
