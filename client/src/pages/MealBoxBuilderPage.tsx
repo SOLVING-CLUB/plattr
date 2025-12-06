@@ -119,14 +119,31 @@ export default function MealBoxBuilderPage() {
             <MapPin className="w-4 h-4 text-muted-foreground" />
             <span className="font-medium">{locationLabel}</span>
           </button>
-          <Button
-            variant="default"
-            size="icon"
-            className="bg-primary hover:bg-primary/90 rounded-full"
-            data-testid="button-cart"
-          >
-            <ShoppingCart className="w-5 h-5" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate("/concierge")}
+              data-testid="button-ai-menu-planner"
+              className="flex items-center justify-center px-3 py-2 rounded-[10px] shadow-md hover:opacity-90 transition-opacity"
+              style={{
+                background: "linear-gradient(135deg, #06352A 0%, #1A9952 100%)",
+                fontFamily: "Sweet Sans Pro",
+                fontSize: "12px",
+                fontWeight: 500,
+                color: "#F5E9DB",
+                height: "40px",
+              }}
+            >
+              AI Menu Planner
+            </button>
+            <Button
+              variant="default"
+              size="icon"
+              className="bg-primary hover:bg-primary/90 rounded-full"
+              data-testid="button-cart"
+            >
+              <ShoppingCart className="w-5 h-5" />
+            </Button>
+          </div>
         </div>
 
         {/* Category Pills */}

@@ -873,13 +873,28 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
 
       {/* Header Section with Location */}
       <div className="relative z-10 px-4 pt-4 pb-6">
-        {/* Location */}
-        <div className="flex items-center mb-6">
+        {/* Location and AI Menu Planner */}
+        <div className="flex items-center justify-between mb-6">
           <button className="flex items-center gap-2" onClick={() => navigate("/location")}>
             <MapPin className="w-5 h-5 text-white" />
             <span className="text-white font-semibold text-[18px]" style={{ fontFamily: "Sweet Sans Pro" }}>
               {locationLabel}
             </span>
+          </button>
+          <button
+            onClick={() => navigate("/concierge")}
+            data-testid="button-ai-menu-planner"
+            className="flex items-center justify-center px-3 py-2 rounded-[10px] shadow-md hover:opacity-90 transition-opacity"
+            style={{
+              background: "linear-gradient(135deg, #06352A 0%, #1A9952 100%)",
+              fontFamily: "Sweet Sans Pro",
+              fontSize: "12px",
+              fontWeight: 500,
+              color: "#F5E9DB",
+              height: "40px",
+            }}
+          >
+            AI Menu Planner
           </button>
         </div>
 

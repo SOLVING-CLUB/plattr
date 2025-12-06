@@ -608,12 +608,29 @@ export default function Menu() {
               {locationLabel}
             </span>
           </button>
-          <button
-            className="p-2 rounded-full hover:bg-gray-100 transition-colors relative"
-            data-testid="button-cart"
-          >
-            <ShoppingCart className="w-5 h-5 text-[#06352A]" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setLocation("/concierge")}
+              data-testid="button-ai-menu-planner"
+              className="flex items-center justify-center px-3 py-2 rounded-[10px] shadow-md hover:opacity-90 transition-opacity"
+              style={{
+                background: "linear-gradient(135deg, #06352A 0%, #1A9952 100%)",
+                fontFamily: "Sweet Sans Pro",
+                fontSize: "12px",
+                fontWeight: 500,
+                color: "#F5E9DB",
+                height: "40px",
+              }}
+            >
+              AI Menu Planner
+            </button>
+            <button
+              className="p-2 rounded-full hover:bg-gray-100 transition-colors relative"
+              data-testid="button-cart"
+            >
+              <ShoppingCart className="w-5 h-5 text-[#06352A]" />
+            </button>
+          </div>
         </div>
 
         {/* Banner */}
