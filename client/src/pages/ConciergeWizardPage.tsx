@@ -436,9 +436,9 @@ export default function ConciergeWizardPage() {
               </Button>
             </div>
 
-            <div className="mt-6 space-y-6">
+            <div className="mt-8 space-y-8">
               <div>
-                <p className="text-sm font-medium mb-2" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                <p className="text-sm font-medium mb-4" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
                   Enter Number of Guests
                 </p>
                 <input
@@ -453,13 +453,13 @@ export default function ConciergeWizardPage() {
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between mb-5">
                   <p className="text-sm font-medium" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
                     Select the type of meal
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-4">
                   {MEAL_TYPES.map((meal) => (
                     <button
                       key={meal.value}
