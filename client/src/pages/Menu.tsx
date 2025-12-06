@@ -6,7 +6,7 @@ import FloatingNav from "@/pages/FloatingNav";
 import { useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
 import type { Dish, Category as CategoryType } from "@shared/schema";
-import { getSupabaseImageUrl } from "@/lib/supabase";
+import { getSupabaseImageUrl, getCategoryImageUrl } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -879,7 +879,16 @@ export default function Menu() {
                           : "border-border"
                       )}>
                         <img 
-                          src={(cat.imageUrl && !cat.imageUrl.startsWith('/images/')) ? cat.imageUrl : (CATEGORY_IMAGES[cat.id] || idliImage1)}
+                          src={(() => {
+                            const dbImageUrl = (cat as any).image_url || cat.imageUrl;
+                            if (dbImageUrl && dbImageUrl.trim() !== '') {
+                              const supabaseUrl = getCategoryImageUrl(dbImageUrl);
+                              if (supabaseUrl && !supabaseUrl.includes('placeholder')) {
+                                return supabaseUrl;
+                              }
+                            }
+                            return CATEGORY_IMAGES[cat.id] || idliImage1;
+                          })()}
                           alt={cat.name}
                           className="w-full h-full object-cover"
                         />
