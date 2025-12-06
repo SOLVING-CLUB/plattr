@@ -118,30 +118,71 @@ export default function ConciergeResultsPage() {
         console.log('Webhook parsed response:', webhookData);
         
         // Extract dish IDs from webhook response
-        // The webhook may return dish IDs in various formats - handle common patterns
+        // The webhook may return data in various formats - handle common patterns
         let dishIds: string[] = [];
+        let categoryMap: Record<string, string> = {}; // Map dish ID to category name
         let aiSummary: string | null = null;
         let budgetNote: string | null = null;
+        let budgetStatusFromWebhook: string | null = null;
         
-        if (webhookData.dishIds) {
-          dishIds = Array.isArray(webhookData.dishIds) ? webhookData.dishIds : [webhookData.dishIds];
-        } else if (webhookData.dishes) {
-          dishIds = Array.isArray(webhookData.dishes) 
-            ? webhookData.dishes.map((d: any) => typeof d === 'string' ? d : d.id || d.dishId)
-            : [];
-        } else if (webhookData.recommendations) {
-          dishIds = Array.isArray(webhookData.recommendations)
-            ? webhookData.recommendations.map((d: any) => typeof d === 'string' ? d : d.id || d.dishId)
-            : [];
-        } else if (Array.isArray(webhookData)) {
-          dishIds = webhookData.map((d: any) => typeof d === 'string' ? d : d.id || d.dishId);
+        // Check if response has an "output" field with embedded JSON (n8n AI response format)
+        let parsedData = webhookData;
+        if (webhookData.output && typeof webhookData.output === 'string') {
+          console.log('Detected n8n output format, extracting JSON...');
+          const outputText = webhookData.output;
+          
+          // Extract JSON from markdown code blocks
+          const jsonMatch = outputText.match(/```json\s*([\s\S]*?)\s*```/);
+          if (jsonMatch && jsonMatch[1]) {
+            try {
+              parsedData = JSON.parse(jsonMatch[1]);
+              console.log('Extracted JSON from output:', parsedData);
+            } catch (e) {
+              console.error('Failed to parse embedded JSON:', e);
+            }
+          }
+          
+          // Also extract the text before the JSON as the summary
+          const textBeforeJson = outputText.split('```json')[0].trim();
+          if (textBeforeJson) {
+            aiSummary = textBeforeJson;
+          }
         }
         
-        if (webhookData.summary || webhookData.aiSummary) {
-          aiSummary = webhookData.summary || webhookData.aiSummary;
+        // Now extract dish IDs from the parsed data
+        if (parsedData.dishIds) {
+          dishIds = Array.isArray(parsedData.dishIds) ? parsedData.dishIds : [parsedData.dishIds];
+        } else if (parsedData.dishes) {
+          dishIds = Array.isArray(parsedData.dishes) 
+            ? parsedData.dishes.map((d: any) => typeof d === 'string' ? d : d.id || d.dishId)
+            : [];
+        } else if (parsedData.recommendations) {
+          const recs = Array.isArray(parsedData.recommendations) ? parsedData.recommendations : [];
+          dishIds = recs.map((d: any) => typeof d === 'string' ? d : d.id || d.dishId);
+          // Build category map from recommendations
+          recs.forEach((d: any) => {
+            if (d.id && d.categoryName) {
+              categoryMap[d.id] = d.categoryName;
+            }
+          });
+        } else if (Array.isArray(parsedData)) {
+          dishIds = parsedData.map((d: any) => typeof d === 'string' ? d : d.id || d.dishId);
         }
-        if (webhookData.budgetNote || webhookData.aiBudgetNote) {
-          budgetNote = webhookData.budgetNote || webhookData.aiBudgetNote;
+        
+        console.log('Extracted dish IDs:', dishIds);
+        console.log('Category map:', categoryMap);
+        
+        // Extract summary and budget info
+        if (parsedData.overallSummary) {
+          aiSummary = parsedData.overallSummary;
+        } else if (parsedData.summary || parsedData.aiSummary) {
+          aiSummary = parsedData.summary || parsedData.aiSummary;
+        }
+        if (parsedData.budgetNote || parsedData.aiBudgetNote) {
+          budgetNote = parsedData.budgetNote || parsedData.aiBudgetNote;
+        }
+        if (parsedData.budgetStatus) {
+          budgetStatusFromWebhook = parsedData.budgetStatus;
         }
         
         // Fetch dish details from Supabase using the IDs
@@ -149,20 +190,28 @@ export default function ConciergeResultsPage() {
           select: '*',
         });
         
+        console.log('All dishes from Supabase:', allDishes.length);
+        
         // Filter to get only the recommended dishes
+        // Match by dish_id (like "D-0011"), id (UUID), or name
         const selectedDishes = allDishes.filter((dish: any) => 
-          dishIds.includes(dish.id) || dishIds.includes(dish.name)
+          dishIds.includes(dish.dish_id) || 
+          dishIds.includes(dish.id) || 
+          dishIds.includes(dish.name)
         );
+        
+        console.log('Selected dishes by ID match:', selectedDishes.length);
         
         // If no matches found by ID, try matching by name
         if (selectedDishes.length === 0 && dishIds.length > 0) {
           const byName = allDishes.filter((dish: any) =>
             dishIds.some((id: string) => 
-              dish.name.toLowerCase().includes(id.toLowerCase()) ||
-              id.toLowerCase().includes(dish.name.toLowerCase())
+              dish.name?.toLowerCase().includes(id.toLowerCase()) ||
+              id.toLowerCase().includes(dish.name?.toLowerCase() || '')
             )
           );
           selectedDishes.push(...byName);
+          console.log('Selected dishes by name match:', selectedDishes.length);
         }
         
         // Calculate costs
@@ -181,12 +230,17 @@ export default function ConciergeResultsPage() {
           spiceLevel: d.spice_level,
           dietaryType: d.dietary_type,
           dishType: d.dish_type,
-          recommendedCategory: d.category_id,
+          // Use category from webhook's categoryMap if available, otherwise use dish_type
+          recommendedCategory: categoryMap[d.dish_id] || categoryMap[d.id] || d.dish_type || 'Other',
         }));
         
-        // Determine budget status
+        console.log('Formatted dishes:', formattedDishes);
+        
+        // Determine budget status - use webhook value if provided, otherwise calculate
         let budgetStatus: "within_budget" | "over_budget" | null = null;
-        if (preferences.budget) {
+        if (budgetStatusFromWebhook) {
+          budgetStatus = budgetStatusFromWebhook === 'within_budget' ? 'within_budget' : 'over_budget';
+        } else if (preferences.budget) {
           const budgetPerPerson = preferences.budget;
           budgetStatus = costPerPerson <= budgetPerPerson ? "within_budget" : "over_budget";
         }
