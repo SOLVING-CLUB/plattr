@@ -410,7 +410,7 @@ export default function ConciergeWizardPage() {
         )}
 
         {currentStep === 3 && (
-          <div>
+          <div className="mt-6">
             <div className="flex items-center justify-between mb-2">
               <div>
                 <h2 className="text-xl font-bold" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
@@ -498,7 +498,7 @@ export default function ConciergeWizardPage() {
         )}
 
         {currentStep === 4 && (
-          <div>
+          <div className="mt-6">
             <div className="flex items-center justify-between mb-2">
               <div>
                 <h2 className="text-xl font-bold" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
@@ -612,7 +612,7 @@ export default function ConciergeWizardPage() {
         )}
 
         {currentStep === 5 && (
-          <div>
+          <div className="mt-6">
             <div className="flex items-center justify-between mb-2">
               <div>
                 <h2 className="text-xl font-bold" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
@@ -678,7 +678,7 @@ export default function ConciergeWizardPage() {
         )}
 
         {currentStep === 6 && (
-          <div>
+          <div className="mt-6">
             <div className="flex items-center justify-between mb-2">
               <div>
                 <h2 className="text-xl font-bold" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
