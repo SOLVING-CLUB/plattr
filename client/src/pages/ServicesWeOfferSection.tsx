@@ -2,7 +2,7 @@ import ServiceCardSection from "@/pages/ServiceCard";
 import mealBoxImage from "@assets/Tiffin_1764989484948.png";
 import cateringImage from "@assets/Tiffin5_1764990291688.png";
 import bulkMealImage from "@assets/Tiffin8_1764990094179.png";
-import corporateImage from "@assets/Tiffi_1763855392279.png";
+import corporateImage from "@assets/Tiffin10_1764990422090.png";
 
 interface ServicesWeOfferSectionProps {
   onServiceClick?: (serviceId: string) => void;
