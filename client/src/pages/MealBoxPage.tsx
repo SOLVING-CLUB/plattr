@@ -999,7 +999,7 @@ import { mealboxOrderService, addressService } from "@/lib/supabase-service";
 import { useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
 import type { Dish, Category as CategoryType } from "@shared/schema";
-import { getSupabaseImageUrl } from "@/lib/supabase"; 
+import { getSupabaseImageUrl, getDishTypeImage } from "@/lib/supabase"; 
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -1149,6 +1149,12 @@ const DISH_TYPE_IMAGES: Record<string, string> = {
   
   // Default fallback
   'default': idliImage1,
+};
+
+// Helper function to get subcategory (dish type) image URL from Supabase with local fallback
+const getSubcategoryImage = (dishType: string): string => {
+  const fallbackImage = DISH_TYPE_IMAGES[dishType] || DISH_TYPE_IMAGES['default'];
+  return getDishTypeImage(dishType, fallbackImage);
 };
 
 // Helper to get dish image - handles both camelCase and snake_case from Supabase
@@ -3366,7 +3372,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                     <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide px-1 pt-2">
                       {/* Dish type options (65's, Chilli, Fry, etc.) - Compact pill design */}
                       {dishTypes.map((dishType) => {
-                        const dishTypeImage = DISH_TYPE_IMAGES[dishType] || DISH_TYPE_IMAGES['default'];
+                        const dishTypeImage = getSubcategoryImage(dishType);
                         
                         return (
                           <button

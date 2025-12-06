@@ -810,7 +810,7 @@ export default function CategoryPage() {
             {/* Show dish type options if available - filter out those with 0 count */}
             {dishTypes.filter(dishType => getDishCountForDishType(dishType) > 0).map((dishType) => {
               const count = getDishCountForDishType(dishType);
-              const dishTypeImage = DISH_TYPE_IMAGES[dishType] || DISH_TYPE_IMAGES['default'];
+              const dishTypeImage = getSubcategoryImage(dishType);
               
               return (
                 <button

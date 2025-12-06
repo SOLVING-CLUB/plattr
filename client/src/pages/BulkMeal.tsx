@@ -1250,7 +1250,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                   <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide px-1 pt-2">
                     {/* Dish type options (65's, Chilli, Fry, etc.) - Compact pill design */}
                     {dishTypes.map((dishType) => {
-                      const dishTypeImage = DISH_TYPE_IMAGES[dishType] || DISH_TYPE_IMAGES['default'];
+                      const dishTypeImage = getSubcategoryImage(dishType);
                       
                       return (
                         <button
