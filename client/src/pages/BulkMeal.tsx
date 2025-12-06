@@ -24,7 +24,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
 import type { Dish, Category as CategoryType } from "@shared/schema";
-import { getSupabaseImageUrl } from "@/lib/supabase";
+import { getSupabaseImageUrl, getDishTypeImage } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 import { LazyImage } from "@/components/ui/lazy-image";
 import { ArrowLeft, Building2, Users, Calendar, Mail, Phone, MapPin, ShoppingCart, UtensilsCrossed, Package, Truck, Clock, X, ChevronDown, Search, Mic, ArrowUpDown, SlidersHorizontal, Star, Utensils, LayoutGrid, Leaf, Drumstick, Egg, Sparkles } from "lucide-react";
@@ -167,6 +167,12 @@ const DISH_TYPE_IMAGES: Record<string, string> = {
   
   // Default fallback
   'default': idliImage1,
+};
+
+// Helper function to get subcategory (dish type) image URL from Supabase with local fallback
+const getSubcategoryImage = (dishType: string): string => {
+  const fallbackImage = DISH_TYPE_IMAGES[dishType] || DISH_TYPE_IMAGES['default'];
+  return getDishTypeImage(dishType, fallbackImage);
 };
 
 type ServiceType = "bulk-meals" | "mealbox" | "catering" | "corporate";

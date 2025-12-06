@@ -98,3 +98,35 @@ export function getSubcategoryImageUrl(imageUrl: string | null | undefined): str
 export function getCuisineImageUrl(imageUrl: string | null | undefined): string {
   return getSupabaseImageUrl(imageUrl, { width: 400, quality: 80, resize: 'cover' });
 }
+
+/**
+ * Helper to convert dish type names to URL-friendly kebab-case format
+ * e.g., "DryFry" -> "dry-fry", "ClearSoup" -> "clear-soup"
+ */
+function toKebabCase(str: string): string {
+  return str
+    .replace(/([a-z])([A-Z])/g, '$1-$2')
+    .replace(/[\s_]+/g, '-')
+    .toLowerCase();
+}
+
+/**
+ * Get dish type (subcategory) image URL from Supabase storage
+ * Uses fallback image by default. To use Supabase, pass a valid imageUrl from the database.
+ * @param dishType - The dish type name (e.g., "DryFry", "ClearSoup", "Grill")
+ * @param fallbackImage - Fallback image to use (required - uses local assets)
+ * @param imageUrlFromDb - Optional image URL from database (if subcategories table has image_url)
+ * @returns Image URL - uses Supabase if imageUrlFromDb provided, otherwise fallback
+ */
+export function getDishTypeImage(dishType: string, fallbackImage?: string, imageUrlFromDb?: string | null): string {
+  // If we have a database image URL, use Supabase
+  if (imageUrlFromDb && imageUrlFromDb.trim() !== '') {
+    const supabaseUrl = getSubcategoryImageUrl(imageUrlFromDb);
+    if (supabaseUrl && !supabaseUrl.includes('placeholder')) {
+      return supabaseUrl;
+    }
+  }
+  
+  // Otherwise use the local fallback image
+  return fallbackImage || '/images/placeholder.jpg';
+}

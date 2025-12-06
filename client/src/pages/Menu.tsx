@@ -6,7 +6,7 @@ import FloatingNav from "@/pages/FloatingNav";
 import { useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
 import type { Dish, Category as CategoryType } from "@shared/schema";
-import { getSupabaseImageUrl, getCategoryImageUrl } from "@/lib/supabase";
+import { getSupabaseImageUrl, getCategoryImageUrl, getDishTypeImage } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -153,6 +153,14 @@ const DISH_TYPE_IMAGES: Record<string, string> = {
   
   // Default fallback
   'default': idliImage1,
+};
+
+// Helper function to get subcategory (dish type) image URL
+// Uses centralized getDishTypeImage from supabase.ts which tries Supabase storage first
+// Falls back to local DISH_TYPE_IMAGES if Supabase image not available
+const getSubcategoryImage = (dishType: string): string => {
+  const fallbackImage = DISH_TYPE_IMAGES[dishType] || DISH_TYPE_IMAGES['default'];
+  return getDishTypeImage(dishType, fallbackImage);
 };
 
 const LOCATION_STORAGE_KEY = "activeLocation";
@@ -924,7 +932,7 @@ export default function Menu() {
                   <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide px-1 pt-2">
                     {/* Dish type options (65's, Chilli, Fry, etc.) - Compact pill design */}
                     {dishTypes.map((dishType) => {
-                      const dishTypeImage = DISH_TYPE_IMAGES[dishType] || DISH_TYPE_IMAGES['default'];
+                      const dishTypeImage = getSubcategoryImage(dishType);
                       
                       return (
                         <button

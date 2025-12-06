@@ -19,7 +19,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient, getQueryFn } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { getSupabaseImageUrl, getCategoryImageUrl } from "@/lib/supabase";
+import { getSupabaseImageUrl, getCategoryImageUrl, getDishTypeImage } from "@/lib/supabase";
 import { cartStorage } from "@/lib/cartStorage";
 import type { Category as CategoryType, Dish } from "@shared/schema";
 
@@ -138,6 +138,12 @@ const DISH_TYPE_IMAGES: Record<string, string> = {
   
   // Default fallback
   'default': idliImage1,
+};
+
+// Helper function to get subcategory (dish type) image URL from Supabase with local fallback
+const getSubcategoryImage = (dishType: string): string => {
+  const fallbackImage = DISH_TYPE_IMAGES[dishType] || DISH_TYPE_IMAGES['default'];
+  return getDishTypeImage(dishType, fallbackImage);
 };
 
 // Helper function to get dish image - now using Supabase storage
