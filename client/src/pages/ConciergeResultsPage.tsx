@@ -51,7 +51,8 @@ export default function ConciergeResultsPage() {
   const [isGenerating, setIsGenerating] = useState(true);
   const [recommendations, setRecommendations] = useState<RecommendationResponse | null>(null);
   const [addedItems, setAddedItems] = useState<Set<string>>(new Set());
-  const hasCalledRef = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const isRequestInFlightRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
 
@@ -71,21 +72,26 @@ export default function ConciergeResultsPage() {
     categoryCounts: categoryCountsParam ? JSON.parse(categoryCountsParam) : [],
   };
 
-  // Retry function
+  // Retry function - abort any in-flight request first
   const handleRetry = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
     setError(null);
-    hasCalledRef.current = false;
+    isRequestInFlightRef.current = false;
     setRetryCount(prev => prev + 1);
   };
 
   // Generate recommendations on mount by calling n8n webhook
   useEffect(() => {
-    const generateRecommendations = async () => {
-      // Prevent duplicate calls (React Strict Mode causes double-mount), but allow retries
-      if (hasCalledRef.current && retryCount === 0) {
+    const generateRecommendations = async (signal: AbortSignal) => {
+      // Prevent duplicate calls - strict check
+      if (isRequestInFlightRef.current) {
+        console.log('[Concierge] Request already in flight, skipping duplicate call');
         return;
       }
-      hasCalledRef.current = true;
+      isRequestInFlightRef.current = true;
+      
       try {
         setIsGenerating(true);
         setError(null);
@@ -133,10 +139,12 @@ export default function ConciergeResultsPage() {
         };
         
         // Call the n8n webhook with user preferences
+        console.log('[Concierge] Sending webhook request with session:', sessionId);
         const webhookResponse = await fetch('https://navaneeth03.app.n8n.cloud/webhook/smart-plattr-concierge', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(requestBody),
+          signal, // Use AbortController signal
         });
         
         if (!webhookResponse.ok) {
@@ -319,13 +327,18 @@ export default function ConciergeResultsPage() {
         
         setRecommendations(data);
       } catch (error: any) {
+        // Ignore abort errors - these are intentional
+        if (error.name === 'AbortError') {
+          console.log('[Concierge] Request was aborted');
+          return;
+        }
+        
         console.error('Recommendation error:', error);
         
         // Determine error type and message
         let errorMessage = "Failed to generate recommendations";
         
         if (error instanceof TypeError) {
-          // Network errors (fetch failures) are TypeErrors
           errorMessage = "Unable to connect to the AI service. Please check your internet connection and try again.";
         } else if (error.name === 'TypeError' || error.message === 'Load failed' || error.message === 'Failed to fetch') {
           errorMessage = "Unable to connect to the AI service. Please check your internet connection and try again.";
@@ -348,10 +361,23 @@ export default function ConciergeResultsPage() {
         });
       } finally {
         setIsGenerating(false);
+        isRequestInFlightRef.current = false;
       }
     };
 
-    generateRecommendations();
+    // Create AbortController for this request
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    
+    // Start the request
+    generateRecommendations(controller.signal);
+    
+    // Cleanup: abort request if component unmounts
+    return () => {
+      console.log('[Concierge] Cleanup: aborting any pending request');
+      controller.abort();
+      isRequestInFlightRef.current = false;
+    };
   }, [retryCount]);
 
   // Add to cart mutation
