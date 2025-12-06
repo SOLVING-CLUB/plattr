@@ -6,7 +6,7 @@ import { ArrowLeft, Search, ChevronRight, Building2, Heart, Sparkles, Cake, Cale
 import FloatingNav from "@/pages/FloatingNav";
 import { supabase } from "@/lib/supabase-client";
 
-import heroImage from "@assets/Banner - 60 mins_1763877285748.png";
+import heroImage from "@assets/Smart_Menu34_1765010825958.png";
 
 interface CategoryCount {
   categoryId: string;
@@ -205,26 +205,34 @@ export default function ConciergeWizardPage() {
 
   return (
     <div className="min-h-screen bg-white pb-24">
-      <div className="relative">
-        <img
-          src={heroImage}
-          alt="Smart Menu Concierge"
-          className="w-full h-80 sm:h-96 object-cover object-top"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-transparent" />
+      <section className="relative w-full bg-white">
+        <div className="relative w-full">
+          <img
+            src={heroImage}
+            alt="Smart Menu Concierge"
+            className="w-full h-auto"
+            data-testid="image-concierge-hero"
+            style={{
+              WebkitMaskImage: 'linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%)',
+              maskImage: 'linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%)'
+            }}
+          />
+        </div>
+      </section>
 
+      <div className="px-4 pt-2">
         <button
           onClick={handleBack}
-          className="absolute top-4 left-4 flex items-center gap-1.5 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1.5 text-sm font-medium shadow-sm"
+          className="flex items-center gap-1.5 mb-4"
           style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}
           data-testid="button-back"
         >
           <ArrowLeft className="w-4 h-4" />
-          {currentStep === 1 ? "Home" : getStepLabel()}
+          <span className="text-sm font-medium">
+            {currentStep === 1 ? "Home" : getStepLabel()}
+          </span>
         </button>
-      </div>
 
-      <div className="px-4 pt-4">
         <div className="flex gap-1">
           {STEPS.map((step) => (
             <div
