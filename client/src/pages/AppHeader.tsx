@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { MapPin, Sparkles } from "lucide-react";
+import { MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import headerBg from "@assets/Hero_1763854193361.png";
@@ -90,13 +90,17 @@ export default function AppHeader({
         <button
           onClick={() => setLocation("/concierge")}
           data-testid="button-smart-menu-concierge"
-          className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-black/10 transition-colors"
+          className="flex items-center justify-center px-4 py-2 rounded-lg hover:opacity-90 transition-opacity"
           style={{
-            background: "linear-gradient(135deg, #FFD700 0%, #FFFFFF 100%)",
+            backgroundColor: "#06352A",
             boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+            fontFamily: "Sweet Sans Pro",
+            fontSize: "18px",
+            fontWeight: 600,
+            color: "white",
           }}
         >
-          <Sparkles className="w-5 h-5 text-[#06352A]" />
+          AI Menu Planner
         </button>
       </div>
     </header>
