@@ -1,7 +1,7 @@
 import ServiceCardSection from "@/pages/ServiceCard";
 import mealBoxImage from "@assets/Tiffin_1764989484948.png";
 import cateringImage from "@assets/Tiffineee_1763855265284.png";
-import bulkMealImage from "@assets/Tiffinhgjh_1763855305423.png";
+import bulkMealImage from "@assets/Tiffin8_1764990094179.png";
 import corporateImage from "@assets/Tiffi_1763855392279.png";
 
 interface ServicesWeOfferSectionProps {
