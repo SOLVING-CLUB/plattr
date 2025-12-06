@@ -89,11 +89,28 @@ export default function ConciergeResultsPage() {
         });
         
         if (!webhookResponse.ok) {
-          throw new Error('Failed to get recommendations from AI');
+          throw new Error(`Failed to get recommendations from AI (Status: ${webhookResponse.status})`);
         }
         
-        const webhookData = await webhookResponse.json();
-        console.log('Webhook response:', webhookData);
+        // Get the raw text first to check if it's valid
+        const rawText = await webhookResponse.text();
+        console.log('Webhook raw response:', rawText);
+        
+        // Check if response is empty
+        if (!rawText || rawText.trim() === '') {
+          throw new Error('The AI service returned an empty response. Please check your n8n workflow - make sure it has a "Respond to Webhook" node that returns JSON data.');
+        }
+        
+        // Try to parse the JSON
+        let webhookData;
+        try {
+          webhookData = JSON.parse(rawText);
+        } catch (parseError) {
+          console.error('JSON parse error:', parseError);
+          throw new Error(`The AI service returned invalid JSON: "${rawText.substring(0, 100)}...". Please check your n8n workflow output.`);
+        }
+        
+        console.log('Webhook parsed response:', webhookData);
         
         // Extract dish IDs from webhook response
         // The webhook may return dish IDs in various formats - handle common patterns
