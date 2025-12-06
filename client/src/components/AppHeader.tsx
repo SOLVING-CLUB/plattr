@@ -1,7 +1,10 @@
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Sparkles, ArrowLeft } from "lucide-react";
+import { Search, Sparkles, ArrowLeft, MapPin } from "lucide-react";
 import { useLocation } from "wouter";
+
+const LOCATION_STORAGE_KEY = "activeLocation";
 
 interface AppHeaderProps {
   onBackClick?: () => void;
@@ -11,6 +14,38 @@ interface AppHeaderProps {
 
 export default function AppHeader({ onBackClick, onSearch, searchQuery }: AppHeaderProps) {
   const [, setLocation] = useLocation();
+  const [locationLabel, setLocationLabel] = useState("Select Address");
+
+  useEffect(() => {
+    const savedLocation = localStorage.getItem(LOCATION_STORAGE_KEY);
+    if (savedLocation) {
+      try {
+        const parsed = JSON.parse(savedLocation);
+        setLocationLabel(parsed.label || "Select Address");
+      } catch (e) {
+        console.error("Error parsing saved location:", e);
+        setLocationLabel("Select Address");
+      }
+    } else {
+      setLocationLabel("Select Address");
+    }
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === LOCATION_STORAGE_KEY && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          setLocationLabel(parsed.label || "Select Address");
+        } catch (error) {
+          console.error("Error parsing location from storage event:", error);
+        }
+      } else if (e.key === LOCATION_STORAGE_KEY && !e.newValue) {
+        setLocationLabel("Select Address");
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
   
   return (
     <header className="sticky top-0 z-50 bg-background border-b" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
@@ -26,6 +61,16 @@ export default function AppHeader({ onBackClick, onSearch, searchQuery }: AppHea
             <ArrowLeft className="w-5 h-5" />
           </Button>
         )}
+
+        <Button 
+          variant="ghost" 
+          className="gap-1 font-medium text-foreground hover:bg-black/5 flex-shrink-0 px-2"
+          onClick={() => setLocation("/location")}
+          data-testid="button-location"
+        >
+          <MapPin className="w-4 h-4" />
+          <span className="text-sm font-medium max-w-[80px] truncate">{locationLabel}</span>
+        </Button>
 
         <div className="flex-1 min-w-0">
           <div className="relative w-full">
