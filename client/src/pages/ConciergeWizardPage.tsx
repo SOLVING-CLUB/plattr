@@ -2,15 +2,11 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Slider } from "@/components/ui/slider";
-import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, ArrowRight, Sparkles, Users, Calendar, DollarSign, Utensils, Flame, ChefHat, Coffee, Wheat, UtensilsCrossed, Soup, Fish, Salad, Drumstick, Cookie, Truck, Cake } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
-import * as LucideIcons from "lucide-react";
+import { ArrowLeft, Search, ChevronRight, Building2, Heart, Sparkles, Cake, CalendarDays, PartyPopper, Briefcase, GraduationCap, Users, Home, Baby, Music, Tent, Star } from "lucide-react";
+import FloatingNav from "@/pages/FloatingNav";
+import { supabase } from "@/lib/supabase-client";
+
+import heroImage from "@assets/Banner - 60 mins_1763877285748.png";
 
 interface CategoryCount {
   categoryId: string;
@@ -29,76 +25,51 @@ interface ConciergePreferences {
 }
 
 const STEPS = [
-  { id: 1, title: "Event Details", description: "Tell us about your event" },
-  { id: 2, title: "Cuisine Preferences", description: "Select your cuisines" },
-  { id: 3, title: "Guest Count & Meal", description: "Guests and meal type" },
-  { id: 4, title: "Dietary & Allergies", description: "Special requirements" },
-  { id: 5, title: "Budget", description: "Your total budget" },
-  { id: 6, title: "Course Details", description: "Customize your courses" },
+  { id: 1, title: "Event Details", label: "" },
+  { id: 2, title: "Cuisine Preferences", label: "Event" },
+  { id: 3, title: "Guest Count & Meal", label: "Cuisine" },
+  { id: 4, title: "Dietary & Allergies", label: "Guest Count & Meals" },
+  { id: 5, title: "Budget", label: "Dietary & Allergies" },
+  { id: 6, title: "Course Details", label: "Budget" },
 ];
 
 const EVENT_TYPES = [
-  { value: "corporate", label: "Corporate Event", icon: "💼" },
-  { value: "wedding", label: "Wedding", icon: "💒" },
-  { value: "engagement", label: "Engagement", icon: "💍" },
-  { value: "birthday", label: "Birthday Party", icon: "🎂" },
-  { value: "anniversary", label: "Anniversary", icon: "🎊" },
-  { value: "festival", label: "Festival", icon: "🪔" },
-  { value: "meeting", label: "Business Meeting", icon: "🤝" },
-  { value: "conference", label: "Conference", icon: "📊" },
-  { value: "seminar", label: "Seminar/Workshop", icon: "📚" },
-  { value: "reception", label: "Reception", icon: "🥂" },
-  { value: "housewarming", label: "Housewarming", icon: "🏡" },
-  { value: "baby-shower", label: "Baby Shower", icon: "👶" },
-  { value: "office-party", label: "Office Party", icon: "🎈" },
-  { value: "casual", label: "Casual Gathering", icon: "🎉" },
-  { value: "religious", label: "Religious Function", icon: "🙏" },
-  { value: "other", label: "Other", icon: "✨" },
+  { value: "corporate", label: "Corporate Event", Icon: Building2 },
+  { value: "wedding", label: "Wedding", Icon: Heart },
+  { value: "engagement", label: "Engagement", Icon: Sparkles },
+  { value: "birthday", label: "Birthday Party", Icon: Cake },
+  { value: "anniversary", label: "Anniversary", Icon: CalendarDays },
+  { value: "festival", label: "Festival", Icon: PartyPopper },
+  { value: "meeting", label: "Business Meeting", Icon: Briefcase },
+  { value: "conference", label: "Conference", Icon: Users },
+  { value: "seminar", label: "Seminar/Workshop", Icon: GraduationCap },
+  { value: "reception", label: "Reception", Icon: Music },
+  { value: "housewarming", label: "Housewarming", Icon: Home },
+  { value: "baby-shower", label: "Baby Shower", Icon: Baby },
+  { value: "office-party", label: "Office Party", Icon: Tent },
+  { value: "casual", label: "Casual Gathering", Icon: Users },
+  { value: "religious", label: "Religious Function", Icon: Star },
+  { value: "other", label: "Other", Icon: Sparkles },
 ];
 
-// Icon mapping for cuisine types
-const getCuisineIcon = (iconName: string) => {
-  const iconMap: Record<string, any> = {
-    'Coffee': Coffee,
-    'Wheat': Wheat,
-    'UtensilsCrossed': UtensilsCrossed,
-    'ChefHat': ChefHat,
-    'Flame': Flame,
-    'Soup': Soup,
-    'Fish': Fish,
-    'Salad': Salad,
-    'Drumstick': Drumstick,
-    'Cookie': Cookie,
-    'Truck': Truck,
-    'Cake': Cake,
-  };
-  return iconMap[iconName] || Utensils;
-};
-
 const MEAL_TYPES = [
-  { value: "breakfast", label: "Breakfast", icon: "☕" },
+  { value: "breakfast", label: "Breakfast", icon: "🍳" },
   { value: "lunch", label: "Lunch", icon: "🍛" },
   { value: "dinner", label: "Dinner", icon: "🍽️" },
   { value: "snacks", label: "Snacks", icon: "🍪" },
 ];
 
-const SPICE_LEVELS = [
-  { value: "mild", label: "Mild", icon: "😊", color: "bg-green-500" },
-  { value: "medium", label: "Medium", icon: "🌶️", color: "bg-yellow-500" },
-  { value: "spicy", label: "Spicy", icon: "🔥", color: "bg-orange-500" },
-  { value: "extra-spicy", label: "Extra Spicy", icon: "🌋", color: "bg-red-500" },
-];
-
 const DIETARY_PREFERENCES = [
-  { value: "veg", label: "Vegetarian", icon: "🥗", description: "Only vegetarian dishes" },
-  { value: "egg", label: "Eggetarian", icon: "🥚", description: "Veg + Egg dishes" },
-  { value: "non-veg", label: "Non-Vegetarian", icon: "🍗", description: "All types including meat" },
-  { value: "all", label: "No Preference", icon: "🍽️", description: "Show all dishes" },
+  { value: "veg", label: "VEG", description: "Only Vegetarian Dishes", color: "#1A9952" },
+  { value: "egg", label: "EGGITARIAN", description: "Vegetarian dishes that include eggs", color: "#F59E0B" },
+  { value: "non-veg", label: "NON-VEG", description: "All Types including meat", color: "#EF4444" },
+  { value: "all", label: "NO PREFERENCE", description: "Shows all dishes", color: "#6B7280", isIcon: true },
 ];
 
 export default function ConciergeWizardPage() {
   const [, setLocation] = useLocation();
   const [currentStep, setCurrentStep] = useState(1);
+  const [cuisineSearch, setCuisineSearch] = useState("");
   const [preferences, setPreferences] = useState<ConciergePreferences>({
     cuisinePreferences: [],
     numberOfPax: 50,
@@ -108,28 +79,71 @@ export default function ConciergeWizardPage() {
     categoryCounts: [],
   });
 
-  // Fetch cuisines from database
   const { data: cuisines = [], isLoading: cuisinesLoading } = useQuery<any[]>({
-    queryKey: ['/api/cuisines'],
+    queryKey: ['cuisines'],
+    queryFn: async () => {
+      try {
+        const rows = await supabase.select('cuisines', {
+          select: 'id,name,display_name,icon,display_order,is_active',
+          order: 'display_order.asc',
+        });
+        if (Array.isArray(rows) && rows.length > 0) {
+          return rows.map((row: any) => ({
+            id: row.id ?? row.name,
+            name: row.name,
+            displayName: row.display_name ?? row.name,
+            icon: row.icon ?? 'UtensilsCrossed',
+            displayOrder: row.display_order ?? 0,
+            isActive: row.is_active ?? true,
+          }));
+        }
+      } catch (error) {
+        console.warn('[Supabase] cuisines table unavailable, deriving from dishes', error);
+      }
+      const dishRows = await supabase.select<{ cuisine: string | null }>('dishes', {
+        select: 'cuisine',
+      });
+      const uniqueCuisines = Array.from(new Set(dishRows.map(d => d.cuisine).filter(Boolean))) as string[];
+      return uniqueCuisines.map((name, index) => ({
+        id: name,
+        name: name,
+        displayName: name,
+        icon: 'UtensilsCrossed',
+        displayOrder: index,
+        isActive: true,
+      }));
+    },
   });
 
-  // Fetch categories for the selected meal type
   const { data: categories = [], isLoading: categoriesLoading } = useQuery<any[]>({
-    queryKey: [`/api/categories/${preferences.mealType}`],
+    queryKey: ['categories', preferences.mealType],
     enabled: !!preferences.mealType,
+    queryFn: async () => {
+      const mealTypeMap: Record<string, string> = {
+        breakfast: 'tiffins',
+        lunch: 'lunch-dinner',
+        dinner: 'lunch-dinner',
+        snacks: 'snacks',
+      };
+      const mealTypeFilter = mealTypeMap[preferences.mealType] || preferences.mealType;
+      const rows = await supabase.select('categories', {
+        select: '*',
+        order: 'display_order.asc',
+      });
+      return rows.filter((cat: any) => {
+        const types = cat.meal_type?.split(',').map((t: string) => t.trim()) || [];
+        return types.includes(mealTypeFilter);
+      });
+    },
   });
-
-  const progress = (currentStep / STEPS.length) * 100;
 
   const handleNext = () => {
     if (currentStep < STEPS.length) {
       setCurrentStep(currentStep + 1);
     } else {
-      // Navigate to results page with preferences
       const params = new URLSearchParams();
       Object.entries(preferences).forEach(([key, value]) => {
         if (value !== undefined && value !== "") {
-          // Serialize arrays and objects as JSON
           if (Array.isArray(value)) {
             params.append(key, JSON.stringify(value));
           } else {
@@ -166,447 +180,588 @@ export default function ConciergeWizardPage() {
     }
   };
 
+  const getStepLabel = () => {
+    return STEPS[currentStep - 1]?.label || "";
+  };
+
+  const toggleCuisine = (cuisineName: string) => {
+    const newCuisines = preferences.cuisinePreferences.includes(cuisineName)
+      ? preferences.cuisinePreferences.filter(c => c !== cuisineName)
+      : [...preferences.cuisinePreferences, cuisineName];
+    setPreferences({ ...preferences, cuisinePreferences: newCuisines });
+  };
+
+  const toggleMealType = (mealValue: string) => {
+    setPreferences({
+      ...preferences,
+      mealType: mealValue as ConciergePreferences['mealType'],
+    });
+  };
+
+  const filteredCuisines = cuisines.filter((c: any) =>
+    c.displayName?.toLowerCase().includes(cuisineSearch.toLowerCase()) ||
+    c.name?.toLowerCase().includes(cuisineSearch.toLowerCase())
+  );
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
-      <div className="container max-w-4xl mx-auto py-8 px-4">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <Sparkles className="w-8 h-8 text-primary" />
-            <h1 className="text-4xl font-bold" data-testid="text-title">Smart Menu Concierge</h1>
-          </div>
-          <p className="text-muted-foreground text-lg" data-testid="text-subtitle">
-            Let AI help you create the perfect menu for your event
-          </p>
-        </div>
+    <div className="min-h-screen bg-white pb-24">
+      <div className="relative">
+        <img
+          src={heroImage}
+          alt="Smart Menu Concierge"
+          className="w-full h-80 sm:h-96 object-cover object-top"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-transparent" />
 
-        {/* Progress Bar */}
-        <div className="mb-8">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm font-medium">Step {currentStep} of {STEPS.length}</span>
-            <span className="text-sm text-muted-foreground">{STEPS[currentStep - 1].title}</span>
-          </div>
-          <Progress value={progress} className="h-2" data-testid="progress-wizard" />
-        </div>
+        <button
+          onClick={handleBack}
+          className="absolute top-4 left-4 flex items-center gap-1.5 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1.5 text-sm font-medium shadow-sm"
+          style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}
+          data-testid="button-back"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          {currentStep === 1 ? "Home" : getStepLabel()}
+        </button>
+      </div>
 
-        {/* Step Indicators */}
-        <div className="flex justify-between mb-8">
+      <div className="px-4 pt-4">
+        <div className="flex gap-1">
           {STEPS.map((step) => (
             <div
               key={step.id}
-              className={`flex flex-col items-center ${
-                step.id <= currentStep ? "opacity-100" : "opacity-40"
-              }`}
-            >
-              <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${
-                  step.id <= currentStep
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted"
-                }`}
-                data-testid={`step-indicator-${step.id}`}
-              >
-                {step.id}
-              </div>
-              <span className="text-xs text-center hidden sm:block">{step.title}</span>
-            </div>
+              className="h-1 flex-1 rounded-full transition-colors"
+              style={{
+                backgroundColor: step.id <= currentStep ? "#1A9952" : "#E5E7EB",
+              }}
+            />
           ))}
         </div>
+      </div>
 
-        {/* Step Content */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              {currentStep === 1 && <Calendar className="w-5 h-5" />}
-              {currentStep === 2 && <Users className="w-5 h-5" />}
-              {currentStep === 3 && <Utensils className="w-5 h-5" />}
-              {currentStep === 4 && <DollarSign className="w-5 h-5" />}
-              {currentStep === 5 && <ChefHat className="w-5 h-5" />}
-              {STEPS[currentStep - 1].title}
-            </CardTitle>
-            <CardDescription>{STEPS[currentStep - 1].description}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Step 1: Event Type */}
-            {currentStep === 1 && (
-              <div className="space-y-4">
-                <Label>What type of event are you planning?</Label>
-                <div className="max-h-96 overflow-y-auto pr-2">
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {EVENT_TYPES.map((type) => (
-                      <Card
-                        key={type.value}
-                        className={`cursor-pointer hover-elevate ${
-                          preferences.eventType === type.value
-                            ? "border-primary border-2"
-                            : ""
-                        }`}
-                        onClick={() =>
-                          setPreferences({ ...preferences, eventType: type.value })
-                        }
-                        data-testid={`card-event-${type.value}`}
+      <div className="px-4 py-6">
+        {currentStep === 1 && (
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <h2 className="text-xl font-bold" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                  Event Details
+                </h2>
+                <p className="text-sm text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
+                  Tell Us About Your Event
+                </p>
+              </div>
+              <Button
+                onClick={handleNext}
+                disabled={!canProceed()}
+                className="px-5 py-2 text-sm font-semibold disabled:opacity-50"
+                style={{
+                  fontFamily: "Sweet Sans Pro",
+                  backgroundColor: "#1A9952",
+                  color: "white",
+                  borderRadius: "8px",
+                }}
+                data-testid="button-next"
+              >
+                Next <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
+
+            <div className="mt-6">
+              <p className="text-sm font-medium mb-4" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                What Type of Event are you planning?
+              </p>
+
+              <div className="grid grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto">
+                {EVENT_TYPES.map(({ value, label, Icon }) => (
+                  <button
+                    key={value}
+                    onClick={() => setPreferences({ ...preferences, eventType: value })}
+                    className="flex items-center gap-3 p-4 border-2 rounded-lg transition-all"
+                    style={{
+                      borderColor: preferences.eventType === value ? "#1A9952" : "#E5E7EB",
+                      backgroundColor: preferences.eventType === value ? "#F0F9F4" : "white",
+                    }}
+                    data-testid={`event-type-${value}`}
+                  >
+                    <div
+                      className="w-5 h-5 rounded-full border-2 flex items-center justify-center"
+                      style={{
+                        borderColor: "#1A9952",
+                        backgroundColor: preferences.eventType === value ? "#1A9952" : "white",
+                      }}
+                    >
+                      {preferences.eventType === value && <div className="w-2 h-2 rounded-full bg-white" />}
+                    </div>
+                    <div className="flex flex-col items-center flex-1">
+                      <Icon className="w-6 h-6 mb-1" style={{ color: "#1A9952" }} />
+                      <span
+                        className="text-xs font-medium text-center"
+                        style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}
                       >
-                        <CardContent className="p-4 text-center">
-                          <div className="text-3xl mb-2">{type.icon}</div>
-                          <div className="text-sm font-medium">{type.label}</div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
+                        {label}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {currentStep === 2 && (
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <h2 className="text-xl font-bold" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                  Cuisine Preferences
+                </h2>
+                <p className="text-sm text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
+                  Select your preferred cuisines
+                </p>
+              </div>
+              <Button
+                onClick={handleNext}
+                disabled={!canProceed()}
+                className="px-5 py-2 text-sm font-semibold disabled:opacity-50"
+                style={{
+                  fontFamily: "Sweet Sans Pro",
+                  backgroundColor: "#1A9952",
+                  color: "white",
+                  borderRadius: "8px",
+                }}
+                data-testid="button-next"
+              >
+                Next <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
+
+            <p className="text-xs text-gray-500 mb-4" style={{ fontFamily: "Sweet Sans Pro" }}>
+              Choose all the cuisines that you'd like to include in your menu
+            </p>
+
+            <div className="relative mb-4">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search Cuisines"
+                value={cuisineSearch}
+                onChange={(e) => setCuisineSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                style={{ fontFamily: "Sweet Sans Pro" }}
+                data-testid="input-cuisine-search"
+              />
+            </div>
+
+            {cuisinesLoading ? (
+              <div className="text-center py-8 text-gray-500" style={{ fontFamily: "Sweet Sans Pro" }}>
+                Loading cuisines...
+              </div>
+            ) : (
+              <div className="space-y-0 border-t border-gray-100">
+                {filteredCuisines.map((cuisine: any) => (
+                  <button
+                    key={cuisine.name}
+                    onClick={() => toggleCuisine(cuisine.name)}
+                    className="w-full flex items-center gap-3 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                    data-testid={`cuisine-${cuisine.name}`}
+                  >
+                    <div className="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center text-sm font-semibold text-green-700">
+                      {cuisine.displayName?.charAt(0) || cuisine.name?.charAt(0)}
+                    </div>
+                    <span
+                      className="flex-1 text-left text-sm"
+                      style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}
+                    >
+                      {cuisine.displayName || cuisine.name}
+                    </span>
+                    <div
+                      className="w-5 h-5 rounded border-2 flex items-center justify-center"
+                      style={{
+                        borderColor: preferences.cuisinePreferences.includes(cuisine.name) ? "#1A9952" : "#D1D5DB",
+                        backgroundColor: preferences.cuisinePreferences.includes(cuisine.name) ? "#1A9952" : "white",
+                      }}
+                    >
+                      {preferences.cuisinePreferences.includes(cuisine.name) && (
+                        <svg
+                          className="w-3 h-3 text-white"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </div>
+                  </button>
+                ))}
               </div>
             )}
+          </div>
+        )}
 
-            {/* Step 2: Cuisine Preferences (Multi-select) */}
-            {currentStep === 2 && (
-              <div className="space-y-4">
-                <div>
-                  <Label>Select your preferred cuisines (choose one or more)</Label>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Choose all the cuisines you'd like to include in your menu
+        {currentStep === 3 && (
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <h2 className="text-xl font-bold" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                  Guest Count & Meals
+                </h2>
+                <p className="text-sm text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
+                  Guests & Meal Type
+                </p>
+              </div>
+              <Button
+                onClick={handleNext}
+                disabled={!canProceed()}
+                className="px-5 py-2 text-sm font-semibold disabled:opacity-50"
+                style={{
+                  fontFamily: "Sweet Sans Pro",
+                  backgroundColor: "#1A9952",
+                  color: "white",
+                  borderRadius: "8px",
+                }}
+                data-testid="button-next"
+              >
+                Next <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
+
+            <div className="mt-6 space-y-6">
+              <div>
+                <p className="text-sm font-medium mb-2" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                  Enter Number of Guests
+                </p>
+                <input
+                  type="number"
+                  placeholder="50"
+                  value={preferences.numberOfPax || ""}
+                  onChange={(e) => setPreferences({ ...preferences, numberOfPax: parseInt(e.target.value) || 0 })}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  style={{ fontFamily: "Sweet Sans Pro" }}
+                  data-testid="input-guest-count"
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-medium" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                    Select the type of meal
                   </p>
                 </div>
-                {cuisinesLoading ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    Loading cuisines...
-                  </div>
-                ) : (
-                  <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {cuisines.map((cuisine, index) => {
-                        const isSelected = preferences.cuisinePreferences.includes(cuisine.name);
-                        const CuisineIcon = getCuisineIcon(cuisine.icon);
-                        return (
-                          <Card
-                            key={cuisine.name || index}
-                            className={`cursor-pointer hover-elevate ${
-                              isSelected ? "border-primary border-2" : ""
-                            }`}
-                            onClick={() => {
-                              const newCuisines = isSelected
-                                ? preferences.cuisinePreferences.filter(c => c !== cuisine.name)
-                                : [...preferences.cuisinePreferences, cuisine.name];
-                              setPreferences({ ...preferences, cuisinePreferences: newCuisines });
-                            }}
-                            data-testid={`card-cuisine-${cuisine.name}`}
-                          >
-                            <CardContent className="p-4">
-                              <div className="flex items-start gap-3">
-                                <div className="text-primary">
-                                  <CuisineIcon className="w-8 h-8" />
-                                </div>
-                                <div className="flex-1">
-                                  <div className="font-medium mb-1">{cuisine.displayName}</div>
-                                </div>
-                                {isSelected && (
-                                  <Badge variant="default" className="ml-auto">Selected</Badge>
-                                )}
-                              </div>
-                            </CardContent>
-                          </Card>
-                        );
-                      })}
-                    </div>
-                    {preferences.cuisinePreferences.length > 0 && (
-                      <div className="flex gap-2 flex-wrap">
-                        <span className="text-sm text-muted-foreground">Selected:</span>
-                        {preferences.cuisinePreferences.map(cuisineName => {
-                          const cuisineData = cuisines.find(c => c.name === cuisineName);
-                          if (!cuisineData) return null;
-                          const CuisineIcon = getCuisineIcon(cuisineData.icon);
-                          return (
-                            <Badge key={cuisineName} variant="secondary" className="flex items-center gap-1">
-                              <CuisineIcon className="w-3 h-3" />
-                              {cuisineData.displayName}
-                            </Badge>
-                          );
-                        })}
+
+                <div className="grid grid-cols-2 gap-3">
+                  {MEAL_TYPES.map((meal) => (
+                    <button
+                      key={meal.value}
+                      onClick={() => toggleMealType(meal.value)}
+                      className="flex items-center gap-3 p-3 border rounded-lg transition-all"
+                      style={{
+                        borderColor: preferences.mealType === meal.value ? "#1A9952" : "#E5E7EB",
+                        backgroundColor: preferences.mealType === meal.value ? "#F0F9F4" : "white",
+                      }}
+                      data-testid={`meal-type-${meal.value}`}
+                    >
+                      <div
+                        className="w-5 h-5 rounded-full border-2 flex items-center justify-center"
+                        style={{
+                          borderColor: "#1A9952",
+                          backgroundColor: preferences.mealType === meal.value ? "#1A9952" : "white",
+                        }}
+                      >
+                        {preferences.mealType === meal.value && <div className="w-2 h-2 rounded-full bg-white" />}
                       </div>
-                    )}
-                  </>
-                )}
-              </div>
-            )}
-
-            {/* Step 3: Guest Count & Meal Type (Combined) */}
-            {currentStep === 3 && (
-              <div className="space-y-6">
-                {/* Guest Count Section */}
-                <div className="space-y-4">
-                  <Label className="text-lg">Number of Guests</Label>
-                  <div className="text-center">
-                    <div className="text-6xl font-bold text-primary mb-2" data-testid="text-pax-count">
-                      {preferences.numberOfPax}
-                    </div>
-                    <p className="text-muted-foreground">guests</p>
-                  </div>
-
-                  <div className="space-y-4">
-                    <Slider
-                      value={[preferences.numberOfPax]}
-                      onValueChange={([value]) =>
-                        setPreferences({ ...preferences, numberOfPax: value })
-                      }
-                      min={10}
-                      max={500}
-                      step={10}
-                      className="w-full"
-                      data-testid="slider-pax"
-                    />
-                    <div className="flex justify-between text-sm text-muted-foreground">
-                      <span>10</span>
-                      <span>500</span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="pax-input">Or enter exact number</Label>
-                    <Input
-                      id="pax-input"
-                      type="number"
-                      min={1}
-                      max={1000}
-                      value={preferences.numberOfPax}
-                      onChange={(e) =>
-                        setPreferences({
-                          ...preferences,
-                          numberOfPax: parseInt(e.target.value) || 1,
-                        })
-                      }
-                      data-testid="input-pax"
-                    />
-                  </div>
-                </div>
-
-                {/* Meal Type Section */}
-                <div className="space-y-4 pt-4 border-t">
-                  <Label className="text-lg">What type of meal?</Label>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {MEAL_TYPES.map((meal) => (
-                      <Card
-                        key={meal.value}
-                        className={`cursor-pointer hover-elevate ${
-                          preferences.mealType === meal.value
-                            ? "border-primary border-2"
-                            : ""
-                        }`}
-                        onClick={() =>
-                          setPreferences({
-                            ...preferences,
-                            mealType: meal.value as ConciergePreferences['mealType'],
-                          })
-                        }
-                        data-testid={`card-meal-${meal.value}`}
+                      <div className="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center text-lg">
+                        {meal.icon}
+                      </div>
+                      <span
+                        className="text-sm font-medium"
+                        style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}
                       >
-                        <CardContent className="p-4 text-center">
-                          <div className="text-3xl mb-2">{meal.icon}</div>
-                          <div className="text-sm font-medium">{meal.label}</div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
+                        {meal.label}
+                      </span>
+                    </button>
+                  ))}
                 </div>
               </div>
-            )}
+            </div>
+          </div>
+        )}
 
-            {/* Step 4: Dietary Preferences & Allergies */}
-            {currentStep === 4 && (
-              <div className="space-y-6">
-                <div className="space-y-4">
-                  <Label>Dietary Preferences</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Select your dietary preference to filter dishes accordingly
-                  </p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {DIETARY_PREFERENCES.map((diet) => (
-                      <Card
-                        key={diet.value}
-                        className={`cursor-pointer hover-elevate ${
-                          preferences.dietaryPreference === diet.value
-                            ? "border-primary border-2"
-                            : ""
-                        }`}
-                        onClick={() =>
-                          setPreferences({
-                            ...preferences,
-                            dietaryPreference: diet.value as ConciergePreferences['dietaryPreference'],
-                          })
-                        }
-                        data-testid={`card-dietary-${diet.value}`}
+        {currentStep === 4 && (
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <h2 className="text-xl font-bold" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                  Dietary & Allergies
+                </h2>
+                <p className="text-sm text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
+                  Special Requirements
+                </p>
+              </div>
+              <Button
+                onClick={handleNext}
+                disabled={!canProceed()}
+                className="px-5 py-2 text-sm font-semibold disabled:opacity-50"
+                style={{
+                  fontFamily: "Sweet Sans Pro",
+                  backgroundColor: "#1A9952",
+                  color: "white",
+                  borderRadius: "8px",
+                }}
+                data-testid="button-next"
+              >
+                Next <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
+
+            <div className="mt-6 space-y-6">
+              <div>
+                <p className="text-sm text-gray-600 mb-4" style={{ fontFamily: "Sweet Sans Pro" }}>
+                  Select your dietary preferences to filter dishes accordingly
+                </p>
+
+                <div className="space-y-3">
+                  {DIETARY_PREFERENCES.map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => setPreferences({ ...preferences, dietaryPreference: option.value as ConciergePreferences['dietaryPreference'] })}
+                      className="w-full flex items-center gap-4 p-4 border rounded-lg transition-all"
+                      style={{
+                        borderColor: preferences.dietaryPreference === option.value ? "#1A9952" : "#E5E7EB",
+                        backgroundColor: preferences.dietaryPreference === option.value ? "#F0F9F4" : "white",
+                      }}
+                      data-testid={`dietary-${option.value}`}
+                    >
+                      {option.isIcon ? (
+                        <div className="w-6 h-6 flex items-center justify-center">
+                          <svg
+                            className="w-5 h-5"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke={option.color}
+                            strokeWidth={2}
+                          >
+                            <path d="M12 3v18M3 12h18" strokeLinecap="round" />
+                          </svg>
+                        </div>
+                      ) : (
+                        <div
+                          className="w-6 h-6 rounded-full border-4"
+                          style={{ borderColor: option.color }}
+                        />
+                      )}
+                      <div className="flex-1 text-left">
+                        <p
+                          className="font-semibold text-sm"
+                          style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}
+                        >
+                          {option.label}
+                        </p>
+                        <p className="text-xs text-gray-500" style={{ fontFamily: "Sweet Sans Pro" }}>
+                          {option.description}
+                        </p>
+                      </div>
+                      <div
+                        className="w-5 h-5 rounded-full border-2 flex items-center justify-center"
+                        style={{
+                          borderColor: "#1A9952",
+                          backgroundColor: preferences.dietaryPreference === option.value ? "#1A9952" : "white",
+                        }}
                       >
-                        <CardContent className="p-4">
-                          <div className="flex items-start gap-3">
-                            <div className="text-3xl">{diet.icon}</div>
-                            <div className="flex-1">
-                              <div className="font-medium mb-1">{diet.label}</div>
-                              <div className="text-xs text-muted-foreground">
-                                {diet.description}
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
+                        {preferences.dietaryPreference === option.value && (
+                          <div className="w-2 h-2 rounded-full bg-white" />
+                        )}
+                      </div>
+                    </button>
+                  ))}
                 </div>
+              </div>
 
-                <div className="space-y-4">
-                  <Label htmlFor="allergies">Allergies or Dietary Restrictions (Optional)</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Let us know about any allergies or specific dietary restrictions to avoid
-                  </p>
-                  <Input
-                    id="allergies"
-                    type="text"
-                    placeholder="e.g., Nuts, Dairy, Gluten, etc."
-                    value={preferences.allergies || ""}
-                    onChange={(e) =>
-                      setPreferences({
-                        ...preferences,
-                        allergies: e.target.value || undefined,
-                      })
-                    }
-                    data-testid="input-allergies"
+              <div>
+                <p
+                  className="font-semibold text-sm mb-2"
+                  style={{ fontFamily: "Sweet Sans Pro", color: "#1A9952" }}
+                >
+                  Allergies or Dietary Restrictions (Optional)
+                </p>
+                <p className="text-xs text-gray-500 mb-3" style={{ fontFamily: "Sweet Sans Pro" }}>
+                  Let us know about any allergies or specific dietary restrictions to avoid
+                </p>
+                <input
+                  type="text"
+                  placeholder="Nuts, Peanut, Fish, etc"
+                  value={preferences.allergies || ""}
+                  onChange={(e) => setPreferences({ ...preferences, allergies: e.target.value || undefined })}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  style={{ fontFamily: "Sweet Sans Pro" }}
+                  data-testid="input-allergies"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {currentStep === 5 && (
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <h2 className="text-xl font-bold" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                  Total Budget
+                </h2>
+                <p className="text-sm text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
+                  Your total budget for catering
+                </p>
+              </div>
+              <Button
+                onClick={handleNext}
+                disabled={!canProceed()}
+                className="px-5 py-2 text-sm font-semibold disabled:opacity-50"
+                style={{
+                  fontFamily: "Sweet Sans Pro",
+                  backgroundColor: "#1A9952",
+                  color: "white",
+                  borderRadius: "8px",
+                }}
+                data-testid="button-next"
+              >
+                Next <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
+
+            <div className="mt-6 space-y-6">
+              <div>
+                <p className="text-sm font-medium mb-2" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                  Enter your total budget
+                </p>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-bold" style={{ color: "#06352A" }}>₹</span>
+                  <input
+                    type="number"
+                    placeholder="25000"
+                    value={preferences.budget || ""}
+                    onChange={(e) => setPreferences({ ...preferences, budget: parseFloat(e.target.value) || 0 })}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    style={{ fontFamily: "Sweet Sans Pro" }}
+                    data-testid="input-budget"
                   />
                 </div>
               </div>
-            )}
 
-            {/* Step 5: Budget */}
-            {currentStep === 5 && (
-              <div className="space-y-6">
-                <div className="space-y-4">
-                  <Label htmlFor="budget">What is your total budget? <span className="text-destructive">*</span></Label>
-                  <p className="text-sm text-muted-foreground">
-                    Enter the total budget for catering your event
+              {preferences.budget > 0 && preferences.numberOfPax > 0 && (
+                <div className="p-4 rounded-lg" style={{ backgroundColor: "#F0F9F4" }}>
+                  <p className="text-sm font-medium" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                    Budget per person:
                   </p>
-                  <div className="flex items-center gap-2">
-                    <span className="text-3xl font-bold">₹</span>
-                    <Input
-                      id="budget"
-                      type="number"
-                      placeholder="e.g., 25000"
-                      value={preferences.budget || ""}
-                      onChange={(e) =>
-                        setPreferences({
-                          ...preferences,
-                          budget: e.target.value ? parseFloat(e.target.value) : 0,
-                        })
-                      }
-                      data-testid="input-budget"
-                      className="text-lg"
-                    />
-                  </div>
-                  {preferences.budget > 0 && preferences.numberOfPax > 0 && (
-                    <div className="bg-primary/10 p-4 rounded-lg">
-                      <p className="text-sm font-medium">Budget per person:</p>
-                      <p className="text-2xl font-bold text-primary">
-                        ₹{(preferences.budget / preferences.numberOfPax).toFixed(2)}
-                      </p>
-                    </div>
-                  )}
-                  {preferences.budget <= 0 && (
-                    <p className="text-sm text-destructive">
-                      Please enter a valid budget amount
-                    </p>
-                  )}
+                  <p className="text-2xl font-bold" style={{ fontFamily: "Sweet Sans Pro", color: "#1A9952" }}>
+                    ₹{(preferences.budget / preferences.numberOfPax).toFixed(2)}
+                  </p>
                 </div>
+              )}
+
+              {preferences.budget <= 0 && (
+                <p className="text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#EF4444" }}>
+                  Please enter a valid budget amount
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {currentStep === 6 && (
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <h2 className="text-xl font-bold" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                  Course Details
+                </h2>
+                <p className="text-sm text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
+                  Customize your courses (optional)
+                </p>
               </div>
-            )}
+              <Button
+                onClick={handleNext}
+                className="px-5 py-2 text-sm font-semibold"
+                style={{
+                  fontFamily: "Sweet Sans Pro",
+                  backgroundColor: "#1A9952",
+                  color: "white",
+                  borderRadius: "8px",
+                }}
+                data-testid="button-get-recommendations"
+              >
+                Get Menu <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
 
-            {/* Step 6: Course Details (Dynamic categories from database) */}
-            {currentStep === 6 && (
-              <div className="space-y-6">
-                <div>
-                  <Label className="text-lg">Customize Your Courses</Label>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Specify how many items you'd like in each category (optional - AI will decide if left blank)
-                  </p>
-                  <Badge variant="outline" className="mt-2">
-                    Meal Type: {MEAL_TYPES.find(m => m.value === preferences.mealType)?.label}
-                  </Badge>
+            <div className="mt-6">
+              <p className="text-xs text-gray-500 mb-4" style={{ fontFamily: "Sweet Sans Pro" }}>
+                Specify how many items you'd like in each category. Leave blank for AI to decide.
+              </p>
+
+              <div className="mb-4 p-3 rounded-lg" style={{ backgroundColor: "#F0F9F4" }}>
+                <p className="text-sm font-medium" style={{ fontFamily: "Sweet Sans Pro", color: "#1A9952" }}>
+                  Meal Type: {MEAL_TYPES.find(m => m.value === preferences.mealType)?.label}
+                </p>
+              </div>
+
+              {categoriesLoading ? (
+                <div className="text-center py-8 text-gray-500" style={{ fontFamily: "Sweet Sans Pro" }}>
+                  Loading categories...
                 </div>
-
+              ) : categories.length === 0 ? (
+                <div className="text-center py-8 text-gray-500" style={{ fontFamily: "Sweet Sans Pro" }}>
+                  No categories available for this meal type
+                </div>
+              ) : (
                 <div className="space-y-4">
-                  {categoriesLoading ? (
-                    <p className="text-sm text-muted-foreground">Loading categories...</p>
-                  ) : categories.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No categories available for this meal type</p>
-                  ) : (
-                    categories.map((category: any) => {
-                      const currentCount = preferences.categoryCounts.find(
-                        cc => cc.categoryId === category.id
-                      )?.count || 0;
+                  {categories.map((category: any) => {
+                    const currentCount = preferences.categoryCounts.find(
+                      cc => cc.categoryId === category.id
+                    )?.count || 0;
 
-                      return (
-                        <div key={category.id} className="space-y-2">
-                          <Label htmlFor={category.id}>{category.name}</Label>
-                          <Input
-                            id={category.id}
-                            type="number"
-                            min={0}
-                            max={15}
-                            placeholder="e.g., 2-3"
-                            value={currentCount || ""}
-                            onChange={(e) => {
-                              const newCount = e.target.value ? parseInt(e.target.value) : 0;
-                              const newCategoryCounts = preferences.categoryCounts.filter(
-                                cc => cc.categoryId !== category.id
-                              );
-                              
-                              if (newCount > 0) {
-                                newCategoryCounts.push({
-                                  categoryId: category.id,
-                                  count: newCount,
-                                });
+                    return (
+                      <div key={category.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                        <span className="text-sm font-medium" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                          {category.name}
+                        </span>
+                        <input
+                          type="number"
+                          min={0}
+                          max={10}
+                          placeholder="0"
+                          value={currentCount || ""}
+                          onChange={(e) => {
+                            const newCount = parseInt(e.target.value) || 0;
+                            const existingIndex = preferences.categoryCounts.findIndex(
+                              cc => cc.categoryId === category.id
+                            );
+                            let newCategoryCounts = [...preferences.categoryCounts];
+                            if (existingIndex >= 0) {
+                              if (newCount === 0) {
+                                newCategoryCounts = newCategoryCounts.filter(cc => cc.categoryId !== category.id);
+                              } else {
+                                newCategoryCounts[existingIndex] = { categoryId: category.id, count: newCount };
                               }
-                              
-                              setPreferences({
-                                ...preferences,
-                                categoryCounts: newCategoryCounts,
-                              });
-                            }}
-                            data-testid={`input-${category.id}`}
-                          />
-                        </div>
-                      );
-                    })
-                  )}
+                            } else if (newCount > 0) {
+                              newCategoryCounts.push({ categoryId: category.id, count: newCount });
+                            }
+                            setPreferences({ ...preferences, categoryCounts: newCategoryCounts });
+                          }}
+                          className="w-20 px-3 py-2 border border-gray-200 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-green-500"
+                          style={{ fontFamily: "Sweet Sans Pro" }}
+                          data-testid={`category-count-${category.id}`}
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Navigation Buttons */}
-        <div className="flex justify-between gap-4">
-          <Button
-            variant="outline"
-            onClick={handleBack}
-            data-testid="button-back"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
-          <Button
-            onClick={handleNext}
-            disabled={!canProceed()}
-            data-testid="button-next"
-          >
-            {currentStep === STEPS.length ? (
-              <>
-                <Sparkles className="w-4 h-4 mr-2" />
-                Get Recommendations
-              </>
-            ) : (
-              <>
-                Next
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </>
-            )}
-          </Button>
-        </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
+
+      <FloatingNav />
     </div>
   );
 }
