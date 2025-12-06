@@ -1,6 +1,6 @@
 import { Sparkles } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
-import biryaniImg from "@assets/Items in Spotlight_1763857996794.png";
+import biryaniImg from "@assets/Items_in_Spotlight_1764990679287.png";
 import gulabJamunImg from "@assets/Spotlight Item.png";
 import secondaryLogo from "@assets/TE-Vintage-01 3 (2).png"
 interface SpotlightItem {
