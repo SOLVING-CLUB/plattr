@@ -27,7 +27,7 @@ export default function SmartMenuConciergeSection({ onTryNow }: SmartMenuConcier
               lineHeight: "1.1",
             }}
           >
-            Smart Menu<br />Concierge
+            AI Menu<br />Planner
           </h2>
           
           <p 

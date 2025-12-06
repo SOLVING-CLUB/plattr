@@ -571,8 +571,8 @@ export default function Home() {
   };
 
   const handleTryMenuConcierge = () => {
-    console.log("Smart Menu Concierge clicked");
-    setLocation("/smart-menu-concierge");
+    console.log("AI Menu Planner clicked");
+    setLocation("/concierge");
   };
 
   return (
