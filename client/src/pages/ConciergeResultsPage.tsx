@@ -52,6 +52,8 @@ export default function ConciergeResultsPage() {
   const [recommendations, setRecommendations] = useState<RecommendationResponse | null>(null);
   const [addedItems, setAddedItems] = useState<Set<string>>(new Set());
   const hasCalledRef = useRef(false);
+  const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   // Parse preferences from URL
   const searchParams = new URLSearchParams(window.location.search);
@@ -69,16 +71,24 @@ export default function ConciergeResultsPage() {
     categoryCounts: categoryCountsParam ? JSON.parse(categoryCountsParam) : [],
   };
 
+  // Retry function
+  const handleRetry = () => {
+    setError(null);
+    hasCalledRef.current = false;
+    setRetryCount(prev => prev + 1);
+  };
+
   // Generate recommendations on mount by calling n8n webhook
   useEffect(() => {
     const generateRecommendations = async () => {
-      // Prevent duplicate calls (React Strict Mode causes double-mount)
-      if (hasCalledRef.current) {
+      // Prevent duplicate calls (React Strict Mode causes double-mount), but allow retries
+      if (hasCalledRef.current && retryCount === 0) {
         return;
       }
       hasCalledRef.current = true;
       try {
         setIsGenerating(true);
+        setError(null);
         
         // Re-parse preferences inside useEffect to get the latest URL params
         const currentSearchParams = new URLSearchParams(window.location.search);
@@ -321,19 +331,39 @@ export default function ConciergeResultsPage() {
         setRecommendations(data);
       } catch (error: any) {
         console.error('Recommendation error:', error);
+        
+        // Determine error type and message
+        let errorMessage = "Failed to generate recommendations";
+        
+        if (error instanceof TypeError) {
+          // Network errors (fetch failures) are TypeErrors
+          errorMessage = "Unable to connect to the AI service. Please check your internet connection and try again.";
+        } else if (error.name === 'TypeError' || error.message === 'Load failed' || error.message === 'Failed to fetch') {
+          errorMessage = "Unable to connect to the AI service. Please check your internet connection and try again.";
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        
+        console.error('Error details:', { 
+          name: error?.name, 
+          message: error?.message, 
+          type: typeof error,
+          isTypeError: error instanceof TypeError 
+        });
+        
+        setError(errorMessage);
         toast({
           title: "Error",
-          description: error.message || "Failed to generate recommendations",
+          description: errorMessage,
           variant: "destructive",
         });
-        setLocation("/concierge");
       } finally {
         setIsGenerating(false);
       }
     };
 
     generateRecommendations();
-  }, []);
+  }, [retryCount]);
 
   // Add to cart mutation
   const addToCartMutation = useMutation({
@@ -458,6 +488,44 @@ export default function ConciergeResultsPage() {
           <p className="text-xs text-muted-foreground mt-6">
             This may take up to 30 seconds
           </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error UI with retry option
+  if (error && !recommendations) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5 flex items-center justify-center px-6">
+        <div className="text-center max-w-md">
+          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-red-100 flex items-center justify-center">
+            <svg className="w-10 h-10 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          
+          <h2 className="text-2xl font-bold mb-2">Something Went Wrong</h2>
+          <p className="text-muted-foreground mb-6">{error}</p>
+          
+          <div className="flex flex-col gap-3">
+            <Button
+              onClick={handleRetry}
+              className="w-full"
+              data-testid="button-retry"
+            >
+              <Loader2 className="w-4 h-4 mr-2" />
+              Try Again
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setLocation("/concierge")}
+              className="w-full"
+              data-testid="button-start-over"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Start Over
+            </Button>
+          </div>
         </div>
       </div>
     );
