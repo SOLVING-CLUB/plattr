@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { Sparkles, ShoppingCart, ArrowLeft, Loader2, TrendingUp, Users, DollarSign } from "lucide-react";
 import { getSupabaseImageUrl } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase-client";
 
 interface Dish {
   id: string;
@@ -70,21 +71,115 @@ export default function ConciergeResultsPage() {
     const generateRecommendations = async () => {
       try {
         setIsGenerating(true);
-        const response = await fetch("/api/concierge/recommendations", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(preferences),
-          credentials: "include",
+        
+        // Map meal type to database format
+        const mealTypeMap: Record<string, string> = {
+          breakfast: 'tiffins',
+          lunch: 'lunch-dinner',
+          dinner: 'lunch-dinner',
+          snacks: 'snacks',
+        };
+        const mealTypeFilter = mealTypeMap[preferences.mealType] || preferences.mealType;
+        
+        // Fetch dishes from Supabase
+        const dishes = await supabase.select<any>('dishes', {
+          select: '*',
+          order: 'name.asc',
         });
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || "Failed to generate recommendations");
+        
+        // Filter dishes based on preferences
+        let filteredDishes = dishes.filter((dish: any) => {
+          // Filter by meal type
+          const mealTypes = dish.meal_type || [];
+          if (!mealTypes.includes(mealTypeFilter)) return false;
+          
+          // Filter by dietary preference
+          if (preferences.dietaryPreference && preferences.dietaryPreference !== 'all') {
+            if (preferences.dietaryPreference === 'veg' && dish.dietary_type !== 'Veg') return false;
+            if (preferences.dietaryPreference === 'non-veg' && dish.dietary_type !== 'Non-Veg') return false;
+            if (preferences.dietaryPreference === 'egg' && !['Veg', 'Egg'].includes(dish.dietary_type)) return false;
+          }
+          
+          // Filter by cuisine preferences
+          if (preferences.cuisinePreferences.length > 0) {
+            if (!preferences.cuisinePreferences.includes(dish.cuisine)) return false;
+          }
+          
+          return true;
+        });
+        
+        // Shuffle and select dishes based on category counts or default selection
+        const shuffled = filteredDishes.sort(() => Math.random() - 0.5);
+        
+        // Select a reasonable number of dishes (max 15 or based on category counts)
+        let selectedDishes: any[] = [];
+        if (preferences.categoryCounts.length > 0) {
+          // Select dishes based on category counts
+          for (const cc of preferences.categoryCounts) {
+            const categoryDishes = shuffled.filter((d: any) => d.category_id === cc.categoryId);
+            selectedDishes.push(...categoryDishes.slice(0, cc.count));
+          }
+        } else {
+          // Default: select up to 10-15 dishes from different categories
+          const categories = Array.from(new Set(shuffled.map((d: any) => d.category_id)));
+          for (const cat of categories.slice(0, 5)) {
+            const catDishes = shuffled.filter((d: any) => d.category_id === cat).slice(0, 3);
+            selectedDishes.push(...catDishes);
+          }
         }
-
-        const data: RecommendationResponse = await response.json();
+        
+        // Calculate costs
+        const totalCost = selectedDishes.reduce((sum, d) => sum + (parseFloat(d.price) || 0) * preferences.numberOfPax, 0);
+        const costPerPerson = totalCost / preferences.numberOfPax;
+        
+        // Format dishes for response
+        const formattedDishes: Dish[] = selectedDishes.map((d: any) => ({
+          id: d.id,
+          name: d.name,
+          description: d.description || '',
+          price: String(d.price || 0),
+          imageUrl: d.image_url || '',
+          mealType: d.meal_type || [],
+          categoryId: d.category_id,
+          spiceLevel: d.spice_level,
+          dietaryType: d.dietary_type,
+          dishType: d.dish_type,
+          recommendedCategory: d.category_id,
+        }));
+        
+        // Determine budget status
+        let budgetStatus: "within_budget" | "over_budget" | null = null;
+        let aiBudgetNote: string | null = null;
+        if (preferences.budget) {
+          const budgetPerPerson = preferences.budget;
+          if (costPerPerson <= budgetPerPerson) {
+            budgetStatus = "within_budget";
+          } else {
+            budgetStatus = "over_budget";
+            aiBudgetNote = `The selected menu costs approximately ₹${Math.round(costPerPerson)} per person, which is above your budget of ₹${budgetPerPerson}. Consider reducing the number of items or selecting more economical dishes.`;
+          }
+        }
+        
+        const data: RecommendationResponse = {
+          sessionId: `session-${Date.now()}`,
+          recommendations: formattedDishes,
+          totalEstimatedCost: totalCost,
+          estimatedCostPerPerson: costPerPerson,
+          preferences: {
+            cuisinePreference: preferences.cuisinePreferences.join(', '),
+            numberOfPax: preferences.numberOfPax,
+            eventType: preferences.eventType,
+            budget: preferences.budget,
+            mealType: preferences.mealType,
+          },
+          aiSummary: `Based on your preferences for a ${preferences.eventType} event with ${preferences.numberOfPax} guests, we've curated ${formattedDishes.length} dishes from ${preferences.cuisinePreferences.length > 0 ? preferences.cuisinePreferences.join(', ') : 'various'} cuisine(s). This selection includes a mix of starters, main courses, and accompaniments to create a complete dining experience.`,
+          budgetStatus,
+          aiBudgetNote,
+        };
+        
         setRecommendations(data);
       } catch (error: any) {
+        console.error('Recommendation error:', error);
         toast({
           title: "Error",
           description: error.message || "Failed to generate recommendations",
