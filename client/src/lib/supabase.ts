@@ -73,32 +73,28 @@ export function getDishFullImageUrl(imageUrl: string | null | undefined): string
 }
 
 /**
- * Get category image URL from Supabase with optional transformations
- * @param categoryId - The category ID
- * @param options - Optional image transformation parameters
- * @returns Supabase storage URL for category image
+ * Get category image URL from Supabase storage with optimized transformations
+ * @param imageUrl - The image_url field from the categories table (e.g., "categories/starters.png")
+ * @returns Optimized Supabase storage URL for category image
  */
-export function getCategoryImageUrl(
-  categoryId: string | null | undefined,
-  options?: ImageTransformOptions
-): string {
-  if (!categoryId) {
-    return '/images/placeholder.jpg';
-  }
-  
-  const imagePath = `categories/${categoryId}.jpg`;
-  
-  // If no transformation options, return the standard URL
-  if (!options || (!options.width && !options.height && !options.quality)) {
-    return `${SUPABASE_URL}${SUPABASE_STORAGE_PATH}/${imagePath}`;
-  }
-  
-  // Build transformation URL
-  const params = new URLSearchParams();
-  if (options.width) params.append('width', options.width.toString());
-  if (options.height) params.append('height', options.height.toString());
-  if (options.quality) params.append('quality', options.quality.toString());
-  if (options.resize) params.append('resize', options.resize);
-  
-  return `${SUPABASE_URL}${SUPABASE_RENDER_PATH}/${imagePath}?${params.toString()}`;
+export function getCategoryImageUrl(imageUrl: string | null | undefined): string {
+  return getSupabaseImageUrl(imageUrl, { width: 400, quality: 80, resize: 'cover' });
+}
+
+/**
+ * Get subcategory image URL from Supabase storage with optimized transformations
+ * @param imageUrl - The image_url field from the subcategories table (e.g., "subcategories/fried-snacks.png")
+ * @returns Optimized Supabase storage URL for subcategory image
+ */
+export function getSubcategoryImageUrl(imageUrl: string | null | undefined): string {
+  return getSupabaseImageUrl(imageUrl, { width: 300, quality: 75, resize: 'cover' });
+}
+
+/**
+ * Get cuisine image URL from Supabase storage with optimized transformations
+ * @param imageUrl - The image_url field from the cuisines table (e.g., "cuisines/south-indian.png")
+ * @returns Optimized Supabase storage URL for cuisine image
+ */
+export function getCuisineImageUrl(imageUrl: string | null | undefined): string {
+  return getSupabaseImageUrl(imageUrl, { width: 400, quality: 80, resize: 'cover' });
 }
