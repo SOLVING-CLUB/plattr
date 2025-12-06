@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -48,12 +48,13 @@ interface RecommendationResponse {
 export default function ConciergeResultsPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [searchParams] = useState(() => new URLSearchParams(window.location.search));
   const [isGenerating, setIsGenerating] = useState(true);
   const [recommendations, setRecommendations] = useState<RecommendationResponse | null>(null);
   const [addedItems, setAddedItems] = useState<Set<string>>(new Set());
+  const hasCalledRef = useRef(false);
 
   // Parse preferences from URL
+  const searchParams = new URLSearchParams(window.location.search);
   const cuisinePreferencesParam = searchParams.get('cuisinePreferences');
   const categoryCountsParam = searchParams.get('categoryCounts');
   
@@ -71,28 +72,61 @@ export default function ConciergeResultsPage() {
   // Generate recommendations on mount by calling n8n webhook
   useEffect(() => {
     const generateRecommendations = async () => {
+      // Prevent duplicate calls (React Strict Mode causes double-mount)
+      if (hasCalledRef.current) {
+        return;
+      }
+      hasCalledRef.current = true;
       try {
         setIsGenerating(true);
         
+        // Re-parse preferences inside useEffect to get the latest URL params
+        const currentSearchParams = new URLSearchParams(window.location.search);
+        const currentCuisineParam = currentSearchParams.get('cuisinePreferences');
+        const currentCategoryCountsParam = currentSearchParams.get('categoryCounts');
+        
+        const currentPrefs = {
+          cuisinePreferences: currentCuisineParam ? JSON.parse(currentCuisineParam) : [],
+          numberOfPax: parseInt(currentSearchParams.get('numberOfPax') || '50'),
+          eventType: currentSearchParams.get('eventType') || '',
+          budget: currentSearchParams.get('budget') ? parseFloat(currentSearchParams.get('budget')!) : undefined,
+          mealType: currentSearchParams.get('mealType') || 'lunch',
+          dietaryPreference: currentSearchParams.get('dietaryPreference') || undefined,
+          allergies: currentSearchParams.get('allergies') || undefined,
+          categoryCounts: currentCategoryCountsParam ? JSON.parse(currentCategoryCountsParam) : [],
+        };
+        
+        // Validate that we have required preferences - redirect to wizard if missing
+        if (!currentPrefs.eventType || currentPrefs.cuisinePreferences.length === 0) {
+          toast({
+            title: "Please complete the wizard",
+            description: "We need your preferences to generate recommendations",
+          });
+          setLocation("/concierge");
+          return;
+        }
+        
         // Generate a unique session ID for n8n tracking
         const sessionId = `plattr-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-        console.log('Generated sessionId:', sessionId);
+        
+        // Build request body with the freshly parsed preferences
+        const requestBody = {
+          sessionId: sessionId,
+          cuisinePreferences: currentPrefs.cuisinePreferences,
+          numberOfPax: currentPrefs.numberOfPax,
+          eventType: currentPrefs.eventType,
+          budget: currentPrefs.budget,
+          mealType: currentPrefs.mealType,
+          dietaryPreference: currentPrefs.dietaryPreference,
+          allergies: currentPrefs.allergies,
+          categoryCounts: currentPrefs.categoryCounts,
+        };
         
         // Call the n8n webhook with user preferences
         const webhookResponse = await fetch('https://navaneeth03.app.n8n.cloud/webhook/smart-plattr-concierge', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sessionId: sessionId,
-            cuisinePreferences: preferences.cuisinePreferences,
-            numberOfPax: preferences.numberOfPax,
-            eventType: preferences.eventType,
-            budget: preferences.budget,
-            mealType: preferences.mealType,
-            dietaryPreference: preferences.dietaryPreference,
-            allergies: preferences.allergies,
-            categoryCounts: preferences.categoryCounts,
-          }),
+          body: JSON.stringify(requestBody),
         });
         
         if (!webhookResponse.ok) {
