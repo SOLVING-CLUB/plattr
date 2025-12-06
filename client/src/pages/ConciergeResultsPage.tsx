@@ -45,6 +45,12 @@ interface RecommendationResponse {
   aiBudgetNote?: string | null;
 }
 
+// Generate a unique request key based on URL parameters
+const getRequestKey = () => {
+  const params = window.location.search;
+  return `concierge-request-${btoa(params).slice(0, 50)}`;
+};
+
 export default function ConciergeResultsPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -52,7 +58,6 @@ export default function ConciergeResultsPage() {
   const [recommendations, setRecommendations] = useState<RecommendationResponse | null>(null);
   const [addedItems, setAddedItems] = useState<Set<string>>(new Set());
   const abortControllerRef = useRef<AbortController | null>(null);
-  const isRequestInFlightRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
 
@@ -72,25 +77,51 @@ export default function ConciergeResultsPage() {
     categoryCounts: categoryCountsParam ? JSON.parse(categoryCountsParam) : [],
   };
 
-  // Retry function - abort any in-flight request first
+  // Retry function - clear session storage and trigger retry
   const handleRetry = () => {
+    const requestKey = getRequestKey();
+    sessionStorage.removeItem(requestKey);
+    sessionStorage.removeItem(`${requestKey}-data`);
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
     setError(null);
-    isRequestInFlightRef.current = false;
     setRetryCount(prev => prev + 1);
   };
 
   // Generate recommendations on mount by calling n8n webhook
   useEffect(() => {
+    const requestKey = getRequestKey();
+    
     const generateRecommendations = async (signal: AbortSignal) => {
-      // Prevent duplicate calls - strict check
-      if (isRequestInFlightRef.current) {
-        console.log('[Concierge] Request already in flight, skipping duplicate call');
+      // Check sessionStorage for existing request or cached data
+      const requestStatus = sessionStorage.getItem(requestKey);
+      const cachedData = sessionStorage.getItem(`${requestKey}-data`);
+      
+      // If we have cached data, use it immediately
+      if (cachedData && requestStatus === 'completed') {
+        console.log('[Concierge] Using cached recommendations');
+        try {
+          const parsed = JSON.parse(cachedData);
+          setRecommendations(parsed);
+          setIsGenerating(false);
+          return;
+        } catch (e) {
+          console.error('[Concierge] Failed to parse cached data, refetching');
+          sessionStorage.removeItem(requestKey);
+          sessionStorage.removeItem(`${requestKey}-data`);
+        }
+      }
+      
+      // If a request is already in progress, just wait
+      if (requestStatus === 'pending') {
+        console.log('[Concierge] Request already in progress, waiting...');
         return;
       }
-      isRequestInFlightRef.current = true;
+      
+      // Mark request as pending in sessionStorage
+      sessionStorage.setItem(requestKey, 'pending');
+      console.log('[Concierge] Starting new request');
       
       try {
         setIsGenerating(true);
@@ -114,6 +145,7 @@ export default function ConciergeResultsPage() {
         
         // Validate that we have required preferences - redirect to wizard if missing
         if (!currentPrefs.eventType || currentPrefs.cuisinePreferences.length === 0) {
+          sessionStorage.removeItem(requestKey);
           toast({
             title: "Please complete the wizard",
             description: "We need your preferences to generate recommendations",
@@ -325,6 +357,11 @@ export default function ConciergeResultsPage() {
           aiBudgetNote: budgetNote,
         };
         
+        // Cache the result in sessionStorage
+        sessionStorage.setItem(requestKey, 'completed');
+        sessionStorage.setItem(`${requestKey}-data`, JSON.stringify(data));
+        console.log('[Concierge] Request completed and cached');
+        
         setRecommendations(data);
       } catch (error: any) {
         // Ignore abort errors - these are intentional
@@ -332,6 +369,9 @@ export default function ConciergeResultsPage() {
           console.log('[Concierge] Request was aborted');
           return;
         }
+        
+        // Clear the pending status on error so retry can work
+        sessionStorage.removeItem(requestKey);
         
         console.error('Recommendation error:', error);
         
@@ -361,7 +401,6 @@ export default function ConciergeResultsPage() {
         });
       } finally {
         setIsGenerating(false);
-        isRequestInFlightRef.current = false;
       }
     };
 
@@ -372,11 +411,11 @@ export default function ConciergeResultsPage() {
     // Start the request
     generateRecommendations(controller.signal);
     
-    // Cleanup: abort request if component unmounts
+    // Cleanup: abort request if component unmounts - DON'T reset sessionStorage status
+    // because we want to track that a request is still pending even across remounts
     return () => {
-      console.log('[Concierge] Cleanup: aborting any pending request');
+      console.log('[Concierge] Cleanup: aborting pending request');
       controller.abort();
-      isRequestInFlightRef.current = false;
     };
   }, [retryCount]);
 
