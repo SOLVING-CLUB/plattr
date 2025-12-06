@@ -1243,6 +1243,8 @@ interface MealBoxProps {
   onNavigate?: NavigateFn;
 }
 
+const LOCATION_STORAGE_KEY = "activeLocation";
+
 export default function MealBox({ onNavigate }: MealBoxProps = {}) {
   const [, setLocation] = useLocation();
   const navigate: NavigateFn = (path, options) => {
@@ -1260,6 +1262,70 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
   const [activeTab, setActiveTab] = useState<"home" | "menu" | "profile">("home");
   const [selectedService, setSelectedService] = useState<ServiceType>("mealbox");
   const [scrollY, setScrollY] = useState(0);
+  const [locationLabel, setLocationLabel] = useState("Select Address");
+
+  // Read location from localStorage on mount and when page regains focus
+  useEffect(() => {
+    const readLocationFromStorage = () => {
+      const savedLocation = localStorage.getItem(LOCATION_STORAGE_KEY);
+      if (savedLocation) {
+        try {
+          const parsed = JSON.parse(savedLocation);
+          setLocationLabel(parsed.label || "Select Address");
+        } catch (e) {
+          console.error("Error parsing saved location:", e);
+          setLocationLabel("Select Address");
+        }
+      } else {
+        setLocationLabel("Select Address");
+      }
+    };
+
+    readLocationFromStorage();
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === LOCATION_STORAGE_KEY && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          setLocationLabel(parsed.label || "Select Address");
+        } catch (error) {
+          console.error("Error parsing location from storage event:", error);
+        }
+      } else if (e.key === LOCATION_STORAGE_KEY && !e.newValue) {
+        setLocationLabel("Select Address");
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        readLocationFromStorage();
+      }
+    };
+
+    const handleFocus = () => {
+      readLocationFromStorage();
+    };
+
+    const handleLocationChange = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail?.label) {
+        setLocationLabel(customEvent.detail.label);
+      } else {
+        readLocationFromStorage();
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleFocus);
+    window.addEventListener("locationchange", handleLocationChange);
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("locationchange", handleLocationChange);
+    };
+  }, []);
 
   // Scroll to top on page load
   useEffect(() => {
@@ -2177,18 +2243,26 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
       <div className="relative z-10 px-4 pt-4 pb-6">
         {/* Location and Cart */}
         <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-2">
-            <MapPin className="w-5 h-5 text-white" />
-            <span className="text-white font-semibold text-[18px]" style={{ fontFamily: "Sweet Sans Pro" }}>
-              Bengaluru, KA
-            </span>
-          </div>
-          <button
-            className="p-2 rounded-full hover:bg-white/20 transition-colors"
-            onClick={() => toast({ title: "Cart", description: "Cart coming soon!" })}
-            data-testid="button-cart"
+          <button 
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+            onClick={() => navigate("/location")}
+            data-testid="button-location"
           >
-            <ShoppingCart className="w-5 h-5 text-white" />
+            <MapPin className="w-5 h-5 text-white" />
+            <span className="text-white font-semibold text-[18px] max-w-[120px] truncate" style={{ fontFamily: "Sweet Sans Pro" }}>
+              {locationLabel}
+            </span>
+          </button>
+          <button
+            onClick={() => navigate("/concierge")}
+            data-testid="button-smart-menu-concierge"
+            className="flex items-center justify-center w-10 h-10 rounded-lg transition-colors"
+            style={{
+              background: "linear-gradient(135deg, #FFD700 0%, #FFFFFF 100%)",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+            }}
+          >
+            <Sparkles className="w-5 h-5 text-[#06352A]" />
           </button>
         </div>
 

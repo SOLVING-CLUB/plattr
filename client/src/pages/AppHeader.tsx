@@ -17,20 +17,24 @@ export default function AppHeader({
   const [locationLabel, setLocationLabel] = useState("Select Address");
 
   useEffect(() => {
-    const savedLocation = localStorage.getItem(LOCATION_STORAGE_KEY);
-    if (savedLocation) {
-      try {
-        const parsed = JSON.parse(savedLocation);
-        setLocationLabel(parsed.label || "Select Address");
-      } catch (e) {
-        console.error("Error parsing saved location:", e);
+    const readLocationFromStorage = () => {
+      const savedLocation = localStorage.getItem(LOCATION_STORAGE_KEY);
+      if (savedLocation) {
+        try {
+          const parsed = JSON.parse(savedLocation);
+          setLocationLabel(parsed.label || "Select Address");
+        } catch (e) {
+          console.error("Error parsing saved location:", e);
+          setLocationLabel("Select Address");
+        }
+      } else {
         setLocationLabel("Select Address");
       }
-    } else {
-      setLocationLabel("Select Address");
-    }
+    };
 
-    // Listen for storage changes (when location is updated from LocationPage)
+    readLocationFromStorage();
+
+    // Listen for storage changes (when location is updated from LocationPage in another tab)
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === LOCATION_STORAGE_KEY && e.newValue) {
         try {
@@ -44,8 +48,22 @@ export default function AppHeader({
       }
     };
 
+    // Listen for custom locationchange event (same-tab SPA navigation)
+    const handleLocationChange = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail?.label) {
+        setLocationLabel(customEvent.detail.label);
+      } else {
+        readLocationFromStorage();
+      }
+    };
+
     window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
+    window.addEventListener("locationchange", handleLocationChange);
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("locationchange", handleLocationChange);
+    };
   }, []);
   return (
     <header 

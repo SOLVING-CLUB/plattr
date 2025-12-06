@@ -17,18 +17,22 @@ export default function AppHeader({ onBackClick, onSearch, searchQuery }: AppHea
   const [locationLabel, setLocationLabel] = useState("Select Address");
 
   useEffect(() => {
-    const savedLocation = localStorage.getItem(LOCATION_STORAGE_KEY);
-    if (savedLocation) {
-      try {
-        const parsed = JSON.parse(savedLocation);
-        setLocationLabel(parsed.label || "Select Address");
-      } catch (e) {
-        console.error("Error parsing saved location:", e);
+    const readLocationFromStorage = () => {
+      const savedLocation = localStorage.getItem(LOCATION_STORAGE_KEY);
+      if (savedLocation) {
+        try {
+          const parsed = JSON.parse(savedLocation);
+          setLocationLabel(parsed.label || "Select Address");
+        } catch (e) {
+          console.error("Error parsing saved location:", e);
+          setLocationLabel("Select Address");
+        }
+      } else {
         setLocationLabel("Select Address");
       }
-    } else {
-      setLocationLabel("Select Address");
-    }
+    };
+
+    readLocationFromStorage();
 
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === LOCATION_STORAGE_KEY && e.newValue) {
@@ -43,8 +47,21 @@ export default function AppHeader({ onBackClick, onSearch, searchQuery }: AppHea
       }
     };
 
+    const handleLocationChange = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail?.label) {
+        setLocationLabel(customEvent.detail.label);
+      } else {
+        readLocationFromStorage();
+      }
+    };
+
     window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
+    window.addEventListener("locationchange", handleLocationChange);
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("locationchange", handleLocationChange);
+    };
   }, []);
   
   return (

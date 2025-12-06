@@ -125,6 +125,9 @@ export default function LocationPage() {
     // Save to localStorage
     localStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify(location));
     
+    // Dispatch custom event for same-tab location updates
+    window.dispatchEvent(new CustomEvent('locationchange', { detail: location }));
+    
     // Add to recents (keep max 5, avoid duplicates)
     const newRecents = [
       location,

@@ -252,6 +252,9 @@ export default function MapConfirmationPage() {
       };
 
       localStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify(locationData));
+      
+      // Dispatch custom event for same-tab location updates
+      window.dispatchEvent(new CustomEvent('locationchange', { detail: locationData }));
 
       const savedRecents = localStorage.getItem(RECENT_LOCATIONS_KEY);
       let recents: LocationData[] = [];
