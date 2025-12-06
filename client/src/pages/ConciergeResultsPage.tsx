@@ -316,22 +316,94 @@ export default function ConciergeResultsPage() {
     });
   };
 
+  // Fun food facts to cycle through while loading
+  const foodFacts = [
+    "Did you know? Indian cuisine has over 30 distinct regional cooking styles!",
+    "A typical South Indian meal has 6 different tastes: sweet, sour, salty, bitter, pungent, and astringent.",
+    "The word 'curry' comes from 'kari', a Tamil word meaning sauce.",
+    "Biryani originated in Persia and evolved in India over 400 years ago.",
+    "India is the world's largest producer of spices, growing over 50 varieties.",
+    "A traditional thali can have anywhere from 6 to 36 different dishes!",
+    "Masala chai became popular in India only in the 1900s when the British started tea cultivation.",
+    "The dosa has been around for over 2000 years, mentioned in ancient Tamil literature.",
+  ];
+
+  // State for cycling through facts
+  const [currentFactIndex, setCurrentFactIndex] = useState(0);
+  const [progressStep, setProgressStep] = useState(0);
+
+  // Effect to cycle facts and progress
+  useEffect(() => {
+    if (!isGenerating) return;
+    
+    const factInterval = setInterval(() => {
+      setCurrentFactIndex(prev => (prev + 1) % foodFacts.length);
+    }, 4000);
+    
+    const progressInterval = setInterval(() => {
+      setProgressStep(prev => prev < 3 ? prev + 1 : prev);
+    }, 8000);
+    
+    return () => {
+      clearInterval(factInterval);
+      clearInterval(progressInterval);
+    };
+  }, [isGenerating]);
+
+  const progressSteps = [
+    "Analyzing your preferences...",
+    "Finding the perfect dishes...",
+    "Balancing your menu...",
+    "Finalizing recommendations..."
+  ];
+
   if (isGenerating) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
-        <div className="container max-w-6xl mx-auto py-8 px-4">
-          <Card className="text-center py-16">
-            <CardContent>
-              <Sparkles className="w-16 h-16 text-primary mx-auto mb-4 animate-pulse" />
-              <h2 className="text-2xl font-bold mb-2">Creating Your Perfect Menu</h2>
-              <p className="text-muted-foreground mb-6">
-                Our AI is analyzing your preferences and selecting the best dishes...
-              </p>
-              <div className="flex justify-center gap-2">
-                <Loader2 className="w-6 h-6 animate-spin text-primary" />
-              </div>
-            </CardContent>
-          </Card>
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5 flex items-center justify-center px-6">
+        <div className="text-center max-w-md">
+          {/* Animated sparkles icon */}
+          <div className="relative w-20 h-20 mx-auto mb-6">
+            <Sparkles className="w-20 h-20 text-primary animate-pulse" />
+            <div className="absolute inset-0 animate-ping opacity-30">
+              <Sparkles className="w-20 h-20 text-primary" />
+            </div>
+          </div>
+          
+          <h2 className="text-2xl font-bold mb-2">Creating Your Perfect Menu</h2>
+          
+          {/* Progress steps */}
+          <div className="mb-6">
+            <p className="text-primary font-medium mb-3">
+              {progressSteps[progressStep]}
+            </p>
+            <div className="flex justify-center gap-2">
+              {progressSteps.map((_, index) => (
+                <div 
+                  key={index}
+                  className={`w-2 h-2 rounded-full transition-all duration-500 ${
+                    index <= progressStep ? 'bg-primary' : 'bg-gray-300'
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
+          
+          {/* Spinning loader */}
+          <div className="flex justify-center mb-8">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+          
+          {/* Food facts carousel */}
+          <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4 border border-primary/10">
+            <p className="text-xs text-muted-foreground mb-1">Did you know?</p>
+            <p className="text-sm text-foreground leading-relaxed transition-opacity duration-500">
+              {foodFacts[currentFactIndex].replace("Did you know? ", "")}
+            </p>
+          </div>
+          
+          <p className="text-xs text-muted-foreground mt-6">
+            This may take up to 30 seconds
+          </p>
         </div>
       </div>
     );
