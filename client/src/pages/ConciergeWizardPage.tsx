@@ -204,51 +204,51 @@ export default function ConciergeWizardPage() {
   );
 
   return (
-    <div className="min-h-screen bg-white pb-24">
-      <section className="relative w-full bg-white">
-        <div className="relative w-full">
-          <img
-            src={heroImage}
-            alt="Smart Menu Concierge"
-            className="w-full h-auto"
-            data-testid="image-concierge-hero"
-            style={{
-              WebkitMaskImage: 'linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%)',
-              maskImage: 'linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%)'
-            }}
-          />
-        </div>
-      </section>
-
-      <div className="px-4 pt-2">
-        <button
-          onClick={handleBack}
-          className="flex items-center gap-1.5 mb-4"
-          style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}
-          data-testid="button-back"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span className="text-sm font-medium">
-            {currentStep === 1 ? "Home" : getStepLabel()}
-          </span>
-        </button>
-
-        <div className="flex gap-1">
-          {STEPS.map((step) => (
-            <div
-              key={step.id}
-              className="h-1 flex-1 rounded-full transition-colors"
+    <div className="min-h-screen bg-white pb-24 flex flex-col">
+      <div className="sticky top-0 z-10 bg-white">
+        <section className="relative w-full bg-white">
+          <div className="relative w-full">
+            <img
+              src={heroImage}
+              alt="Smart Menu Concierge"
+              className="w-full h-auto"
+              data-testid="image-concierge-hero"
               style={{
-                backgroundColor: step.id <= currentStep ? "#1A9952" : "#E5E7EB",
+                WebkitMaskImage: 'linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%)',
+                maskImage: 'linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%)'
               }}
             />
-          ))}
-        </div>
-      </div>
+          </div>
+        </section>
 
-      <div className="px-4 py-6">
+        <div className="px-4 pt-2">
+          <button
+            onClick={handleBack}
+            className="flex items-center gap-1.5 mb-4"
+            style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}
+            data-testid="button-back"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span className="text-sm font-medium">
+              {currentStep === 1 ? "Home" : getStepLabel()}
+            </span>
+          </button>
+
+          <div className="flex gap-1">
+            {STEPS.map((step) => (
+              <div
+                key={step.id}
+                className="h-1 flex-1 rounded-full transition-colors"
+                style={{
+                  backgroundColor: step.id <= currentStep ? "#1A9952" : "#E5E7EB",
+                }}
+              />
+            ))}
+          </div>
+        </div>
+
         {currentStep === 1 && (
-          <div>
+          <div className="px-4 py-4">
             <div className="flex items-center justify-between mb-2">
               <div>
                 <h2 className="text-xl font-bold" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
@@ -274,12 +274,16 @@ export default function ConciergeWizardPage() {
               </Button>
             </div>
 
-            <div className="mt-6">
-              <p className="text-sm font-medium mb-4" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                What Type of Event are you planning?
-              </p>
+            <p className="text-sm font-medium mt-4" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+              What Type of Event are you planning?
+            </p>
+          </div>
+        )}
+      </div>
 
-              <div className="grid grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto">
+      <div className="flex-1 overflow-y-auto px-4">
+        {currentStep === 1 && (
+          <div className="grid grid-cols-2 gap-3 pb-4">
                 {EVENT_TYPES.map(({ value, label, Icon }) => (
                   <button
                     key={value}
@@ -311,8 +315,6 @@ export default function ConciergeWizardPage() {
                     </div>
                   </button>
                 ))}
-              </div>
-            </div>
           </div>
         )}
 
