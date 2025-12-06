@@ -7,9 +7,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Sparkles, ShoppingCart, ArrowLeft, Loader2, TrendingUp, Users, DollarSign } from "lucide-react";
+import { Sparkles, ShoppingCart, ArrowLeft, Loader2, TrendingUp, Users, DollarSign, Leaf, Drumstick } from "lucide-react";
 import { getSupabaseImageUrl } from "@/lib/supabase";
 import { supabase } from "@/lib/supabase-client";
+import FloatingNav from "@/pages/FloatingNav";
+import { LazyImage } from "@/components/ui/lazy-image";
 
 interface Dish {
   id: string;
@@ -348,11 +350,17 @@ export default function ConciergeResultsPage() {
     return acc;
   }, {} as Record<string, Dish[]>);
 
+  const handleNavTabChange = (tab: "home" | "menu" | "profile") => {
+    if (tab === "home") setLocation("/");
+    else if (tab === "menu") setLocation("/tiffins");
+    else if (tab === "profile") setLocation("/profile");
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
-      <div className="container max-w-6xl mx-auto py-8 px-4">
-        {/* Header */}
-        <div className="mb-8">
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5 pb-24">
+      <div className="container max-w-6xl mx-auto pt-12 pb-8 px-4">
+        {/* Header - Start Over button with extra top spacing for mobile status bar */}
+        <div className="mb-6">
           <Button
             variant="ghost"
             onClick={() => setLocation("/concierge")}
@@ -366,187 +374,142 @@ export default function ConciergeResultsPage() {
           <div className="flex items-center gap-3 mb-4">
             <Sparkles className="w-8 h-8 text-primary" />
             <div className="flex-1">
-              <h1 className="text-3xl font-bold" data-testid="text-title">Your Personalized Menu</h1>
-              <p className="text-muted-foreground">
+              <h1 className="text-2xl font-bold" data-testid="text-title">Your Personalized Menu</h1>
+              <p className="text-sm text-muted-foreground">
                 AI-curated recommendations for your {preferences.eventType}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1" data-testid="text-session-id">
-                Session ID: <span className="font-mono">{recommendations.sessionId}</span>
               </p>
             </div>
           </div>
 
-          {/* AI Summary */}
-          {recommendations.aiSummary && (
-            <Card className="mb-6 bg-primary/5 border-primary/20">
-              <CardContent className="p-6">
-                <div className="flex items-start gap-3">
-                  <Sparkles className="w-6 h-6 text-primary mt-1 flex-shrink-0" />
-                  <div>
-                    <h3 className="font-semibold text-lg mb-2">AI Recommendation Summary</h3>
-                    <p className="text-muted-foreground leading-relaxed" data-testid="text-ai-summary">
-                      {recommendations.aiSummary}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <Card>
-              <CardContent className="p-4 flex items-center gap-3">
-                <Users className="w-8 h-8 text-primary" />
+          {/* Summary Cards - Horizontal scroll on mobile */}
+          <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+            <Card className="flex-shrink-0 min-w-[140px]">
+              <CardContent className="p-3 flex items-center gap-2">
+                <Users className="w-6 h-6 text-primary" />
                 <div>
-                  <p className="text-sm text-muted-foreground">Guests</p>
-                  <p className="text-2xl font-bold" data-testid="text-guests">{preferences.numberOfPax}</p>
+                  <p className="text-xs text-muted-foreground">Guests</p>
+                  <p className="text-lg font-bold" data-testid="text-guests">{preferences.numberOfPax}</p>
                 </div>
               </CardContent>
             </Card>
             
-            <Card>
-              <CardContent className="p-4 flex items-center gap-3">
-                <TrendingUp className="w-8 h-8 text-primary" />
+            <Card className="flex-shrink-0 min-w-[140px]">
+              <CardContent className="p-3 flex items-center gap-2">
+                <TrendingUp className="w-6 h-6 text-primary" />
                 <div>
-                  <p className="text-sm text-muted-foreground">Dishes Selected</p>
-                  <p className="text-2xl font-bold" data-testid="text-dish-count">{recommendations.recommendations.length}</p>
+                  <p className="text-xs text-muted-foreground">Dishes</p>
+                  <p className="text-lg font-bold" data-testid="text-dish-count">{recommendations.recommendations.length}</p>
                 </div>
               </CardContent>
             </Card>
             
-            <Card>
-              <CardContent className="p-4 flex items-center gap-3">
-                <DollarSign className="w-8 h-8 text-primary" />
+            <Card className="flex-shrink-0 min-w-[160px]">
+              <CardContent className="p-3 flex items-center gap-2">
+                <DollarSign className="w-6 h-6 text-primary" />
                 <div>
-                  <p className="text-sm text-muted-foreground">Estimated Total</p>
-                  <p className="text-2xl font-bold" data-testid="text-total-cost">
+                  <p className="text-xs text-muted-foreground">Est. Total</p>
+                  <p className="text-lg font-bold" data-testid="text-total-cost">
                     ₹{recommendations.totalEstimatedCost.toLocaleString()}
                   </p>
-                  {preferences.budget && (
-                    <p className="text-xs mt-1" data-testid="text-per-person">
-                      ₹{Math.round(recommendations.estimatedCostPerPerson)}/person
-                      {recommendations.budgetStatus === "within_budget" && (
-                        <span className="text-green-600 ml-2">✓ Within budget</span>
-                      )}
-                      {recommendations.budgetStatus === "over_budget" && (
-                        <span className="text-orange-600 ml-2">Premium option</span>
-                      )}
-                    </p>
+                  {recommendations.budgetStatus === "within_budget" && (
+                    <span className="text-xs text-green-600">✓ Within budget</span>
                   )}
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Budget Note from AI */}
-          {recommendations.aiBudgetNote && (
-            <Card className="mb-6 border-orange-200 bg-orange-50/50 dark:bg-orange-950/20 dark:border-orange-900">
-              <CardContent className="p-4">
-                <div className="flex items-start gap-3">
-                  <DollarSign className="w-5 h-5 text-orange-600 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <h4 className="font-semibold text-sm mb-1">Budget Note</h4>
-                    <p className="text-sm text-muted-foreground" data-testid="text-budget-note">
-                      {recommendations.aiBudgetNote}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          <div className="flex gap-3">
+          {/* Action Buttons */}
+          <div className="flex gap-3 mt-4">
             <Button
-              size="lg"
+              size="sm"
               onClick={handleAddAllToCart}
               disabled={addToCartMutation.isPending}
+              className="flex-1"
               data-testid="button-add-all"
             >
               <ShoppingCart className="w-4 h-4 mr-2" />
               Add All to Cart
             </Button>
             <Button
-              size="lg"
+              size="sm"
               variant="outline"
-              onClick={() => setLocation("/tiffins")}
+              onClick={() => setLocation("/bulk-meals")}
+              className="flex-1"
               data-testid="button-browse-menu"
             >
-              Browse Full Menu
+              Browse Menu
             </Button>
           </div>
         </div>
 
-        {/* Recommended Dishes */}
-        <div className="space-y-8">
+        {/* Recommended Dishes - 2 column grid like BulkMeal */}
+        <div className="space-y-6">
           {Object.entries(groupedDishes).map(([category, dishes]) => (
             <div key={category}>
-              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                <Badge variant="secondary">{category}</Badge>
-                <span className="text-sm text-muted-foreground">({dishes.length} items)</span>
+              <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                <Badge variant="secondary" className="text-sm">{category}</Badge>
+                <span className="text-xs text-muted-foreground">({dishes.length})</span>
               </h2>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* 2 column grid matching BulkMeal */}
+              <div className="grid grid-cols-2 gap-3">
                 {dishes.map((dish) => {
                   const isAdded = addedItems.has(dish.id);
+                  const isVeg = dish.dietaryType?.toLowerCase() === 'veg';
+                  const isNonVeg = dish.dietaryType?.toLowerCase() === 'non-veg';
                   
                   return (
-                    <Card key={dish.id} className="hover-elevate" data-testid={`card-dish-${dish.id}`}>
-                      <CardHeader className="p-0">
-                        <img
+                    <Card 
+                      key={dish.id} 
+                      className="overflow-hidden hover-elevate group"
+                      data-testid={`card-dish-${dish.id}`}
+                    >
+                      {/* Dish Image */}
+                      <div className="relative h-32 overflow-hidden">
+                        <LazyImage 
                           src={getSupabaseImageUrl(dish.imageUrl)}
                           alt={dish.name}
-                          className="w-full h-40 object-cover rounded-t-lg"
-                          onError={(e) => {
-                            e.currentTarget.src = '/images/placeholder.jpg';
-                          }}
+                          containerClassName="w-full h-full"
+                          className="transition-transform duration-500 group-hover:scale-110"
                         />
-                      </CardHeader>
-                      <CardContent className="p-4">
-                        <div className="flex justify-between items-start mb-2">
-                          <CardTitle className="text-lg" data-testid="text-dish-name">{dish.name}</CardTitle>
-                          <Badge variant="outline" className="ml-2">
-                            ₹{parseFloat(dish.price).toFixed(0)}
-                          </Badge>
-                        </div>
-                        
-                        <CardDescription className="text-sm line-clamp-2 mb-3">
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                        {isVeg && (
+                          <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
+                            <Leaf className="w-3 h-3 text-white" />
+                          </div>
+                        )}
+                        {isNonVeg && (
+                          <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-red-500 flex items-center justify-center">
+                            <Drumstick className="w-3 h-3 text-white" />
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Dish Content */}
+                      <div className="p-3">
+                        <h3 className="font-bold text-sm mb-1 line-clamp-1" data-testid={`text-dish-name-${dish.id}`}>
+                          {dish.name}
+                        </h3>
+                        <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
                           {dish.description}
-                        </CardDescription>
-                        
-                        <div className="flex gap-2 flex-wrap mb-3">
-                          {dish.dietaryType && (
-                            <Badge variant="secondary" className="text-xs">
-                              {dish.dietaryType}
-                            </Badge>
-                          )}
-                          {dish.spiceLevel && (
-                            <Badge variant="secondary" className="text-xs">
-                              {dish.spiceLevel}
-                            </Badge>
-                          )}
+                        </p>
+                        <div className="flex items-center justify-between gap-2 mb-2">
+                          <span className="text-primary font-bold text-base" data-testid={`text-dish-price-${dish.id}`}>
+                            ₹{parseFloat(dish.price).toFixed(0)}
+                          </span>
                         </div>
-                        
                         <Button
-                          className="w-full"
                           size="sm"
                           onClick={() => handleAddToCart(dish.id)}
                           disabled={isAdded || addToCartMutation.isPending}
                           variant={isAdded ? "secondary" : "default"}
+                          className="w-full rounded-full text-xs h-8"
                           data-testid={`button-add-${dish.id}`}
                         >
-                          {isAdded ? (
-                            <>✓ Added</>
-                          ) : addToCartMutation.isPending ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <>
-                              <ShoppingCart className="w-4 h-4 mr-2" />
-                              Add to Cart
-                            </>
-                          )}
+                          {isAdded ? "Added" : "Add"}
                         </Button>
-                      </CardContent>
+                      </div>
                     </Card>
                   );
                 })}
@@ -555,17 +518,51 @@ export default function ConciergeResultsPage() {
           ))}
         </div>
 
+        {/* AI Recommendation Summary - Moved to after dishes */}
+        {recommendations.aiSummary && (
+          <Card className="mt-6 bg-primary/5 border-primary/20">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <Sparkles className="w-5 h-5 text-primary mt-1 flex-shrink-0" />
+                <div>
+                  <h3 className="font-semibold text-sm mb-2">AI Recommendation Summary</h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed" data-testid="text-ai-summary">
+                    {recommendations.aiSummary}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Budget Note from AI */}
+        {recommendations.aiBudgetNote && (
+          <Card className="mt-4 border-orange-200 bg-orange-50/50">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <DollarSign className="w-5 h-5 text-orange-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <h4 className="font-semibold text-sm mb-1">Budget Note</h4>
+                  <p className="text-xs text-muted-foreground" data-testid="text-budget-note">
+                    {recommendations.aiBudgetNote}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Bottom Action */}
-        <div className="mt-8 text-center">
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-2">Ready to Order?</h3>
-            <p className="text-muted-foreground mb-4">
+        <div className="mt-6 text-center">
+          <Card className="p-4">
+            <h3 className="text-base font-semibold mb-2">Ready to Order?</h3>
+            <p className="text-xs text-muted-foreground mb-3">
               Add your selected items to the cart and proceed to checkout
             </p>
             <div className="flex justify-center gap-3">
               <Button
-                size="lg"
-                onClick={() => setLocation("/tiffins")}
+                size="sm"
+                onClick={() => setLocation("/bulk-meals")}
                 variant="outline"
                 data-testid="button-view-cart"
               >
@@ -573,7 +570,7 @@ export default function ConciergeResultsPage() {
                 View Cart
               </Button>
               <Button
-                size="lg"
+                size="sm"
                 onClick={handleAddAllToCart}
                 disabled={addToCartMutation.isPending}
                 data-testid="button-add-all-bottom"
@@ -584,6 +581,9 @@ export default function ConciergeResultsPage() {
           </Card>
         </div>
       </div>
+
+      {/* Floating Navigation */}
+      <FloatingNav activeTab="menu" onTabChange={handleNavTabChange} />
     </div>
   );
 }
