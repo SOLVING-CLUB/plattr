@@ -3361,7 +3361,8 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                             <LazyImage 
                               src={dish ? getDishImage(dish) : item.image || idliImage1}
                               alt={item.name}
-                              className="w-full h-full transition-transform duration-500 group-hover:scale-110"
+                              containerClassName="w-full h-full"
+                              className="transition-transform duration-500 group-hover:scale-110"
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                         {isSelected && (

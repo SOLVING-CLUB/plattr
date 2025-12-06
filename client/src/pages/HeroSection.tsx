@@ -1,4 +1,5 @@
 import { ChevronRight } from "lucide-react";
+import { LazyImage } from "@/components/ui/lazy-image";
 import heroBanner from "@assets/Banner - 60 mins_1763877285748.png";
 
 interface HeroSectionProps {
@@ -11,11 +12,13 @@ export default function HeroSection({ onExploreMenu }: HeroSectionProps) {
       {/* Hero Banner - Full image visible with fade at bottom */}
       <div className="relative w-full">
         {/* Background Image - Full image with fade effect */}
-        <img 
+        <LazyImage 
           src={heroBanner}
           alt="60-minute delivery"
+          containerClassName="w-full"
           className="w-full h-auto"
           data-testid="image-hero-banner"
+          showSkeleton={true}
           style={{
             WebkitMaskImage: 'linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%)',
             maskImage: 'linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%)'

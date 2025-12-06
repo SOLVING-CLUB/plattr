@@ -1270,7 +1270,8 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                           <LazyImage 
                             src={getDishImage(dish.name, dish.imageUrl || undefined, dish)}
                             alt={dish.name}
-                            className="w-full h-full transition-transform duration-500 group-hover:scale-110"
+                            containerClassName="w-full h-full"
+                            className="transition-transform duration-500 group-hover:scale-110"
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                           {dish.categoryId && dish.categoryId.includes('veg') && (
@@ -1536,7 +1537,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                   <LazyImage 
                     src={getDishImage(detailDish.name, detailDish.imageUrl || undefined, detailDish)}
                     alt={detailDish.name}
-                    className="w-full h-full"
+                    containerClassName="w-full h-full"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                 </div>

@@ -2,12 +2,14 @@ import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "./skeleton";
 
-interface LazyImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
+interface LazyImageProps extends Omit<React.ImgHTMLAttributes<HTMLImageElement>, 'className'> {
   src: string;
   alt: string;
   fallbackSrc?: string;
   aspectRatio?: "square" | "video" | "wide" | "auto";
   showSkeleton?: boolean;
+  className?: string;
+  containerClassName?: string;
 }
 
 export function LazyImage({
@@ -17,6 +19,7 @@ export function LazyImage({
   aspectRatio = "auto",
   showSkeleton = true,
   className,
+  containerClassName,
   ...props
 }: LazyImageProps) {
   const [isLoaded, setIsLoaded] = useState(false);
@@ -33,7 +36,7 @@ export function LazyImage({
         }
       },
       {
-        rootMargin: "100px",
+        rootMargin: "200px",
         threshold: 0.01,
       }
     );
@@ -69,7 +72,7 @@ export function LazyImage({
       className={cn(
         "relative overflow-hidden bg-muted",
         aspectRatioClasses[aspectRatio],
-        className
+        containerClassName
       )}
     >
       {showSkeleton && !isLoaded && (
@@ -85,7 +88,8 @@ export function LazyImage({
           onError={handleError}
           className={cn(
             "w-full h-full object-cover transition-opacity duration-300",
-            isLoaded ? "opacity-100" : "opacity-0"
+            isLoaded ? "opacity-100" : "opacity-0",
+            className
           )}
           {...props}
         />
