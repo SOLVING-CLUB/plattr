@@ -155,10 +155,13 @@ const DISH_TYPE_IMAGES: Record<string, string> = {
   'default': idliImage1,
 };
 
+const LOCATION_STORAGE_KEY = "activeLocation";
+
 export default function Menu() {
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<"home" | "menu" | "profile">("menu");
   const [scrollY, setScrollY] = useState(0);
+  const [locationLabel, setLocationLabel] = useState("Select Address");
 
   // Scroll to top on page load
   useEffect(() => {
@@ -170,6 +173,54 @@ export default function Menu() {
     const handleScroll = () => setScrollY(window.scrollY);
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Location sync from localStorage
+  useEffect(() => {
+    const readLocationFromStorage = () => {
+      const savedLocation = localStorage.getItem(LOCATION_STORAGE_KEY);
+      if (savedLocation) {
+        try {
+          const parsed = JSON.parse(savedLocation);
+          setLocationLabel(parsed.label || "Select Address");
+        } catch (e) {
+          setLocationLabel("Select Address");
+        }
+      } else {
+        setLocationLabel("Select Address");
+      }
+    };
+
+    readLocationFromStorage();
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === LOCATION_STORAGE_KEY && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          setLocationLabel(parsed.label || "Select Address");
+        } catch (error) {
+          console.error("Error parsing location from storage event:", error);
+        }
+      } else if (e.key === LOCATION_STORAGE_KEY && !e.newValue) {
+        setLocationLabel("Select Address");
+      }
+    };
+
+    const handleLocationChange = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail?.label) {
+        setLocationLabel(customEvent.detail.label);
+      } else {
+        readLocationFromStorage();
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("locationchange", handleLocationChange);
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("locationchange", handleLocationChange);
+    };
   }, []);
   const [selectedMealCategory, setSelectedMealCategory] = useState<string>("lunch-dinner");
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -551,12 +602,12 @@ export default function Menu() {
       <div className="relative z-10 px-4 pt-4 pb-6">
         {/* Location and Cart */}
         <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-2">
+          <button className="flex items-center gap-2" onClick={() => setLocation("/location")}>
             <MapPin className="w-5 h-5 text-[#06352A]" />
             <span className="text-[#06352A] font-semibold text-[18px]" style={{ fontFamily: "Sweet Sans Pro" }}>
-              Bengaluru, KA
+              {locationLabel}
             </span>
-          </div>
+          </button>
           <button
             className="p-2 rounded-full hover:bg-gray-100 transition-colors relative"
             data-testid="button-cart"

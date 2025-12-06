@@ -944,18 +944,69 @@ import dinnerIcon from "@assets/Rectangle 34625261.png";
 
 type ServiceType = "bulk-meals" | "mealbox" | "catering" | "corporate";
 
+const LOCATION_STORAGE_KEY = "activeLocation";
+
 export default function CateringOrder() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<"home" | "menu" | "profile">("home");
   const [selectedService, setSelectedService] = useState<ServiceType>("catering");
   const [scrollY, setScrollY] = useState(0);
+  const [locationLabel, setLocationLabel] = useState("Select Address");
 
   // Track scroll position for sticky header
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY);
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Location sync from localStorage
+  useEffect(() => {
+    const readLocationFromStorage = () => {
+      const savedLocation = localStorage.getItem(LOCATION_STORAGE_KEY);
+      if (savedLocation) {
+        try {
+          const parsed = JSON.parse(savedLocation);
+          setLocationLabel(parsed.label || "Select Address");
+        } catch (e) {
+          setLocationLabel("Select Address");
+        }
+      } else {
+        setLocationLabel("Select Address");
+      }
+    };
+
+    readLocationFromStorage();
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === LOCATION_STORAGE_KEY && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          setLocationLabel(parsed.label || "Select Address");
+        } catch (error) {
+          console.error("Error parsing location from storage event:", error);
+        }
+      } else if (e.key === LOCATION_STORAGE_KEY && !e.newValue) {
+        setLocationLabel("Select Address");
+      }
+    };
+
+    const handleLocationChange = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail?.label) {
+        setLocationLabel(customEvent.detail.label);
+      } else {
+        readLocationFromStorage();
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("locationchange", handleLocationChange);
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("locationchange", handleLocationChange);
+    };
   }, []);
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -1166,12 +1217,12 @@ export default function CateringOrder() {
       <div className="relative z-10 px-4 pt-4 pb-6">
         {/* Location and Cart */}
         <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-2">
+          <button className="flex items-center gap-2" onClick={() => setLocation("/location")}>
             <MapPin className="w-5 h-5 text-white" />
             <span className="text-white font-semibold text-[18px]" style={{ fontFamily: "Sweet Sans Pro" }}>
-              Bengaluru, KA
+              {locationLabel}
             </span>
-          </div>
+          </button>
           <button
             className="p-2 rounded-full hover:bg-white/20 transition-colors"
             onClick={() => toast({ title: "Cart", description: "Cart coming soon!" })}

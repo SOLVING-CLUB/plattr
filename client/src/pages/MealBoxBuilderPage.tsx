@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
+
+const LOCATION_STORAGE_KEY = "activeLocation";
 import {
   ShoppingCart,
   MapPin,
@@ -24,6 +26,54 @@ export default function MealBoxBuilderPage() {
   const [mealPreference, setMealPreference] = useState<"veg" | "non-veg">("non-veg");
   const [vegQuantity, setVegQuantity] = useState(5);
   const [nonVegQuantity, setNonVegQuantity] = useState(12);
+  const [locationLabel, setLocationLabel] = useState("Select Address");
+
+  useEffect(() => {
+    const readLocationFromStorage = () => {
+      const savedLocation = localStorage.getItem(LOCATION_STORAGE_KEY);
+      if (savedLocation) {
+        try {
+          const parsed = JSON.parse(savedLocation);
+          setLocationLabel(parsed.label || "Select Address");
+        } catch (e) {
+          setLocationLabel("Select Address");
+        }
+      } else {
+        setLocationLabel("Select Address");
+      }
+    };
+
+    readLocationFromStorage();
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === LOCATION_STORAGE_KEY && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          setLocationLabel(parsed.label || "Select Address");
+        } catch (error) {
+          console.error("Error parsing location from storage event:", error);
+        }
+      } else if (e.key === LOCATION_STORAGE_KEY && !e.newValue) {
+        setLocationLabel("Select Address");
+      }
+    };
+
+    const handleLocationChange = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail?.label) {
+        setLocationLabel(customEvent.detail.label);
+      } else {
+        readLocationFromStorage();
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("locationchange", handleLocationChange);
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("locationchange", handleLocationChange);
+    };
+  }, []);
 
   const categories = [
     { id: "bulk-meals", label: "Bulk Meals", icon: Package },
@@ -61,10 +111,14 @@ export default function MealBoxBuilderPage() {
       {/* Header */}
       <header className="bg-transparent relative z-50 backdrop-blur-sm">
         <div className="flex items-center justify-between p-4">
-          <div className="flex items-center gap-2" data-testid="text-location">
+          <button 
+            className="flex items-center gap-2" 
+            data-testid="text-location"
+            onClick={() => navigate("/location")}
+          >
             <MapPin className="w-4 h-4 text-muted-foreground" />
-            <span className="font-medium">Bengaluru, KA</span>
-          </div>
+            <span className="font-medium">{locationLabel}</span>
+          </button>
           <Button
             variant="default"
             size="icon"

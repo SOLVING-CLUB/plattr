@@ -172,6 +172,8 @@ const DISH_TYPE_IMAGES: Record<string, string> = {
 type ServiceType = "bulk-meals" | "mealbox" | "catering" | "corporate";
 type NavigateFn = (path: string, options?: { replace?: boolean }) => void;
 
+const LOCATION_STORAGE_KEY = "activeLocation";
+
 interface BulkMealsProps {
   onNavigate?: NavigateFn;
 }
@@ -190,10 +192,59 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
   const { cart, addedItems, addToCart, removeFromCart, enterCategory } = useCart();
   const [activeTab, setActiveTab] = useState<"home" | "menu" | "profile">("home");
   const [selectedService, setSelectedService] = useState<ServiceType>("bulk-meals");
+  const [locationLabel, setLocationLabel] = useState("Select Address");
 
   // Scroll to top on page load
   useEffect(() => {
     window.scrollTo(0, 0);
+  }, []);
+
+  // Location sync from localStorage
+  useEffect(() => {
+    const readLocationFromStorage = () => {
+      const savedLocation = localStorage.getItem(LOCATION_STORAGE_KEY);
+      if (savedLocation) {
+        try {
+          const parsed = JSON.parse(savedLocation);
+          setLocationLabel(parsed.label || "Select Address");
+        } catch (e) {
+          setLocationLabel("Select Address");
+        }
+      } else {
+        setLocationLabel("Select Address");
+      }
+    };
+
+    readLocationFromStorage();
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === LOCATION_STORAGE_KEY && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          setLocationLabel(parsed.label || "Select Address");
+        } catch (error) {
+          console.error("Error parsing location from storage event:", error);
+        }
+      } else if (e.key === LOCATION_STORAGE_KEY && !e.newValue) {
+        setLocationLabel("Select Address");
+      }
+    };
+
+    const handleLocationChange = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail?.label) {
+        setLocationLabel(customEvent.detail.label);
+      } else {
+        readLocationFromStorage();
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("locationchange", handleLocationChange);
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("locationchange", handleLocationChange);
+    };
   }, []);
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -734,12 +785,12 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
         {/* Loading Skeleton Content */}
         <div className="relative z-10 px-4 pt-4 pb-6">
           <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-2">
+            <button className="flex items-center gap-2" onClick={() => navigate("/location")}>
               <MapPin className="w-5 h-5 text-white" />
               <span className="text-white font-semibold text-[18px]" style={{ fontFamily: "Sweet Sans Pro" }}>
-                Bengaluru, KA
+                {locationLabel}
               </span>
-            </div>
+            </button>
           </div>
           {/* Service Tabs Skeleton */}
           <div className="grid grid-cols-4 gap-2 mb-8">
@@ -824,12 +875,12 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
       <div className="relative z-10 px-4 pt-4 pb-6">
         {/* Location */}
         <div className="flex items-center mb-6">
-          <div className="flex items-center gap-2">
+          <button className="flex items-center gap-2" onClick={() => navigate("/location")}>
             <MapPin className="w-5 h-5 text-white" />
             <span className="text-white font-semibold text-[18px]" style={{ fontFamily: "Sweet Sans Pro" }}>
-              Bengaluru, KA
+              {locationLabel}
             </span>
-          </div>
+          </button>
         </div>
 
         {/* Service Navigation Tabs */}
