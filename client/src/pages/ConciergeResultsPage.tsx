@@ -222,33 +222,53 @@ export default function ConciergeResultsPage() {
         }
         
         // Fetch dish details from Supabase using the IDs
-        const allDishes = await supabase.select<any>('dishes', {
-          select: '*',
-        });
+        // Use PostgREST 'in' operator to only fetch the dishes we need
+        let selectedDishes: any[] = [];
         
-        console.log('All dishes from Supabase:', allDishes.length);
-        
-        // Filter to get only the recommended dishes
-        // Match by dish_id (like "D-0011"), id (UUID), or name
-        const selectedDishes = allDishes.filter((dish: any) => 
-          dishIds.includes(dish.dish_id) || 
-          dishIds.includes(dish.id) || 
-          dishIds.includes(dish.name)
-        );
-        
-        console.log('Selected dishes by ID match:', selectedDishes.length);
-        
-        // If no matches found by ID, try matching by name
-        if (selectedDishes.length === 0 && dishIds.length > 0) {
-          const byName = allDishes.filter((dish: any) =>
-            dishIds.some((id: string) => 
-              dish.name?.toLowerCase().includes(id.toLowerCase()) ||
-              id.toLowerCase().includes(dish.name?.toLowerCase() || '')
-            )
-          );
-          selectedDishes.push(...byName);
-          console.log('Selected dishes by name match:', selectedDishes.length);
+        if (dishIds.length > 0) {
+          try {
+            console.log('Fetching dishes from Supabase for IDs:', dishIds);
+            
+            // Build the 'in' filter for dish_id column (format: D-0001, D-0002, etc.)
+            // PostgREST requires string values to be double-quoted
+            const quotedIds = dishIds.map((id: string) => `"${id}"`).join(',');
+            const inFilter = `in.(${quotedIds})`;
+            
+            console.log('Supabase filter:', inFilter);
+            
+            const dishesResult = await supabase.select<any>('dishes', {
+              select: '*',
+              filter: { 'dish_id': inFilter },
+            });
+            
+            console.log('Dishes fetched from Supabase:', dishesResult?.length || 0);
+            
+            if (dishesResult && dishesResult.length > 0) {
+              selectedDishes = dishesResult;
+            } else {
+              // Fallback: try fetching by UUID id if dish_id didn't work
+              console.log('No matches by dish_id, trying by UUID id...');
+              const byIdResult = await supabase.select<any>('dishes', {
+                select: '*',
+                filter: { 'id': inFilter },
+              });
+              
+              if (byIdResult && byIdResult.length > 0) {
+                selectedDishes = byIdResult;
+                console.log('Found dishes by UUID:', byIdResult.length);
+              }
+            }
+          } catch (supabaseError: any) {
+            console.error('Supabase query error:', supabaseError);
+            toast({
+              title: "Error loading dishes",
+              description: "Could not fetch dish details. Please try again.",
+              variant: "destructive",
+            });
+          }
         }
+        
+        console.log('Selected dishes count:', selectedDishes.length);
         
         // Calculate costs
         const totalCost = selectedDishes.reduce((sum: number, d: any) => sum + (parseFloat(d.price) || 0) * preferences.numberOfPax, 0);
