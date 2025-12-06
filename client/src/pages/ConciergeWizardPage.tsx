@@ -319,7 +319,7 @@ export default function ConciergeWizardPage() {
         )}
 
         {currentStep === 2 && (
-          <div>
+          <div className="mt-6">
             <div className="flex items-center justify-between mb-2">
               <div>
                 <h2 className="text-xl font-bold" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
