@@ -218,12 +218,13 @@ export function mapApiRouteToSupabase(route: string[]): { table: string; options
           }
         };
       }
-      // Otherwise filter by meal_type
+      // Filter by meal_type using ilike pattern match since meal_type is comma-separated
+      // e.g., "tiffins, snacks, lunch-dinner" - use ilike to find categories containing the meal type
       return {
         table: 'categories',
         options: {
           select: '*',
-          filter: { 'meal_type': `eq.${dbMealType}` },
+          filter: { 'meal_type': `ilike.*${dbMealType}*` },
           order: 'display_order.asc'
         }
       };

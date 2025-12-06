@@ -402,11 +402,14 @@ export default function Menu() {
   };
 
   // Fuse.js instance for fuzzy search (memoized)
+  // Includes category_id so searching for "sweets" finds dishes in the sweets category
   const fuse = useMemo(() => {
     return new Fuse(dishes, {
       keys: [
         { name: 'name', weight: 2 },
-        { name: 'description', weight: 1 }
+        { name: 'description', weight: 1 },
+        { name: 'category_id', weight: 1.5 },
+        { name: 'categoryId', weight: 1.5 }
       ],
       threshold: 0.4,
       ignoreLocation: true,
