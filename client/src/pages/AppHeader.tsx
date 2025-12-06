@@ -90,12 +90,12 @@ export default function AppHeader({
         <button
           onClick={() => setLocation("/concierge")}
           data-testid="button-smart-menu-concierge"
-          className="flex items-center justify-center px-4 py-2 rounded-lg hover:opacity-90 transition-opacity text-[12px]"
+          className="flex items-center justify-center px-3 py-1.5 rounded-lg hover:opacity-90 transition-opacity"
           style={{
-            backgroundColor: "#06352A",
+            background: "linear-gradient(135deg, #06352A 0%, #1A9952 100%)",
             boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
             fontFamily: "Sweet Sans Pro",
-            fontSize: "18px",
+            fontSize: "12px",
             fontWeight: 600,
             color: "white",
           }}
