@@ -66,71 +66,86 @@ export default function ConciergeResultsPage() {
     categoryCounts: categoryCountsParam ? JSON.parse(categoryCountsParam) : [],
   };
 
-  // Generate recommendations on mount
+  // Generate recommendations on mount by calling n8n webhook
   useEffect(() => {
     const generateRecommendations = async () => {
       try {
         setIsGenerating(true);
         
-        // Map meal type to database format
-        const mealTypeMap: Record<string, string> = {
-          breakfast: 'tiffins',
-          lunch: 'lunch-dinner',
-          dinner: 'lunch-dinner',
-          snacks: 'snacks',
-        };
-        const mealTypeFilter = mealTypeMap[preferences.mealType] || preferences.mealType;
+        // Call the n8n webhook with user preferences
+        const webhookResponse = await fetch('https://navaneeth03.app.n8n.cloud/webhook/smart-plattr-concierge', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            cuisinePreferences: preferences.cuisinePreferences,
+            numberOfPax: preferences.numberOfPax,
+            eventType: preferences.eventType,
+            budget: preferences.budget,
+            mealType: preferences.mealType,
+            dietaryPreference: preferences.dietaryPreference,
+            allergies: preferences.allergies,
+            categoryCounts: preferences.categoryCounts,
+          }),
+        });
         
-        // Fetch dishes from Supabase
-        const dishes = await supabase.select<any>('dishes', {
+        if (!webhookResponse.ok) {
+          throw new Error('Failed to get recommendations from AI');
+        }
+        
+        const webhookData = await webhookResponse.json();
+        console.log('Webhook response:', webhookData);
+        
+        // Extract dish IDs from webhook response
+        // The webhook may return dish IDs in various formats - handle common patterns
+        let dishIds: string[] = [];
+        let aiSummary: string | null = null;
+        let budgetNote: string | null = null;
+        
+        if (webhookData.dishIds) {
+          dishIds = Array.isArray(webhookData.dishIds) ? webhookData.dishIds : [webhookData.dishIds];
+        } else if (webhookData.dishes) {
+          dishIds = Array.isArray(webhookData.dishes) 
+            ? webhookData.dishes.map((d: any) => typeof d === 'string' ? d : d.id || d.dishId)
+            : [];
+        } else if (webhookData.recommendations) {
+          dishIds = Array.isArray(webhookData.recommendations)
+            ? webhookData.recommendations.map((d: any) => typeof d === 'string' ? d : d.id || d.dishId)
+            : [];
+        } else if (Array.isArray(webhookData)) {
+          dishIds = webhookData.map((d: any) => typeof d === 'string' ? d : d.id || d.dishId);
+        }
+        
+        if (webhookData.summary || webhookData.aiSummary) {
+          aiSummary = webhookData.summary || webhookData.aiSummary;
+        }
+        if (webhookData.budgetNote || webhookData.aiBudgetNote) {
+          budgetNote = webhookData.budgetNote || webhookData.aiBudgetNote;
+        }
+        
+        // Fetch dish details from Supabase using the IDs
+        const allDishes = await supabase.select<any>('dishes', {
           select: '*',
-          order: 'name.asc',
         });
         
-        // Filter dishes based on preferences
-        let filteredDishes = dishes.filter((dish: any) => {
-          // Filter by meal type
-          const mealTypes = dish.meal_type || [];
-          if (!mealTypes.includes(mealTypeFilter)) return false;
-          
-          // Filter by dietary preference
-          if (preferences.dietaryPreference && preferences.dietaryPreference !== 'all') {
-            if (preferences.dietaryPreference === 'veg' && dish.dietary_type !== 'Veg') return false;
-            if (preferences.dietaryPreference === 'non-veg' && dish.dietary_type !== 'Non-Veg') return false;
-            if (preferences.dietaryPreference === 'egg' && !['Veg', 'Egg'].includes(dish.dietary_type)) return false;
-          }
-          
-          // Filter by cuisine preferences
-          if (preferences.cuisinePreferences.length > 0) {
-            if (!preferences.cuisinePreferences.includes(dish.cuisine)) return false;
-          }
-          
-          return true;
-        });
+        // Filter to get only the recommended dishes
+        const selectedDishes = allDishes.filter((dish: any) => 
+          dishIds.includes(dish.id) || dishIds.includes(dish.name)
+        );
         
-        // Shuffle and select dishes based on category counts or default selection
-        const shuffled = filteredDishes.sort(() => Math.random() - 0.5);
-        
-        // Select a reasonable number of dishes (max 15 or based on category counts)
-        let selectedDishes: any[] = [];
-        if (preferences.categoryCounts.length > 0) {
-          // Select dishes based on category counts
-          for (const cc of preferences.categoryCounts) {
-            const categoryDishes = shuffled.filter((d: any) => d.category_id === cc.categoryId);
-            selectedDishes.push(...categoryDishes.slice(0, cc.count));
-          }
-        } else {
-          // Default: select up to 10-15 dishes from different categories
-          const categories = Array.from(new Set(shuffled.map((d: any) => d.category_id)));
-          for (const cat of categories.slice(0, 5)) {
-            const catDishes = shuffled.filter((d: any) => d.category_id === cat).slice(0, 3);
-            selectedDishes.push(...catDishes);
-          }
+        // If no matches found by ID, try matching by name
+        if (selectedDishes.length === 0 && dishIds.length > 0) {
+          const byName = allDishes.filter((dish: any) =>
+            dishIds.some((id: string) => 
+              dish.name.toLowerCase().includes(id.toLowerCase()) ||
+              id.toLowerCase().includes(dish.name.toLowerCase())
+            )
+          );
+          selectedDishes.push(...byName);
         }
         
         // Calculate costs
-        const totalCost = selectedDishes.reduce((sum, d) => sum + (parseFloat(d.price) || 0) * preferences.numberOfPax, 0);
-        const costPerPerson = totalCost / preferences.numberOfPax;
+        const totalCost = selectedDishes.reduce((sum: number, d: any) => sum + (parseFloat(d.price) || 0) * preferences.numberOfPax, 0);
+        const costPerPerson = preferences.numberOfPax > 0 ? totalCost / preferences.numberOfPax : 0;
         
         // Format dishes for response
         const formattedDishes: Dish[] = selectedDishes.map((d: any) => ({
@@ -149,19 +164,13 @@ export default function ConciergeResultsPage() {
         
         // Determine budget status
         let budgetStatus: "within_budget" | "over_budget" | null = null;
-        let aiBudgetNote: string | null = null;
         if (preferences.budget) {
           const budgetPerPerson = preferences.budget;
-          if (costPerPerson <= budgetPerPerson) {
-            budgetStatus = "within_budget";
-          } else {
-            budgetStatus = "over_budget";
-            aiBudgetNote = `The selected menu costs approximately ₹${Math.round(costPerPerson)} per person, which is above your budget of ₹${budgetPerPerson}. Consider reducing the number of items or selecting more economical dishes.`;
-          }
+          budgetStatus = costPerPerson <= budgetPerPerson ? "within_budget" : "over_budget";
         }
         
         const data: RecommendationResponse = {
-          sessionId: `session-${Date.now()}`,
+          sessionId: webhookData.sessionId || `session-${Date.now()}`,
           recommendations: formattedDishes,
           totalEstimatedCost: totalCost,
           estimatedCostPerPerson: costPerPerson,
@@ -172,9 +181,9 @@ export default function ConciergeResultsPage() {
             budget: preferences.budget,
             mealType: preferences.mealType,
           },
-          aiSummary: `Based on your preferences for a ${preferences.eventType} event with ${preferences.numberOfPax} guests, we've curated ${formattedDishes.length} dishes from ${preferences.cuisinePreferences.length > 0 ? preferences.cuisinePreferences.join(', ') : 'various'} cuisine(s). This selection includes a mix of starters, main courses, and accompaniments to create a complete dining experience.`,
+          aiSummary: aiSummary || `Based on your preferences for a ${preferences.eventType} event with ${preferences.numberOfPax} guests, we've curated ${formattedDishes.length} personalized dishes.`,
           budgetStatus,
-          aiBudgetNote,
+          aiBudgetNote: budgetNote,
         };
         
         setRecommendations(data);
