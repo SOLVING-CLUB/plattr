@@ -24,10 +24,7 @@ export default function AboutPage() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <AppHeader 
-        cartItemCount={0}
-        onCartClick={() => setLocation('/cart')}
-      />
+      <AppHeader />
 
       <main className="max-w-6xl mx-auto px-4 py-8">
         <Button 

@@ -754,8 +754,6 @@ export default function CategoryPage() {
   return (
     <div className="h-screen bg-background flex flex-col overflow-hidden">
       <AppHeader 
-        cartItemCount={totalCartItems}
-        onCartClick={() => setShowPlatter(true)}
         onBackClick={() => setLocation('/')}
         onSearch={setSearchQuery}
         searchQuery={searchQuery}

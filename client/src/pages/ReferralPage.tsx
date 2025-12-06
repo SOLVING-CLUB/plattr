@@ -46,10 +46,7 @@ export default function ReferralPage() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <AppHeader 
-        cartItemCount={0}
-        onCartClick={() => setLocation('/cart')}
-      />
+      <AppHeader />
 
       <main className="max-w-4xl mx-auto px-4 py-8">
         <Button 

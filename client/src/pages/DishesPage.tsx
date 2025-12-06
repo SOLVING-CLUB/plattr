@@ -73,10 +73,7 @@ export default function DishesPage() {
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-6">
-      <AppHeader 
-        cartItemCount={totalItems}
-        onCartClick={() => setLocation('/categories/tiffins')}
-      />
+      <AppHeader />
 
       <main className="max-w-7xl mx-auto px-4 py-6">
         <Button 

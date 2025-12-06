@@ -1,22 +1,19 @@
 import { useState, useEffect } from "react";
-import { MapPin, ShoppingCart } from "lucide-react";
+import { MapPin, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { useLocation } from "wouter";
 import headerBg from "@assets/Hero_1763854193361.png";
 
 interface AppHeaderProps {
-  cartCount?: number;
   onLocationClick?: () => void;
-  onCartClick?: () => void;
 }
 
 const LOCATION_STORAGE_KEY = "activeLocation";
 
 export default function AppHeader({ 
-  cartCount = 0,
-  onLocationClick,
-  onCartClick 
+  onLocationClick
 }: AppHeaderProps) {
+  const [, setLocation] = useLocation();
   const [locationLabel, setLocationLabel] = useState("Select Address");
 
   useEffect(() => {
@@ -72,23 +69,17 @@ export default function AppHeader({
             style={{ fontFamily: "Sweet Sans Pro" }}>{locationLabel}</span>
         </Button>
 
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="relative hover:bg-black/10"
-          onClick={onCartClick}
-          data-testid="button-cart"
+        <button
+          onClick={() => setLocation("/concierge")}
+          data-testid="button-smart-menu-concierge"
+          className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-black/10 transition-colors"
+          style={{
+            background: "linear-gradient(135deg, #FFD700 0%, #FFFFFF 100%)",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+          }}
         >
-          <ShoppingCart className="w-5 h-5" />
-          {cartCount > 0 && (
-            <Badge 
-              className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
-              data-testid="text-cart-count"
-            >
-              {cartCount}
-            </Badge>
-          )}
-        </Button>
+          <Sparkles className="w-5 h-5 text-[#06352A]" />
+        </button>
       </div>
     </header>
   );

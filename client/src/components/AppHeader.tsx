@@ -1,17 +1,17 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, ShoppingCart, ArrowLeft } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Search, Sparkles, ArrowLeft } from "lucide-react";
+import { useLocation } from "wouter";
 
 interface AppHeaderProps {
-  cartItemCount?: number;
-  onCartClick: () => void;
   onBackClick?: () => void;
   onSearch?: (query: string) => void;
   searchQuery?: string;
 }
 
-export default function AppHeader({ cartItemCount = 0, onCartClick, onBackClick, onSearch, searchQuery }: AppHeaderProps) {
+export default function AppHeader({ onBackClick, onSearch, searchQuery }: AppHeaderProps) {
+  const [, setLocation] = useLocation();
+  
   return (
     <header className="sticky top-0 z-50 bg-background border-b" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       <div className="flex items-center gap-2 p-3 max-w-7xl mx-auto">
@@ -40,23 +40,17 @@ export default function AppHeader({ cartItemCount = 0, onCartClick, onBackClick,
           </div>
         </div>
 
-        <Button 
-          size="icon" 
-          variant="ghost" 
-          className="relative flex-shrink-0"
-          onClick={onCartClick}
-          data-testid="button-cart"
+        <button
+          onClick={() => setLocation("/concierge")}
+          data-testid="button-smart-menu-concierge"
+          className="flex items-center justify-center w-10 h-10 rounded-lg flex-shrink-0 transition-colors"
+          style={{
+            background: "linear-gradient(135deg, #FFD700 0%, #FFFFFF 100%)",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+          }}
         >
-          <ShoppingCart className="w-5 h-5" />
-          {cartItemCount > 0 && (
-            <Badge 
-              className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 rounded-full"
-              data-testid="badge-cart-count"
-            >
-              {cartItemCount}
-            </Badge>
-          )}
-        </Button>
+          <Sparkles className="w-5 h-5 text-[#06352A]" />
+        </button>
       </div>
     </header>
   );

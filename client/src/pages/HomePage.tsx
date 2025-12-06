@@ -578,9 +578,7 @@ export default function Home() {
   return (
     <div className="min-h-screen pb-44">
       <AppHeader 
-        cartCount={cartCount}
         onLocationClick={handleLocationClick}
-        onCartClick={handleCartClick}
       />
       
       <HeroSection onExploreMenu={handleExploreMenu} />
