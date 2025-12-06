@@ -72,11 +72,16 @@ export default function ConciergeResultsPage() {
       try {
         setIsGenerating(true);
         
+        // Generate a unique session ID for n8n tracking
+        const sessionId = `plattr-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+        console.log('Generated sessionId:', sessionId);
+        
         // Call the n8n webhook with user preferences
         const webhookResponse = await fetch('https://navaneeth03.app.n8n.cloud/webhook/smart-plattr-concierge', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            sessionId: sessionId,
             cuisinePreferences: preferences.cuisinePreferences,
             numberOfPax: preferences.numberOfPax,
             eventType: preferences.eventType,
