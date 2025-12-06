@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { LazyImage } from "@/components/ui/lazy-image";
 import biryaniImage1 from '@assets/stock_images/indian_biryani_dish__60e99e80.jpg';
 import idliImage1 from '@assets/stock_images/indian_idli_sambar_s_c6bb3ca9.jpg';
 import vadaImage1 from '@assets/stock_images/indian_vada_d82fc29e.jpg';
@@ -916,10 +917,10 @@ export default function Menu() {
                         onClick={() => openDishDetail(dish)}
                         data-testid={`image-dish-${dish.id}`}
                       >
-                        <img 
+                        <LazyImage 
                           src={getDishImage(dish.name, dish.imageUrl || undefined, dish)}
                           alt={dish.name}
-                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                          className="w-full h-full transition-transform duration-500 group-hover:scale-110"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                         {dish.categoryId && dish.categoryId.includes('veg') && (
@@ -1132,10 +1133,10 @@ export default function Menu() {
               {/* Image */}
               {detailDish && (
                 <div className="relative h-64 rounded-lg overflow-hidden">
-                  <img 
+                  <LazyImage 
                     src={getDishImage(detailDish.name, detailDish.imageUrl || undefined, detailDish)}
                     alt={detailDish.name}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                 </div>

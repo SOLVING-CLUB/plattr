@@ -26,6 +26,7 @@ import { getQueryFn } from "@/lib/queryClient";
 import type { Dish, Category as CategoryType } from "@shared/schema";
 import { getSupabaseImageUrl } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
+import { LazyImage } from "@/components/ui/lazy-image";
 import { ArrowLeft, Building2, Users, Calendar, Mail, Phone, MapPin, ShoppingCart, UtensilsCrossed, Package, Truck, Clock, X, ChevronDown, Search, Mic, ArrowUpDown, SlidersHorizontal, Star, Utensils, LayoutGrid, Leaf, Drumstick, Egg, Sparkles } from "lucide-react";
 import biryaniImage1 from '@assets/stock_images/indian_biryani_dish__60e99e80.jpg';
 import idliImage1 from '@assets/stock_images/indian_idli_sambar_s_c6bb3ca9.jpg';
@@ -1266,11 +1267,10 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                           onClick={() => { handleInteraction(); openDishDetail(dish); }}
                           data-testid={`image-dish-${dish.id}`}
                         >
-                          <img 
+                          <LazyImage 
                             src={getDishImage(dish.name, dish.imageUrl || undefined, dish)}
                             alt={dish.name}
-                            loading="lazy"
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                            className="w-full h-full transition-transform duration-500 group-hover:scale-110"
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                           {dish.categoryId && dish.categoryId.includes('veg') && (
@@ -1533,10 +1533,10 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
               {/* Image */}
               {detailDish && (
                 <div className="relative h-64 rounded-lg overflow-hidden">
-                  <img 
+                  <LazyImage 
                     src={getDishImage(detailDish.name, detailDish.imageUrl || undefined, detailDish)}
                     alt={detailDish.name}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                 </div>

@@ -1015,6 +1015,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { LazyImage } from "@/components/ui/lazy-image";
 import { ArrowLeft, Building2, MapPin, ShoppingCart, UtensilsCrossed, Package, Truck, Search, Check, ChevronRight, ChevronLeft, Star, ArrowUpDown, SlidersHorizontal, LayoutGrid, Leaf, Drumstick, Egg, Sparkles } from "lucide-react";
 import FloatingNav from "@/pages/FloatingNav";
 import ContinueOrderBanner from "@/pages/ContinueOrderBanner";
@@ -3357,10 +3358,10 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                             onClick={() => { handleInteraction(); if (dish) openDishDetail(dish); }}
                             data-testid={`image-dish-${item.id}`}
                           >
-                            <img 
+                            <LazyImage 
                               src={dish ? getDishImage(dish) : item.image || idliImage1}
                               alt={item.name}
-                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                              className="w-full h-full transition-transform duration-500 group-hover:scale-110"
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                         {isSelected && (
