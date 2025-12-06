@@ -345,11 +345,11 @@ export default function ConciergeWizardPage() {
               </Button>
             </div>
 
-            <p className="text-xs text-gray-500 mb-4" style={{ fontFamily: "Sweet Sans Pro" }}>
+            <p className="text-xs text-gray-500 mb-6" style={{ fontFamily: "Sweet Sans Pro" }}>
               Choose all the cuisines that you'd like to include in your menu
             </p>
 
-            <div className="relative mb-4">
+            <div className="relative mb-6">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 type="text"
