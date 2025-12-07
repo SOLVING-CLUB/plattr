@@ -478,14 +478,19 @@ export default function ConciergeResultsPage() {
   // Bulk Meal mode: update dish quantity
   const handleBulkQuantityChange = (dishId: string, change: number) => {
     setDishQuantities(prev => {
-      const current = prev[dishId] || 0;
-      const newQty = Math.max(0, current + change);
-      if (newQty === 0) {
-        const { [dishId]: _, ...rest } = prev;
-        return rest;
-      }
+      const current = prev[dishId] ?? 5; // Default to 5 if not set
+      const newQty = Math.max(1, current + change); // Minimum 1
       return { ...prev, [dishId]: newQty };
     });
+  };
+  
+  // Bulk Meal mode: set dish quantity directly (for typing)
+  const handleBulkQuantitySet = (dishId: string, value: string) => {
+    const numValue = parseInt(value) || 0;
+    setDishQuantities(prev => ({
+      ...prev,
+      [dishId]: Math.max(0, numValue)
+    }));
   };
   
   // Bulk Meal mode: add dish to bulk cart
@@ -901,7 +906,7 @@ export default function ConciergeResultsPage() {
                   const isEgg = dish.dietaryType?.toLowerCase() === 'egg';
                   const isNonVeg = dish.dietaryType?.toLowerCase() === 'non-veg';
                   const isVegOrEgg = isVeg || isEgg || (!isVeg && !isEgg && !isNonVeg);
-                  const currentQty = dishQuantities[dish.id] || 0;
+                  const currentQty = dishQuantities[dish.id] ?? 5;
                   const isInMealbox = mealboxDishes.vegDishes.includes(dish.id) || mealboxDishes.nonVegDishes.includes(dish.id);
                   
                   return (
@@ -956,7 +961,7 @@ export default function ConciergeResultsPage() {
                             {!isAdded ? (
                               <>
                                 <div className="flex items-center justify-between gap-2">
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-1">
                                     <button
                                       onClick={() => handleBulkQuantityChange(dish.id, -1)}
                                       className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100"
@@ -964,7 +969,14 @@ export default function ConciergeResultsPage() {
                                     >
                                       <Minus className="w-3 h-3" />
                                     </button>
-                                    <span className="w-6 text-center font-semibold text-sm">{currentQty}</span>
+                                    <input
+                                      type="number"
+                                      value={currentQty}
+                                      onChange={(e) => handleBulkQuantitySet(dish.id, e.target.value)}
+                                      className="w-12 h-7 text-center font-semibold text-sm border border-gray-300 rounded"
+                                      min="0"
+                                      data-testid={`input-qty-${dish.id}`}
+                                    />
                                     <button
                                       onClick={() => handleBulkQuantityChange(dish.id, 1)}
                                       className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100"
