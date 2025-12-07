@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Sparkles, ShoppingCart, ArrowLeft, Loader2, TrendingUp, Users, DollarSign, Leaf, Drumstick, Plus, Minus, Package, Utensils } from "lucide-react";
+import { Sparkles, ShoppingCart, ArrowLeft, Loader2, TrendingUp, Users, DollarSign, Leaf, Drumstick, Plus, Minus, Package, Utensils, RefreshCw } from "lucide-react";
 import { getSupabaseImageUrl } from "@/lib/supabase";
 import { supabase } from "@/lib/supabase-client";
 import FloatingNav from "@/pages/FloatingNav";
@@ -688,15 +688,25 @@ export default function ConciergeResultsPage() {
       <div className="container max-w-6xl mx-auto pt-12 pb-8 px-4">
         {/* Header - Start Over button with extra top spacing for mobile status bar */}
         <div className="mb-6">
-          <Button
-            variant="ghost"
-            onClick={() => setLocation("/concierge")}
-            className="mb-4"
-            data-testid="button-back"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Start Over
-          </Button>
+          <div className="flex items-center gap-2 mb-4">
+            <Button
+              variant="ghost"
+              onClick={() => setLocation("/concierge")}
+              data-testid="button-back"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Start Over
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleRetry}
+              disabled={isGenerating}
+              data-testid="button-refresh"
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${isGenerating ? 'animate-spin' : ''}`} />
+              {isGenerating ? 'Refreshing...' : 'Refresh'}
+            </Button>
+          </div>
           
           <div className="flex items-center gap-3 mb-4">
             <Sparkles className="w-8 h-8 text-primary" />
