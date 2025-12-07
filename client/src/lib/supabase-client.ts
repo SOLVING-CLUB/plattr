@@ -228,6 +228,27 @@ export function mapApiRouteToSupabase(route: string[]): { table: string; options
           order: 'display_order.asc'
         }
       };
+    
+    case '/api/category-meal-types':
+      // Fetch categories for a specific meal type using junction table
+      // Route format: ['/api/category-meal-types', mealTypeId]
+      if (!mealType) {
+        return {
+          table: 'category_meal_types',
+          options: {
+            select: '*,categories(*)',
+            order: 'display_order.asc'
+          }
+        };
+      }
+      return {
+        table: 'category_meal_types',
+        options: {
+          select: '*,categories(*)',
+          filter: { 'meal_type': `eq.${dbMealType}` },
+          order: 'display_order.asc'
+        }
+      };
       
     case '/api/dishes':
       if (categoryId === 'all' || !categoryId) {

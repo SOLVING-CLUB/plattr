@@ -58,12 +58,31 @@ import grilledIcon from "@assets/Image34_1763904331982.png";
 import friedIcon from "@assets/Image65_1763904331981.png";
 import stuffedIcon from "@assets/Image49_1763904331978.png";
 
-// Helper function to filter categories by meal_type from database
+// Type for category_meal_types junction table response
+interface CategoryMealTypeRow {
+  id: number;
+  category_id: string;
+  meal_type: string;
+  display_order: number | null;
+  categories: CategoryType;
+}
+
+// Helper function to extract categories from category_meal_types junction table
+const extractCategoriesFromMealTypes = (categoryMealTypes: CategoryMealTypeRow[]): CategoryType[] => {
+  if (!categoryMealTypes || categoryMealTypes.length === 0) return [];
+  
+  // Extract the nested category objects and sort by display_order
+  return categoryMealTypes
+    .filter(cmt => cmt.categories)
+    .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
+    .map(cmt => cmt.categories);
+};
+
+// Legacy helper function to filter categories by meal_type from database (fallback)
 // The database meal_type column contains comma-separated values like "tiffins, snacks, lunch-dinner"
 const filterCategoriesByMealType = (categories: any[], mealTypeFilter: string): any[] => {
   return categories.filter(cat => {
     const mealType = (cat as any).meal_type || cat.mealType || '';
-    // Check if the category's meal_type contains the selected filter
     return mealType.toLowerCase().includes(mealTypeFilter.toLowerCase());
   });
 };
@@ -276,24 +295,33 @@ export default function Menu() {
 
   const priorityCategoryId = getPriorityCategoryId(mealType);
 
-  // Fetch ALL categories from database
+  // Fetch categories for the selected meal type from category_meal_types junction table
+  const { data: categoryMealTypesData = [] } = useQuery<CategoryMealTypeRow[]>({
+    queryKey: ['/api/category-meal-types', mealType],
+    enabled: !!mealType,
+  });
+
+  // Fallback: Fetch ALL categories from database (used if junction table returns empty)
   const { data: allCategoriesFromDb = [] } = useQuery<CategoryType[]>({
     queryKey: ['/api/categories', 'all'],
   });
 
-  // Filter categories dynamically from database meal_type column
-  // This replaces the hardcoded MEAL_TYPE_CATEGORIES mapping
+  // Extract categories from junction table, falling back to legacy filtering
   const categories = useMemo(() => {
+    // Try to use category_meal_types junction table first
+    if (categoryMealTypesData && categoryMealTypesData.length > 0) {
+      return extractCategoriesFromMealTypes(categoryMealTypesData);
+    }
+    
+    // Fallback to legacy filtering by meal_type column
     if (!mealType || allCategoriesFromDb.length === 0) return [];
     const filtered = filterCategoriesByMealType(allCategoriesFromDb, mealType);
     return filtered.sort((a, b) => {
-      // Priority category always comes first
       if (a.id === priorityCategoryId) return -1;
       if (b.id === priorityCategoryId) return 1;
-      // Then sort by displayOrder
       return (a.displayOrder || 0) - (b.displayOrder || 0);
     }) as CategoryType[];
-  }, [allCategoriesFromDb, mealType, priorityCategoryId]);
+  }, [categoryMealTypesData, allCategoriesFromDb, mealType, priorityCategoryId]);
 
   // Set first category as selected when categories load or when meal type changes
   // Keep 'all' as valid selection - only reset if it's an invalid category ID
@@ -862,7 +890,7 @@ export default function Menu() {
                       variant={selectedCategory === 'all' ? "default" : "secondary"}
                       className="text-[10px] h-5 px-2 font-medium"
                     >
-                      {dishes.length}
+                      {allDishes.length}
                     </Badge>
                   </div>
                 </button>
