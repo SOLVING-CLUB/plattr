@@ -167,6 +167,8 @@ export default function ConciergeWizardPage() {
           }
         }
       });
+      // Add timestamp to ensure fresh webhook call each time wizard is completed
+      params.append('t', Date.now().toString());
       setLocation(`/concierge/results?${params.toString()}`);
     }
   };
