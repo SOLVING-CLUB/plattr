@@ -63,7 +63,6 @@ interface CategoryMealTypeRow {
   id: number;
   category_id: string;
   meal_type: string;
-  display_order: number | null;
   categories: CategoryType;
 }
 
@@ -71,11 +70,15 @@ interface CategoryMealTypeRow {
 const extractCategoriesFromMealTypes = (categoryMealTypes: CategoryMealTypeRow[]): CategoryType[] => {
   if (!categoryMealTypes || categoryMealTypes.length === 0) return [];
   
-  // Extract the nested category objects and sort by display_order
+  // Extract the nested category objects and sort by category's display_order
   return categoryMealTypes
     .filter(cmt => cmt.categories)
-    .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
-    .map(cmt => cmt.categories);
+    .map(cmt => cmt.categories)
+    .sort((a, b) => {
+      const aOrder = (a as any).display_order || a.displayOrder || 0;
+      const bOrder = (b as any).display_order || b.displayOrder || 0;
+      return aOrder - bOrder;
+    });
 };
 
 // Legacy helper function to filter categories by meal_type from database (fallback)
