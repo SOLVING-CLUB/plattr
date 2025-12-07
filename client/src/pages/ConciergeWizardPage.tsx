@@ -70,6 +70,7 @@ export default function ConciergeWizardPage() {
   const [, setLocation] = useLocation();
   const [currentStep, setCurrentStep] = useState(1);
   const [cuisineSearch, setCuisineSearch] = useState("");
+  const [activeTab, setActiveTab] = useState<"home" | "menu" | "profile">("home");
   const [preferences, setPreferences] = useState<ConciergePreferences>({
     cuisinePreferences: [],
     numberOfPax: 50,
@@ -78,6 +79,21 @@ export default function ConciergeWizardPage() {
     mealType: "lunch",
     categoryCounts: [],
   });
+
+  const handleTabChange = (tab: "home" | "menu" | "profile") => {
+    setActiveTab(tab);
+    switch (tab) {
+      case "home":
+        setLocation("/");
+        break;
+      case "menu":
+        setLocation("/menu/lunch-dinner");
+        break;
+      case "profile":
+        setLocation("/profile");
+        break;
+    }
+  };
 
   const { data: cuisines = [], isLoading: cuisinesLoading } = useQuery<any[]>({
     queryKey: ['cuisines'],
@@ -771,7 +787,7 @@ export default function ConciergeWizardPage() {
         )}
       </div>
 
-      <FloatingNav />
+      <FloatingNav activeTab={activeTab} onTabChange={handleTabChange} />
     </div>
   );
 }
