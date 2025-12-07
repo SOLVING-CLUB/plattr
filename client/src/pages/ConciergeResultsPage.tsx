@@ -172,6 +172,11 @@ export default function ConciergeResultsPage() {
         // Generate a unique session ID for n8n tracking
         const sessionId = `plattr-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
         
+        // Calculate per-plate budget
+        const perPlateBudget = currentPrefs.budget && currentPrefs.numberOfPax > 0 
+          ? Math.round(currentPrefs.budget / currentPrefs.numberOfPax) 
+          : undefined;
+        
         // Build request body with the freshly parsed preferences
         const requestBody = {
           sessionId: sessionId,
@@ -179,6 +184,7 @@ export default function ConciergeResultsPage() {
           numberOfPax: currentPrefs.numberOfPax,
           eventType: currentPrefs.eventType,
           budget: currentPrefs.budget,
+          budgetPerPlate: perPlateBudget,
           mealType: currentPrefs.mealType,
           dietaryPreference: currentPrefs.dietaryPreference,
           allergies: currentPrefs.allergies,
