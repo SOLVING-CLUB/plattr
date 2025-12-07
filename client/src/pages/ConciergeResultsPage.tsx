@@ -7,11 +7,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Sparkles, ShoppingCart, ArrowLeft, Loader2, TrendingUp, Users, DollarSign, Leaf, Drumstick } from "lucide-react";
+import { Sparkles, ShoppingCart, ArrowLeft, Loader2, TrendingUp, Users, DollarSign, Leaf, Drumstick, Plus, Minus, Package, Utensils } from "lucide-react";
 import { getSupabaseImageUrl } from "@/lib/supabase";
 import { supabase } from "@/lib/supabase-client";
 import FloatingNav from "@/pages/FloatingNav";
 import { LazyImage } from "@/components/ui/lazy-image";
+import { useCart } from "@/context/CartContex";
 
 interface Dish {
   id: string;
@@ -60,6 +61,20 @@ export default function ConciergeResultsPage() {
   const abortControllerRef = useRef<AbortController | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  
+  // Order mode: "bulkMeal" or "mealbox"
+  const [orderMode, setOrderMode] = useState<"bulkMeal" | "mealbox">("bulkMeal");
+  
+  // Bulk Meal mode: quantity per dish
+  const [dishQuantities, setDishQuantities] = useState<Record<string, number>>({});
+  
+  // MealBox mode: portion counts for veg and non-veg plates
+  const [vegPortions, setVegPortions] = useState(1);
+  const [nonVegPortions, setNonVegPortions] = useState(0);
+  const [mealboxDishes, setMealboxDishes] = useState<{ vegDishes: string[], nonVegDishes: string[] }>({ vegDishes: [], nonVegDishes: [] });
+  
+  // Use cart context for bulk meals
+  const { cart, addToCart, getQuantity, clearCart } = useCart();
 
   // Parse preferences from URL
   const searchParams = new URLSearchParams(window.location.search);
@@ -453,6 +468,70 @@ export default function ConciergeResultsPage() {
       }
     });
   };
+  
+  // Bulk Meal mode: update dish quantity
+  const handleBulkQuantityChange = (dishId: string, change: number) => {
+    setDishQuantities(prev => {
+      const current = prev[dishId] || 0;
+      const newQty = Math.max(0, current + change);
+      if (newQty === 0) {
+        const { [dishId]: _, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [dishId]: newQty };
+    });
+  };
+  
+  // Bulk Meal mode: add dish to bulk cart
+  const handleAddToBulkCart = (dish: Dish, quantity: number) => {
+    if (quantity <= 0) return;
+    
+    const numericId = parseInt(dish.id.replace(/\D/g, '')) || Date.now();
+    addToCart("bulk-meals", {
+      id: numericId,
+      name: dish.name,
+      price: parseFloat(dish.price),
+      quantity: quantity,
+    });
+    
+    setAddedItems(prev => new Set(prev).add(dish.id));
+    setDishQuantities(prev => {
+      const { [dish.id]: _, ...rest } = prev;
+      return rest;
+    });
+    
+    toast({
+      title: "Added to cart",
+      description: `${quantity}x ${dish.name} added to your bulk meal cart`,
+    });
+  };
+  
+  // Calculate total items in bulk cart
+  const bulkCartTotal = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const bulkCartValue = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  
+  // MealBox mode: toggle dish in plate
+  const toggleMealboxDish = (dishId: string, isVeg: boolean) => {
+    setMealboxDishes(prev => {
+      if (isVeg) {
+        const exists = prev.vegDishes.includes(dishId);
+        return {
+          ...prev,
+          vegDishes: exists 
+            ? prev.vegDishes.filter(id => id !== dishId)
+            : [...prev.vegDishes, dishId]
+        };
+      } else {
+        const exists = prev.nonVegDishes.includes(dishId);
+        return {
+          ...prev,
+          nonVegDishes: exists 
+            ? prev.nonVegDishes.filter(id => id !== dishId)
+            : [...prev.nonVegDishes, dishId]
+        };
+      }
+    });
+  };
 
   // Fun food facts to cycle through while loading
   const foodFacts = [
@@ -600,7 +679,7 @@ export default function ConciergeResultsPage() {
 
   const handleNavTabChange = (tab: "home" | "menu" | "profile") => {
     if (tab === "home") setLocation("/");
-    else if (tab === "menu") setLocation("/tiffins");
+    else if (tab === "menu") setLocation("/menu");
     else if (tab === "profile") setLocation("/profile");
   };
 
@@ -667,28 +746,126 @@ export default function ConciergeResultsPage() {
             </Card>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex gap-3 mt-4">
-            <Button
-              size="sm"
-              onClick={handleAddAllToCart}
-              disabled={addToCartMutation.isPending}
-              className="flex-1"
-              data-testid="button-add-all"
-            >
-              <ShoppingCart className="w-4 h-4 mr-2" />
-              Add All to Cart
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setLocation("/bulk-meals")}
-              className="flex-1"
-              data-testid="button-browse-menu"
-            >
-              Browse Menu
-            </Button>
+          {/* Order Mode Toggle */}
+          <div className="mt-4 mb-4">
+            <p className="text-sm font-medium mb-2" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+              How would you like to order?
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setOrderMode("bulkMeal")}
+                className="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg border-2 transition-all"
+                style={{
+                  borderColor: orderMode === "bulkMeal" ? "#1A9952" : "#E5E7EB",
+                  backgroundColor: orderMode === "bulkMeal" ? "#F0F9F4" : "white",
+                }}
+                data-testid="button-mode-bulk"
+              >
+                <Package className="w-5 h-5" style={{ color: "#1A9952" }} />
+                <span className="text-sm font-medium" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                  Bulk Meal
+                </span>
+              </button>
+              <button
+                onClick={() => setOrderMode("mealbox")}
+                className="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg border-2 transition-all"
+                style={{
+                  borderColor: orderMode === "mealbox" ? "#1A9952" : "#E5E7EB",
+                  backgroundColor: orderMode === "mealbox" ? "#F0F9F4" : "white",
+                }}
+                data-testid="button-mode-mealbox"
+              >
+                <Utensils className="w-5 h-5" style={{ color: "#1A9952" }} />
+                <span className="text-sm font-medium" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                  MealBox
+                </span>
+              </button>
+            </div>
           </div>
+
+          {/* MealBox Mode: Plate Selection based on dietary preference */}
+          {orderMode === "mealbox" && (
+            <div className="bg-white rounded-lg border border-gray-200 p-4 mb-4">
+              <h3 className="text-base font-semibold mb-3" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                Select Your Meal Plates
+              </h3>
+              <p className="text-xs text-gray-500 mb-4" style={{ fontFamily: "Sweet Sans Pro" }}>
+                Based on your dietary preference: <strong>{preferences.dietaryPreference || 'all'}</strong>
+              </p>
+              
+              <div className="space-y-4">
+                {/* Veg Plate - Always show for veg, egg, all, non-veg, or undefined preference */}
+                {(preferences.dietaryPreference === 'veg' || preferences.dietaryPreference === 'egg' || preferences.dietaryPreference === 'all' || preferences.dietaryPreference === 'non-veg' || !preferences.dietaryPreference) && (
+                  <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center">
+                        <Leaf className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>Veg Plate</p>
+                        <p className="text-xs text-gray-500">Vegetarian dishes only</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setVegPortions(Math.max(0, vegPortions - 1))}
+                        className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100"
+                        data-testid="button-veg-minus"
+                      >
+                        <Minus className="w-4 h-4" />
+                      </button>
+                      <span className="w-8 text-center font-semibold">{vegPortions}</span>
+                      <button
+                        onClick={() => setVegPortions(vegPortions + 1)}
+                        className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100"
+                        data-testid="button-veg-plus"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Non-Veg Plate - Only show if dietary preference is non-veg or all */}
+                {(preferences.dietaryPreference === 'non-veg' || preferences.dietaryPreference === 'all' || !preferences.dietaryPreference) && (
+                  <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center">
+                        <Drumstick className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>Non-Veg Plate</p>
+                        <p className="text-xs text-gray-500">Includes meat dishes</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setNonVegPortions(Math.max(0, nonVegPortions - 1))}
+                        className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100"
+                        data-testid="button-nonveg-minus"
+                      >
+                        <Minus className="w-4 h-4" />
+                      </button>
+                      <span className="w-8 text-center font-semibold">{nonVegPortions}</span>
+                      <button
+                        onClick={() => setNonVegPortions(nonVegPortions + 1)}
+                        className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100"
+                        data-testid="button-nonveg-plus"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              {(vegPortions > 0 || nonVegPortions > 0) && (
+                <p className="text-xs text-gray-500 mt-3" style={{ fontFamily: "Sweet Sans Pro" }}>
+                  Now select dishes below to add to your plates
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Recommended Dishes - 2 column grid like BulkMeal */}
@@ -705,7 +882,11 @@ export default function ConciergeResultsPage() {
                 {dishes.map((dish) => {
                   const isAdded = addedItems.has(dish.id);
                   const isVeg = dish.dietaryType?.toLowerCase() === 'veg';
+                  const isEgg = dish.dietaryType?.toLowerCase() === 'egg';
                   const isNonVeg = dish.dietaryType?.toLowerCase() === 'non-veg';
+                  const isVegOrEgg = isVeg || isEgg || (!isVeg && !isEgg && !isNonVeg);
+                  const currentQty = dishQuantities[dish.id] || 0;
+                  const isInMealbox = mealboxDishes.vegDishes.includes(dish.id) || mealboxDishes.nonVegDishes.includes(dish.id);
                   
                   return (
                     <Card 
@@ -725,6 +906,11 @@ export default function ConciergeResultsPage() {
                         {isVeg && (
                           <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
                             <Leaf className="w-3 h-3 text-white" />
+                          </div>
+                        )}
+                        {isEgg && (
+                          <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-yellow-500 flex items-center justify-center">
+                            <span className="text-white text-xs font-bold">E</span>
                           </div>
                         )}
                         {isNonVeg && (
@@ -747,16 +933,69 @@ export default function ConciergeResultsPage() {
                             ₹{parseFloat(dish.price).toFixed(0)}
                           </span>
                         </div>
-                        <Button
-                          size="sm"
-                          onClick={() => handleAddToCart(dish.id)}
-                          disabled={isAdded || addToCartMutation.isPending}
-                          variant={isAdded ? "secondary" : "default"}
-                          className="w-full rounded-full text-xs h-8"
-                          data-testid={`button-add-${dish.id}`}
-                        >
-                          {isAdded ? "Added" : "Add"}
-                        </Button>
+                        
+                        {/* Bulk Meal Mode: Quantity controls */}
+                        {orderMode === "bulkMeal" && (
+                          <div className="space-y-2">
+                            {!isAdded ? (
+                              <>
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={() => handleBulkQuantityChange(dish.id, -1)}
+                                      className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100"
+                                      data-testid={`button-qty-minus-${dish.id}`}
+                                    >
+                                      <Minus className="w-3 h-3" />
+                                    </button>
+                                    <span className="w-6 text-center font-semibold text-sm">{currentQty}</span>
+                                    <button
+                                      onClick={() => handleBulkQuantityChange(dish.id, 1)}
+                                      className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100"
+                                      data-testid={`button-qty-plus-${dish.id}`}
+                                    >
+                                      <Plus className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                </div>
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleAddToBulkCart(dish, currentQty)}
+                                  disabled={currentQty === 0}
+                                  className="w-full rounded-full text-xs h-8"
+                                  style={{ backgroundColor: currentQty > 0 ? "#1A9952" : undefined }}
+                                  data-testid={`button-add-${dish.id}`}
+                                >
+                                  {currentQty > 0 ? `Add ${currentQty}` : "Add"}
+                                </Button>
+                              </>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                className="w-full rounded-full text-xs h-8"
+                                disabled
+                                data-testid={`button-added-${dish.id}`}
+                              >
+                                Added to Cart
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                        
+                        {/* MealBox Mode: Toggle add to plate */}
+                        {orderMode === "mealbox" && (
+                          <Button
+                            size="sm"
+                            onClick={() => toggleMealboxDish(dish.id, isVegOrEgg)}
+                            variant={isInMealbox ? "secondary" : "default"}
+                            className="w-full rounded-full text-xs h-8"
+                            style={{ backgroundColor: isInMealbox ? "#E5E7EB" : "#1A9952" }}
+                            data-testid={`button-add-${dish.id}`}
+                          >
+                            {isInMealbox ? "Remove from Plate" : "Add to Plate"}
+                          </Button>
+                        )}
                       </div>
                     </Card>
                   );
@@ -829,6 +1068,36 @@ export default function ConciergeResultsPage() {
           </Card>
         </div>
       </div>
+
+      {/* Floating Cart Button - Only show in Bulk Meal mode when cart has items */}
+      {orderMode === "bulkMeal" && bulkCartTotal > 0 && (
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 w-[calc(100%-2rem)] max-w-md">
+          <button
+            onClick={() => setLocation("/bulk-meals-cart")}
+            className="w-full flex items-center justify-between px-5 py-4 rounded-xl shadow-lg"
+            style={{ backgroundColor: "#1A9952" }}
+            data-testid="button-floating-cart"
+          >
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <ShoppingCart className="w-6 h-6 text-white" />
+                <span className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-white text-xs font-bold flex items-center justify-center" style={{ color: "#1A9952" }}>
+                  {bulkCartTotal}
+                </span>
+              </div>
+              <span className="text-white font-medium" style={{ fontFamily: "Sweet Sans Pro" }}>
+                {bulkCartTotal} item{bulkCartTotal > 1 ? 's' : ''} in cart
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-white font-bold text-lg" style={{ fontFamily: "Sweet Sans Pro" }}>
+                ₹{bulkCartValue.toLocaleString('en-IN')}
+              </span>
+              <span className="text-white">→</span>
+            </div>
+          </button>
+        </div>
+      )}
 
       {/* Floating Navigation */}
       <FloatingNav activeTab="menu" onTabChange={handleNavTabChange} />
