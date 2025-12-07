@@ -194,10 +194,11 @@ export const getQueryFn = <T>(options: {
           const categoryId = route[2];
           // If category is 'all' or empty, filter dishes by categories of this mealType
           if (!categoryId || categoryId === 'all') {
-            // Fetch categories for this mealType
+            // Fetch categories for this mealType using ilike since meal_type is comma-separated
+            // e.g., "tiffins, snacks, lunch-dinner" - use ilike to match
             const categories = await supabase.select('categories', {
               select: 'id',
-              filter: { 'meal_type': `eq.${mealType}` },
+              filter: { 'meal_type': `ilike.*${mealType}*` },
               order: 'display_order.asc'
             });
             const ids = (categories as Array<{ id: string }>).map(c => c.id).filter(Boolean);
