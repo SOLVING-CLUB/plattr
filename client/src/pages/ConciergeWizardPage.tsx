@@ -87,7 +87,7 @@ export default function ConciergeWizardPage() {
         setLocation("/");
         break;
       case "menu":
-        setLocation("/menu/lunch-dinner");
+        setLocation("/menu");
         break;
       case "profile":
         setLocation("/profile");
