@@ -56,17 +56,18 @@ serve(async (req) => {
       )
     }
 
-    // Send SMS using 2factor.in
-    const apiKey = Deno.env.get('TWOFACTOR_API_KEY') || Deno.env.get('BULK_SMS_API_KEY')
-    const templateName = Deno.env.get('TWOFACTOR_TEMPLATE_NAME') || 'PLATTR'
+    // Get WhatsApp API credentials
+    const whatsappPhoneNumberId = Deno.env.get('WHATSAPP_PHONE_NUMBER_ID')
+    const whatsappAccessToken = Deno.env.get('WHATSAPP_ACCESS_TOKEN')
+    const whatsappTemplateName = Deno.env.get('WHATSAPP_OTP_TEMPLATE_NAME') || 'plattr_otp'
     
-    if (!apiKey) {
+    if (!whatsappPhoneNumberId || !whatsappAccessToken) {
       // In development, just return OTP in response
-      console.log(`📱 [DEV MODE] SMS to +91${phone}: Your OTP is ${otp}`)
+      console.log(`📱 [DEV MODE] WhatsApp to +91${phone}: Your OTP is ${otp}`)
       return new Response(
         JSON.stringify({ 
           success: true, 
-          message: "OTP sent successfully",
+          message: "OTP sent successfully via WhatsApp",
           otp // Include OTP in dev mode
         }),
         { 
@@ -76,30 +77,65 @@ serve(async (req) => {
       )
     }
 
-    // Format phone with country code
+    // Format phone with country code for WhatsApp (91 for India)
     const phoneWithCountryCode = `91${phone}`
-    const apiUrl = templateName
-      ? `https://2factor.in/API/V1/${apiKey}/SMS/${phoneWithCountryCode}/${otp}/${templateName}`
-      : `https://2factor.in/API/V1/${apiKey}/SMS/${phoneWithCountryCode}/${otp}`
+    
+    // Send OTP via WhatsApp Business API
+    const whatsappApiUrl = `https://graph.facebook.com/v18.0/${whatsappPhoneNumberId}/messages`
+    
+    const whatsappPayload = {
+      messaging_product: "whatsapp",
+      to: phoneWithCountryCode,
+      type: "template",
+      template: {
+        name: whatsappTemplateName,
+        language: {
+          code: "en"
+        },
+        components: [
+          {
+            type: "body",
+            parameters: [
+              {
+                type: "text",
+                text: otp
+              }
+            ]
+          },
+          {
+            type: "button",
+            sub_type: "url",
+            index: "0",
+            parameters: [
+              {
+                type: "text",
+                text: otp
+              }
+            ]
+          }
+        ]
+      }
+    }
 
-    const smsResponse = await fetch(apiUrl, {
-      method: 'GET',
+    const whatsappResponse = await fetch(whatsappApiUrl, {
+      method: 'POST',
       headers: {
+        'Authorization': `Bearer ${whatsappAccessToken}`,
         'Content-Type': 'application/json',
-        'Accept': 'application/json',
       },
+      body: JSON.stringify(whatsappPayload),
     })
 
-    if (!smsResponse.ok) {
-      const errorText = await smsResponse.text()
-      console.error('SMS API Error:', errorText)
+    if (!whatsappResponse.ok) {
+      const errorData = await whatsappResponse.json()
+      console.error('WhatsApp API Error:', errorData)
       
       // In development, still return success with OTP
       if (Deno.env.get('NODE_ENV') === 'development') {
         return new Response(
           JSON.stringify({ 
             success: true, 
-            message: "OTP sent successfully (dev mode)",
+            message: "OTP sent successfully via WhatsApp (dev mode)",
             otp
           }),
           { 
@@ -110,7 +146,7 @@ serve(async (req) => {
       }
       
       return new Response(
-        JSON.stringify({ error: "Failed to send OTP" }),
+        JSON.stringify({ error: "Failed to send OTP via WhatsApp" }),
         { 
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -120,7 +156,7 @@ serve(async (req) => {
 
     const responseData: any = {
       success: true,
-      message: "OTP sent successfully",
+      message: "OTP sent successfully via WhatsApp",
     }
 
     // In development, include OTP in response
@@ -146,4 +182,3 @@ serve(async (req) => {
     )
   }
 })
-
