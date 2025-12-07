@@ -54,14 +54,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { CartProvider } from "@/context/CartContex";
 import { useEffect, useState, useRef, type ComponentType, type ReactNode } from "react";
 
-// Simple auth guard - redirects to /test-auth if not authenticated
+// Simple auth guard - redirects to /phone if not authenticated
 function RequireAuth({ children }: { children: ReactNode }) {
   const [, setLocation] = useLocation();
   const { isAuthenticated, loading, initialized } = useAuth();
 
   useEffect(() => {
     if (initialized && !loading && !isAuthenticated) {
-      setLocation('/test-auth', { replace: true });
+      setLocation('/phone', { replace: true });
     }
   }, [isAuthenticated, loading, initialized, setLocation]);
 
@@ -108,7 +108,7 @@ function RequireNeedsName({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (initialized && !loading) {
       if (!isAuthenticated) {
-        setLocation('/test-auth', { replace: true });
+        setLocation('/phone', { replace: true });
         return;
       }
 
@@ -320,11 +320,11 @@ function App() {
         
         // Simple navigation logic:
         // - If authenticated → go to home
-        // - If not authenticated → go to auth page
+        // - If not authenticated → go to phone screen (WhatsApp login)
         if (isAuthenticated) {
           setLocation('/', { replace: true });
         } else {
-          setLocation('/test-auth', { replace: true });
+          setLocation('/phone', { replace: true });
         }
       }, 500);
       }, 2000);
