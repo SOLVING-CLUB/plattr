@@ -309,38 +309,7 @@ export default function Menu() {
     queryKey: ['/api/categories', 'all'],
   });
 
-  // Extract categories from junction table, falling back to legacy filtering
-  const categories = useMemo(() => {
-    // Try to use category_meal_types junction table first
-    if (categoryMealTypesData && categoryMealTypesData.length > 0) {
-      return extractCategoriesFromMealTypes(categoryMealTypesData);
-    }
-    
-    // Fallback to legacy filtering by meal_type column
-    if (!mealType || allCategoriesFromDb.length === 0) return [];
-    const filtered = filterCategoriesByMealType(allCategoriesFromDb, mealType);
-    return filtered.sort((a, b) => {
-      if (a.id === priorityCategoryId) return -1;
-      if (b.id === priorityCategoryId) return 1;
-      return (a.displayOrder || 0) - (b.displayOrder || 0);
-    }) as CategoryType[];
-  }, [categoryMealTypesData, allCategoriesFromDb, mealType, priorityCategoryId]);
-
-  // Set first category as selected when categories load or when meal type changes
-  // Keep 'all' as valid selection - only reset if it's an invalid category ID
-  useEffect(() => {
-    if (categories.length > 0) {
-      // Don't reset if 'all' is selected - it's a valid filter option
-      if (selectedCategory === 'all') return;
-      // Only reset if the current selection is not found in available categories
-      if (!selectedCategory || !categories.find(c => c.id === selectedCategory)) {
-        setSelectedCategory('all');
-      }
-    }
-  }, [categories, selectedCategory, mealType]);
-
-  // OPTIMIZATION: Lazy-load category counts in background after page renders
-  // This query fetches all dishes for the meal type but is non-blocking
+  // Fetch all dishes for the meal type (used for category counts and filtering)
   const { data: allDishesForCounts = [] } = useQuery<Dish[]>({
     queryKey: ['/api/dishes', mealType, 'all', 'all'],
     enabled: !!mealType,
@@ -355,6 +324,61 @@ export default function Menu() {
       return isAvailable;
     });
   }, [allDishesForCounts]);
+
+  // Extract categories from junction table, falling back to legacy filtering
+  // IMPORTANT: We must only show categories that have actual dishes for this meal type
+  const categories = useMemo(() => {
+    // First, get the set of category IDs that actually have dishes in allDishes
+    const categoryIdsWithDishes = new Set<string>();
+    allDishes.forEach(dish => {
+      const catId = (dish as any).category_id || dish.categoryId;
+      if (catId) categoryIdsWithDishes.add(catId);
+    });
+    
+    // If no dishes loaded yet, return empty (will populate once dishes load)
+    if (categoryIdsWithDishes.size === 0 && allDishes.length === 0) {
+      // Try to use category_meal_types junction table first
+      if (categoryMealTypesData && categoryMealTypesData.length > 0) {
+        return extractCategoriesFromMealTypes(categoryMealTypesData);
+      }
+      
+      // Fallback to legacy filtering by meal_type column
+      if (!mealType || allCategoriesFromDb.length === 0) return [];
+      const filtered = filterCategoriesByMealType(allCategoriesFromDb, mealType);
+      return filtered.sort((a, b) => {
+        if (a.id === priorityCategoryId) return -1;
+        if (b.id === priorityCategoryId) return 1;
+        return (a.displayOrder || 0) - (b.displayOrder || 0);
+      }) as CategoryType[];
+    }
+    
+    // Filter allCategoriesFromDb to only include categories that have dishes
+    const categoriesWithDishes = allCategoriesFromDb.filter(cat => 
+      categoryIdsWithDishes.has(cat.id)
+    );
+    
+    // Sort: priority category first, then by display order
+    return categoriesWithDishes.sort((a, b) => {
+      if (a.id === priorityCategoryId) return -1;
+      if (b.id === priorityCategoryId) return 1;
+      const aOrder = (a as any).display_order || a.displayOrder || 0;
+      const bOrder = (b as any).display_order || b.displayOrder || 0;
+      return aOrder - bOrder;
+    }) as CategoryType[];
+  }, [categoryMealTypesData, allCategoriesFromDb, mealType, priorityCategoryId, allDishes]);
+
+  // Set first category as selected when categories load or when meal type changes
+  // Keep 'all' as valid selection - only reset if it's an invalid category ID
+  useEffect(() => {
+    if (categories.length > 0) {
+      // Don't reset if 'all' is selected - it's a valid filter option
+      if (selectedCategory === 'all') return;
+      // Only reset if the current selection is not found in available categories
+      if (!selectedCategory || !categories.find(c => c.id === selectedCategory)) {
+        setSelectedCategory('all');
+      }
+    }
+  }, [categories, selectedCategory, mealType]);
 
   // Fetch dishes for selected category (for display)
   const { data: dishes = [], isLoading: isLoadingDishes } = useQuery<Dish[]>({
