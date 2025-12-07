@@ -79,8 +79,8 @@ export default function Profile() {
         description: "You have been successfully logged out.",
       });
 
-      // Redirect to test-auth page (entry point for unauthenticated users)
-      setLocation("/test-auth", { replace: true });
+      // Redirect to phone screen (WhatsApp login)
+      setLocation("/phone", { replace: true });
     } catch (error: any) {
       console.error("Logout error:", error);
       sessionStorage.removeItem('justLoggedOut');
