@@ -158,6 +158,9 @@ export default function ConciergeWizardPage() {
       setCurrentStep(currentStep + 1);
     } else {
       const params = new URLSearchParams();
+      // Add timestamp FIRST to ensure fresh webhook call each time wizard is completed
+      // (cache key is truncated, so timestamp must be at the start)
+      params.append('t', Date.now().toString());
       Object.entries(preferences).forEach(([key, value]) => {
         if (value !== undefined && value !== "") {
           if (Array.isArray(value)) {
@@ -167,8 +170,6 @@ export default function ConciergeWizardPage() {
           }
         }
       });
-      // Add timestamp to ensure fresh webhook call each time wizard is completed
-      params.append('t', Date.now().toString());
       setLocation(`/concierge/results?${params.toString()}`);
     }
   };
