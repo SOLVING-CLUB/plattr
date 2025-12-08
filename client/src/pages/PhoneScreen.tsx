@@ -82,7 +82,7 @@ export default function PhoneScreen() {
         }}
       >
       {/* Main Content */}
-      <div className="flex-1 px-4 sm:px-6 overflow-y-auto" style={{ paddingTop: 'env(safe-area-inset-top, 20px)' }}>
+      <div className="flex-1 px-4 sm:px-6 overflow-y-auto" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 48px)' }}>
         {/* Logo */}
         <div className="mb-4 sm:mb-6" style={{ marginTop: "20px" }}>
           <img

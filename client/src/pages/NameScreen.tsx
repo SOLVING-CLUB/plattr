@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useLocation } from 'wouter';
 import plattrLogoImage from "@assets/plattr_logo.png";
 import { userService } from "@/lib/supabase-service";
@@ -7,23 +7,8 @@ import { useMutation } from "@tanstack/react-query";
 
 export default function NameScreen() {
   const [fullName, setFullName] = useState('');
-  const [currentTime, setCurrentTime] = useState('9:41');
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-
-  // Update time every minute
-  useEffect(() => {
-    const updateTime = () => {
-      const now = new Date();
-      const hours = now.getHours();
-      const minutes = now.getMinutes();
-      setCurrentTime(`${hours}:${minutes.toString().padStart(2, '0')}`);
-    };
-    
-    updateTime();
-    const interval = setInterval(updateTime, 60000);
-    return () => clearInterval(interval);
-  }, []);
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFullName(e.target.value);
@@ -79,31 +64,8 @@ export default function NameScreen() {
         zIndex: 100
       }}
     >
-      {/* Status Bar */}
-      <div 
-        className="flex justify-between items-center px-6"
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 1000,
-          minHeight: "44px",
-          width: "100%",
-          paddingTop: "env(safe-area-inset-top, 0px)",
-          paddingBottom: "8px"
-        }}
-      >
-        <span className="text-base font-semibold" style={{ color: "#000000", fontFamily: "Sweet Sans Pro, -apple-system, sans-serif" }}>{currentTime}</span>
-        <div className="flex gap-1 items-center">
-          <div className="w-4 h-3 bg-black"></div>
-          <div className="w-4 h-3 bg-black"></div>
-          <div className="w-6 h-3 bg-black rounded-sm"></div>
-        </div>
-      </div>
-
       {/* Main Content */}
-      <div className="flex-1 px-4 sm:px-6 overflow-y-auto" style={{ paddingTop: '60px' }}>
+      <div className="flex-1 px-4 sm:px-6 overflow-y-auto" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 48px)' }}>
         {/* Logo */}
         <div className="mb-4 sm:mb-6" style={{ marginTop: "20px" }}>
           <img
