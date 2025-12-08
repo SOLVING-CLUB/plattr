@@ -41,44 +41,53 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // Find valid OTP
-    const { data: otpRecords, error: otpError } = await supabase
-      .from('otp_verifications')
-      .select('*')
-      .eq('phone', phone)
-      .eq('otp', otp)
-      .eq('is_used', false)
-      .limit(1)
+    // Check for test bypass OTP (for development/testing only)
+    const enableTestBypass = Deno.env.get('ENABLE_TEST_OTP_BYPASS') === 'true'
+    const testBypassOtp = Deno.env.get('TEST_BYPASS_OTP') || '123456'
+    const isTestBypass = enableTestBypass && otp === testBypassOtp
 
-    if (otpError || !otpRecords || otpRecords.length === 0) {
-      return new Response(
-        JSON.stringify({ error: "Invalid OTP" }),
-        { 
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      )
+    if (isTestBypass) {
+      console.log(`🧪 [TEST BYPASS] Login bypass used for phone: ${phone}`)
+    } else {
+      // Find valid OTP (only if not using test bypass)
+      const { data: otpRecords, error: otpError } = await supabase
+        .from('otp_verifications')
+        .select('*')
+        .eq('phone', phone)
+        .eq('otp', otp)
+        .eq('is_used', false)
+        .limit(1)
+
+      if (otpError || !otpRecords || otpRecords.length === 0) {
+        return new Response(
+          JSON.stringify({ error: "Invalid OTP" }),
+          { 
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        )
+      }
+
+      const otpRecord = otpRecords[0]
+
+      // Check expiration
+      const expiresAt = new Date(otpRecord.expires_at)
+      if (expiresAt <= new Date()) {
+        return new Response(
+          JSON.stringify({ error: "OTP has expired" }),
+          { 
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        )
+      }
+
+      // Mark OTP as used
+      await supabase
+        .from('otp_verifications')
+        .update({ is_used: true })
+        .eq('id', otpRecord.id)
     }
-
-    const otpRecord = otpRecords[0]
-
-    // Check expiration
-    const expiresAt = new Date(otpRecord.expires_at)
-    if (expiresAt <= new Date()) {
-      return new Response(
-        JSON.stringify({ error: "OTP has expired" }),
-        { 
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      )
-    }
-
-    // Mark OTP as used
-    await supabase
-      .from('otp_verifications')
-      .update({ is_used: true })
-      .eq('id', otpRecord.id)
 
     // Check if user exists
     const { data: existingUsers } = await supabase
