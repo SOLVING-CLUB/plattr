@@ -5,6 +5,7 @@ import { edgeFunctions } from "@/lib/supabase-service";
 import { supabaseAuth } from "@/lib/supabase-auth";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
+import { refreshAuthState } from "@/hooks/useAuth";
 
 export default function VerificationScreen() {
   const [code, setCode] = useState(['', '', '', '', '', '']);
@@ -107,6 +108,9 @@ export default function VerificationScreen() {
       }
     },
     onSuccess: (data: any) => {
+      // Refresh auth state to recognize the newly logged in user
+      refreshAuthState();
+      
       const tempUsernamePattern = /^user_\d{4}(?:_\d+)?$/;
       const isTempUsername = tempUsernamePattern.test(data.user?.username || '');
       

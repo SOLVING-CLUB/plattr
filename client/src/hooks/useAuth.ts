@@ -21,6 +21,27 @@ let authSubscribers: Set<(state: AuthState) => void> = new Set();
 let authSubscription: { unsubscribe: () => void } | null = null;
 let isInitialized = false;
 
+// Check if user is authenticated via localStorage (fallback for OTP auth)
+function checkLocalAuth(): User | null {
+  const userId = localStorage.getItem('userId');
+  const phone = localStorage.getItem('phone');
+  const username = localStorage.getItem('username');
+  
+  if (userId && phone) {
+    // Create a mock user object for local auth
+    return {
+      id: userId,
+      phone: phone,
+      email: localStorage.getItem('email') || undefined,
+      user_metadata: { username },
+      app_metadata: {},
+      aud: 'authenticated',
+      created_at: new Date().toISOString(),
+    } as User;
+  }
+  return null;
+}
+
 // Initialize auth listener once globally
 function initAuthListener() {
   if (isInitialized) return;
@@ -28,15 +49,18 @@ function initAuthListener() {
 
   // Get initial session
   supabaseAuth.auth.getSession().then(({ data: { session }, error }) => {
-    if (!error) {
-      globalAuthState = {
-        user: session?.user ?? null,
-        session,
-        loading: false,
-        initialized: true,
-      };
-      notifySubscribers();
-    }
+    // Check Supabase session first, then fall back to local auth
+    const supabaseUser = session?.user ?? null;
+    const localUser = checkLocalAuth();
+    const user = supabaseUser || localUser;
+    
+    globalAuthState = {
+      user,
+      session,
+      loading: false,
+      initialized: true,
+    };
+    notifySubscribers();
   });
 
   // Listen to auth state changes
@@ -46,8 +70,13 @@ function initAuthListener() {
       return;
     }
 
+    // Check Supabase session first, then fall back to local auth
+    const supabaseUser = session?.user ?? null;
+    const localUser = checkLocalAuth();
+    const user = supabaseUser || localUser;
+
     globalAuthState = {
-      user: session?.user ?? null,
+      user,
       session,
       loading: false,
       initialized: true,
@@ -93,6 +122,20 @@ function initAuthListener() {
 
 function notifySubscribers() {
   authSubscribers.forEach(callback => callback(globalAuthState));
+}
+
+// Function to refresh auth state (call after OTP verification)
+export function refreshAuthState() {
+  const localUser = checkLocalAuth();
+  if (localUser && !globalAuthState.user) {
+    globalAuthState = {
+      user: localUser,
+      session: null,
+      loading: false,
+      initialized: true,
+    };
+    notifySubscribers();
+  }
 }
 
 /**
