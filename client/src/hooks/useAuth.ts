@@ -138,6 +138,24 @@ export function refreshAuthState() {
   }
 }
 
+// Function to clear auth state (call during logout)
+export function clearAuthState() {
+  // Clear localStorage
+  localStorage.removeItem('userId');
+  localStorage.removeItem('phone');
+  localStorage.removeItem('email');
+  localStorage.removeItem('username');
+  
+  // Clear global auth state
+  globalAuthState = {
+    user: null,
+    session: null,
+    loading: false,
+    initialized: true,
+  };
+  notifySubscribers();
+}
+
 /**
  * Custom hook for Supabase authentication
  * Uses singleton pattern to prevent multiple subscriptions

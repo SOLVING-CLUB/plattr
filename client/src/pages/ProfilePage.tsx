@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { userService } from "@/lib/supabase-service";
 import { supabaseAuth } from "@/lib/supabase-auth";
 import { useToast } from "@/hooks/use-toast";
+import { clearAuthState } from "@/hooks/useAuth";
 import FloatingNav from "@/pages/FloatingNav";
 
 import sunburstBg from "@assets/image 1684_1764062792375.png";
@@ -51,27 +52,22 @@ export default function Profile() {
 
   const handleLogout = async () => {
     try {
-      // Set flag to prevent auto-redirect on test-auth page
-      sessionStorage.setItem('justLoggedOut', 'true');
-
-      // Sign out from Supabase
-      const { error } = await supabaseAuth.auth.signOut();
+      // Clear auth state immediately (before Supabase signout)
+      // This prevents the PublicOnly guard from redirecting back to home
+      clearAuthState();
       
-      if (error) {
-        throw error;
-      }
-
-      // Clear all local storage
-      localStorage.clear();
-      // Keep justLoggedOut flag for now, will be cleared by test-auth page
+      // Clear session storage
       sessionStorage.removeItem('userId');
       sessionStorage.removeItem('username');
       sessionStorage.removeItem('phone');
       sessionStorage.removeItem('email');
       sessionStorage.removeItem('needsName');
+      sessionStorage.setItem('justLoggedOut', 'true');
 
-      // Wait a moment for auth state to update
-      await new Promise(resolve => setTimeout(resolve, 300));
+      // Sign out from Supabase (in background)
+      supabaseAuth.auth.signOut().catch(err => {
+        console.error("Supabase signout error:", err);
+      });
 
       // Show success message
       toast({
