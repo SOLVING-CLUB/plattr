@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { useLocation } from 'wouter';
 import plattrLogoImage from "@assets/plattr_logo.png";
-import { userService } from "@/lib/supabase-service";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation } from "@tanstack/react-query";
+import { refreshAuthState } from "@/hooks/useAuth";
 
 export default function NameScreen() {
   const [fullName, setFullName] = useState('');
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFullName(e.target.value);
@@ -16,42 +16,26 @@ export default function NameScreen() {
 
   const isValid = fullName.trim().length >= 2;
 
-  // Update username mutation
-  const updateUsernameMutation = useMutation({
-    mutationFn: async (username: string) => {
-      const updatedUser = await userService.updateProfile({
-        username: username.trim(),
-      });
-      return { user: updatedUser };
-    },
-    onSuccess: (data: any) => {
-      // Store updated username and clear needsName flag
-      localStorage.setItem("username", data.user.username);
+  const handleContinue = () => {
+    if (isValid && !isSubmitting) {
+      setIsSubmitting(true);
+      
+      // Store username locally
+      localStorage.setItem("username", fullName.trim());
       sessionStorage.removeItem('needsName');
+      
+      // Refresh auth state with new username
+      refreshAuthState();
       
       toast({
         title: "Welcome!",
-        description: `Welcome to Plattr, ${data.user.username}!`,
+        description: `Welcome to Plattr, ${fullName.trim()}!`,
       });
       
       // Navigate to home page
       setTimeout(() => {
         setLocation('/', { replace: true });
-      }, 500);
-    },
-    onError: (error: any) => {
-      console.error('Username update error:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message || "Failed to update username. Please try again.",
-      });
-    },
-  });
-
-  const handleContinue = () => {
-    if (isValid) {
-      updateUsernameMutation.mutate(fullName);
+      }, 300);
     }
   };
 
@@ -117,13 +101,13 @@ export default function NameScreen() {
           onClick={handleContinue}
           className="w-full py-3 rounded-md text-white font-semibold text-sm sm:text-base flex items-center justify-center gap-2 transition-all mb-4 sm:mb-6"
           style={{ 
-            backgroundColor: (isValid && !updateUsernameMutation.isPending) ? '#1A9952' : '#A5D6A7',
-            cursor: (isValid && !updateUsernameMutation.isPending) ? 'pointer' : 'not-allowed',
+            backgroundColor: (isValid && !isSubmitting) ? '#1A9952' : '#A5D6A7',
+            cursor: (isValid && !isSubmitting) ? 'pointer' : 'not-allowed',
             fontFamily: "Sweet Sans Pro, -apple-system, sans-serif"
           }}
-          disabled={!isValid || updateUsernameMutation.isPending}
+          disabled={!isValid || isSubmitting}
         >
-          {updateUsernameMutation.isPending ? 'Saving...' : 'Ready to Plattr'}
+          {isSubmitting ? 'Saving...' : 'Ready to Plattr'}
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="mt-0.5">
             <path d="M6 12L10 8L6 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
