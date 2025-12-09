@@ -23,7 +23,42 @@ import { Slider } from "@/components/ui/slider";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
-import type { Dish, Category as CategoryType } from "@shared/schema";
+// Define interfaces locally to resolve missing exports
+export interface Category {
+  id: string;
+  name: string;
+  image_url: string;
+  imageUrl?: string;
+  displayOrder?: number;
+  meal_type?: string;
+  mealType?: string;
+  active?: boolean;
+}
+
+// Renaming to CategoryType to match existing usage code
+export type CategoryType = Category;
+
+export interface Dish {
+  id: any; // Using any to handle potential string/number mismatch in component
+  name: string;
+  description: string | null;
+  price: number | string;
+  image_url: string | null;
+  imageUrl?: string;
+  category_id: string;
+  categoryId?: string;
+  dish_type?: string | null;
+  dishType?: string;
+  is_available?: boolean;
+  isAvailable?: boolean;
+  rating?: number;
+  dietary_tag?: string | null;
+  dietaryType?: string;
+  calories?: number | null;
+  protein?: number | null;
+  carbs?: number | null;
+  fat?: number | null;
+}
 import { getSupabaseImageUrl, getDishTypeImage } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 import { LazyImage } from "@/components/ui/lazy-image";
@@ -44,8 +79,8 @@ import upmaImage from '@assets/image_1760599771826.png';
 import breadToastImage from '@assets/image_1760599797811.png';
 import southIndianPlatterImage from '@assets/image_1760599912464.png';
 import FloatingNav from "@/pages/FloatingNav";
-    import { useCart } from "@/context/CartContex";
-    import {
+import { useCart } from "@/context/CartContex";
+import {
   Carousel,
   CarouselContent,
   CarouselItem,
@@ -118,7 +153,7 @@ const DISH_TYPE_IMAGES: Record<string, string> = {
   'Alcoholic': idliImage1,
   'Milkshake': idliImage1,
   'Smoothie': idliImage1,
-  
+
   // Breakfast items
   'Bread': breadToastImage,
   'EggPlate': idliImage1,
@@ -129,19 +164,19 @@ const DISH_TYPE_IMAGES: Record<string, string> = {
   'SavoryBakery': samosaImage,
   'Steamed': idliImage1,
   'SweetGriddle': uttapamImage,
-  
+
   // Snacks
   'Chips': samosaImage,
   'Namkeen': samosaImage,
   'Pizza': samosaImage,
-  
+
   // Chaats
   'CurdChaat': vadaImage1,
   'DryChaat': vadaImage1,
   'FusionChaat': vadaImage1,
   'StuffedDough': samosaImage,
   'WetChaat': vadaImage1,
-  
+
   // Desserts & Sweets
   'Cake': samosaImage,
   'Pastry': samosaImage,
@@ -149,12 +184,12 @@ const DISH_TYPE_IMAGES: Record<string, string> = {
   'ColostrumMithai': masalaDosaImage,
   'FriedMithai': vadaImage1,
   'GrainMithai': pongalImage,
-  
+
   // Salads
   'FruitSalad': platterImage,
   'LeafySalad': platterImage,
   'LegumeSalad': platterImage,
-  
+
   // Lunch/Dinner
   'Soup': thaliImage,
   'ClearSoup': thaliImage,
@@ -164,7 +199,7 @@ const DISH_TYPE_IMAGES: Record<string, string> = {
   'ColdBite': platterImage,
   'DryFry': vadaImage1,
   'Grill': vadaImage1,
-  
+
   // Default fallback
   'default': idliImage1,
 };
@@ -271,7 +306,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
   const [isStuck, setIsStuck] = useState(false);
   const [quantities, setQuantities] = useState<Record<number, number>>({});
   const hasInteractedRef = useRef(false);
-  
+
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   const openDishDetail = (dish: Dish) => {
@@ -289,7 +324,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
   const handleAddToCart = (item: { id: number; name: string; price: number; quantity?: number }) => {
     handleInteraction();
     const quantity = quantities[item.id] !== undefined ? quantities[item.id] : (item.quantity || 5);
-    
+
     if (quantity < 5) {
       toast({
         title: "Minimum Order Required",
@@ -312,7 +347,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
   const handleRemoveFromCart = (itemId: number) => {
     removeFromCart(itemId);
   };
-  
+
   // Detect when sticky element becomes stuck
   // Using rootMargin to trigger slightly before the sentinel leaves viewport for reliable detection
   useEffect(() => {
@@ -324,7 +359,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
         // When sentinel is not visible, sticky element is stuck
         setIsStuck(!entry.isIntersecting);
       },
-      { 
+      {
         threshold: 0,
         rootMargin: '-1px 0px 0px 0px'
       }
@@ -344,7 +379,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
     }, 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
-  
+
   // Map UI tab selection to database meal_type filter value
   // Database meal_type column contains: "tiffins", "snacks", "lunch-dinner" (comma-separated)
   const getMealTypeFilter = (category: string): string => {
@@ -362,7 +397,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
   const { data: allCategoriesFromDb = [], isLoading: isLoadingCategories } = useQuery<CategoryType[]>({
     queryKey: ['/api/categories', 'all'],
   });
-  
+
   // Check if initial data is still loading (categories and first dishes query)
   const isInitialLoading = isLoadingCategories;
 
@@ -413,7 +448,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes - counts don't change often
     refetchOnWindowFocus: false,
   });
-  
+
   // Filter to available dishes only
   const allDishes = useMemo(() => {
     return allDishesForCounts.filter(dish => {
@@ -434,6 +469,12 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
     enabled: !!selectedCategory && selectedCategory !== 'all',
   });
 
+  // Fetch subcategories for images on BulkMeal page
+  const { data: subcategories = [] } = useQuery<any[]>({
+    queryKey: ['/api/subcategories'],
+    staleTime: 1000 * 60 * 60, // 1 hour
+  });
+
   // Get visible category IDs for the current meal type
   const visibleCategoryIds = useMemo(() => {
     return new Set(categories.map(c => c.id));
@@ -448,7 +489,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
       // Only include dish types from dishes in visible categories
       const dishCategoryId = (dish as any).category_id || dish.categoryId;
       if (!visibleCategoryIds.has(dishCategoryId)) return;
-      
+
       const dishType = (dish as any).dish_type || dish.dishType;
       if (dishType && dishType.trim() !== '') {
         types.add(dishType);
@@ -459,8 +500,8 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
 
   // Use allUniqueDishTypes when "All" is selected, otherwise use fetched dish types
   // Filter out empty strings from fetched dish types (API may return [""] for categories with no dish types)
-  const dishTypes = selectedCategory === 'all' 
-    ? allUniqueDishTypes 
+  const dishTypes = selectedCategory === 'all'
+    ? allUniqueDishTypes
     : fetchedDishTypes.filter(dt => dt && dt.trim() !== '');
 
   // Reset dish type filter when category changes
@@ -474,10 +515,10 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
     allDishes.forEach(d => {
       const dishCategoryId = (d as any).category_id || d.categoryId;
       if (!dishCategoryId) return;
-      
+
       // Apply dietary filter (egg is client-side)
       if (dietaryMode === 'egg' && !d.name.toLowerCase().includes('egg')) return;
-      
+
       counts[dishCategoryId] = (counts[dishCategoryId] || 0) + 1;
     });
     return counts;
@@ -499,7 +540,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
     });
     return counts;
   }, [dishes]);
-  
+
   // Get dish count for a specific dish type (uses memoized counts)
   const getDishCountForDishType = useCallback((dishType: string): number => {
     return dishTypeCounts[dishType] || 0;
@@ -528,7 +569,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
   const filteredAndSortedDishes = useMemo(() => {
     let searchResults: typeof dishes = [];
     let searchScores: Map<string, number> = new Map();
-    
+
     // If searching, use Fuse.js for fuzzy matching
     if (debouncedSearchQuery && debouncedSearchQuery.trim()) {
       const fuseResults = fuse.search(debouncedSearchQuery);
@@ -539,7 +580,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
     } else {
       searchResults = dishes;
     }
-    
+
     return searchResults
       .filter(dish => {
         // Dish type filter
@@ -549,20 +590,20 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
             return false;
           }
         }
-        
+
         // Dietary filter (egg is client-side)
         if (dietaryMode === 'egg') {
           if (!dish.name.toLowerCase().includes('egg')) {
             return false;
           }
         }
-        
+
         // Price range filter
         const price = parseFloat(dish.price as string);
         if (price < priceRange[0] || price > priceRange[1]) {
           return false;
         }
-        
+
         return true;
       })
       .sort((a, b) => {
@@ -572,22 +613,22 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
           const scoreB = searchScores.get(b.id) ?? 1;
           if (scoreA !== scoreB) return scoreA - scoreB;
         }
-        
+
         // When viewing "All", priority category dishes come first
         if (selectedCategory === 'all' && priorityCategoryId) {
           const aCategoryId = (a as any).category_id || a.categoryId;
           const bCategoryId = (b as any).category_id || b.categoryId;
           const aIsPriority = aCategoryId === priorityCategoryId;
           const bIsPriority = bCategoryId === priorityCategoryId;
-          
+
           if (aIsPriority && !bIsPriority) return -1;
           if (!aIsPriority && bIsPriority) return 1;
         }
-        
+
         // Then apply the selected sort option
         const priceA = parseFloat(a.price as string);
         const priceB = parseFloat(b.price as string);
-        
+
         switch (sortOption) {
           case 'price-low':
             return priceA - priceB;
@@ -610,22 +651,46 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
   };
 
   // Helper function to get dish image
+  // Added helper for category images utilizing DB url
+  const getCategoryImageUrl = (categoryId: string): string => {
+    const category = categories.find(c => c.id === categoryId);
+    if (!category) return CATEGORY_IMAGES[categoryId] || idliImage1;
+
+    // Check for DB image_url (snake_case) or imageUrl (camelCase)
+    const dbImage = (category as any).image_url || category.imageUrl;
+
+    if (dbImage && !dbImage.startsWith('/images/')) {
+      return getSupabaseImageUrl(dbImage);
+    }
+    return CATEGORY_IMAGES[categoryId] || idliImage1;
+  };
+
+  // Shadowing outer getSubcategoryImage to use fetched subcategories
+  const getSubcategoryImage = (dishType: string): string => {
+    const subcat = subcategories.find((s: any) => s.name === dishType);
+    if (subcat?.image_url) {
+      return getSupabaseImageUrl(subcat.image_url);
+    }
+    const fallbackImage = DISH_TYPE_IMAGES[dishType] || DISH_TYPE_IMAGES['default'];
+    return getDishTypeImage(dishType, fallbackImage);
+  };
+
   const getDishImage = (dishName: string, dishImageUrl?: string, dishData?: any): string => {
     const imageUrlFromDb = dishImageUrl || dishData?.image_url || dishData?.imageUrl;
-    
+
     if (imageUrlFromDb && imageUrlFromDb.trim() !== '') {
       const supabaseUrl = getSupabaseImageUrl(imageUrlFromDb);
       if (supabaseUrl && !supabaseUrl.includes('placeholder') && supabaseUrl.startsWith('http')) {
         return supabaseUrl;
       }
     }
-    
+
     const name = dishName.toLowerCase();
-    
+
     if (name === 'achari paneer tikka') {
       return 'https://leltckltotobsibixhqo.supabase.co/storage/v1/object/public/dish_images/dishes/D-0002/main.png';
     }
-    
+
     if (name.includes('paneer tikka') || name.includes('achari paneer')) return platterImage;
     if (name.includes('paneer')) return platterImage;
     if (name.includes('tikka')) return platterImage;
@@ -642,10 +707,10 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
     if (name.includes('biryani')) return biryaniImage1;
     if (name.includes('thali') || name.includes('meal')) return thaliImage;
     if (name.includes('curry') || name.includes('masala')) return platterImage;
-    
+
     return platterImage;
   };
-  
+
   const [formData, setFormData] = useState({
     eventType: "",
     numberOfPeople: "",
@@ -747,7 +812,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.eventType || !formData.phone || !formData.eventDate) {
       toast({
         title: "Missing Information",
@@ -859,7 +924,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
       {/* Sentinel element for sticky detection - placed at top for reliable intersection detection */}
       <div ref={sentinelRef} className="absolute top-0 left-0 right-0" style={{ height: "1px" }} />
       {/* Sticky Back Button Header - uses isStuck from IntersectionObserver for performance */}
-      <div 
+      <div
         className="sticky top-0 z-50 transition-all duration-200"
         style={{
           backgroundColor: isStuck ? 'white' : 'transparent',
@@ -920,7 +985,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
             }}
           >
             <UtensilsCrossed className="w-6 h-6 mb-1" />
-            <span 
+            <span
               className="text-[10px] font-semibold text-center leading-tight"
               style={{ fontFamily: "Sweet Sans Pro" }}
             >
@@ -939,7 +1004,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
             }}
           >
             <Package className="w-6 h-6 mb-1" />
-            <span 
+            <span
               className="text-[10px] font-semibold text-center leading-tight"
               style={{ fontFamily: "Sweet Sans Pro" }}
             >
@@ -949,51 +1014,51 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
 
           {!onNavigate && (
             <>
-          <button
+              <button
                 onClick={() => navigate("/catering")}
-            data-testid="service-tab-catering"
-            className="flex flex-col items-center justify-center p-3 transition-all hover-elevate active-elevate-2 aspect-square"
-            style={{
-              borderRadius: "10px",
-              backgroundColor: selectedService === "catering" ? "#06352A" : "#FFFFFF",
-              color: selectedService === "catering" ? "#F5E9DB" : "#06352A",
-            }}
-          >
-            <Truck className="w-6 h-6 mb-1" />
-            <span 
-              className="text-[10px] font-semibold text-center leading-tight"
-              style={{ fontFamily: "Sweet Sans Pro" }}
-            >
-              Catering
-            </span>
-          </button>
+                data-testid="service-tab-catering"
+                className="flex flex-col items-center justify-center p-3 transition-all hover-elevate active-elevate-2 aspect-square"
+                style={{
+                  borderRadius: "10px",
+                  backgroundColor: selectedService === "catering" ? "#06352A" : "#FFFFFF",
+                  color: selectedService === "catering" ? "#F5E9DB" : "#06352A",
+                }}
+              >
+                <Truck className="w-6 h-6 mb-1" />
+                <span
+                  className="text-[10px] font-semibold text-center leading-tight"
+                  style={{ fontFamily: "Sweet Sans Pro" }}
+                >
+                  Catering
+                </span>
+              </button>
 
-          <button
+              <button
                 onClick={() => navigate("/corporate")}
-            data-testid="service-tab-corporate"
-            className="flex flex-col items-center justify-center p-3 transition-all hover-elevate active-elevate-2 aspect-square"
-            style={{
-              borderRadius: "10px",
-              backgroundColor: selectedService === "corporate" ? "#06352A" : "#FFFFFF",
-              color: selectedService === "corporate" ? "#F5E9DB" : "#06352A",
-            }}
-          >
-            <Building2 className="w-6 h-6 mb-1" />
-            <span 
-              className="text-[10px] font-semibold text-center leading-tight"
-              style={{ fontFamily: "Sweet Sans Pro" }}
-            >
-              Corporate
-            </span>
-          </button>
+                data-testid="service-tab-corporate"
+                className="flex flex-col items-center justify-center p-3 transition-all hover-elevate active-elevate-2 aspect-square"
+                style={{
+                  borderRadius: "10px",
+                  backgroundColor: selectedService === "corporate" ? "#06352A" : "#FFFFFF",
+                  color: selectedService === "corporate" ? "#F5E9DB" : "#06352A",
+                }}
+              >
+                <Building2 className="w-6 h-6 mb-1" />
+                <span
+                  className="text-[10px] font-semibold text-center leading-tight"
+                  style={{ fontFamily: "Sweet Sans Pro" }}
+                >
+                  Corporate
+                </span>
+              </button>
             </>
           )}
         </div>
       </div>
       {/* Sticky Search Bar and Meal Category Container - Outside header for proper sticky behavior */}
-      <div 
-        className="sticky z-40 px-4 pb-2 pt-4 transition-all duration-200" 
-        style={{ 
+      <div
+        className="sticky z-40 px-4 pb-2 pt-4 transition-all duration-200"
+        style={{
           top: '92px',
           backgroundColor: "white",
           boxShadow: isStuck ? "0 2px 4px rgba(0,0,0,0.1)" : "none"
@@ -1019,7 +1084,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
         </div>
 
         {/* Meal Category Buttons */}
-        <div 
+        <div
           className="flex items-center justify-between gap-1 sm:gap-3 p-1.5 sm:p-2 bg-white rounded-full"
           style={{
             border: "1px solid #E5E7EB"
@@ -1036,10 +1101,10 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
             }}
             data-testid="button-category-lunch-dinner"
           >
-            <img 
-              src={selectedMealCategory === "lunch-dinner" ? lunchDinnerIconWhite : lunchDinnerIcon} 
-              alt="Lunch/Dinner" 
-              className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" 
+            <img
+              src={selectedMealCategory === "lunch-dinner" ? lunchDinnerIconWhite : lunchDinnerIcon}
+              alt="Lunch/Dinner"
+              className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0"
             />
             <span className="text-[10px] sm:text-[12px] leading-none">Lunch / Dinner</span>
           </button>
@@ -1055,10 +1120,10 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
             }}
             data-testid="button-category-tiffins"
           >
-            <img 
-              src={selectedMealCategory === "tiffins" ? tiffinsIconWhite : tiffinsIcon} 
-              alt="Tiffins" 
-              className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" 
+            <img
+              src={selectedMealCategory === "tiffins" ? tiffinsIconWhite : tiffinsIcon}
+              alt="Tiffins"
+              className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0"
             />
             <span className="text-[10px] sm:text-[12px] leading-none">Tiffins</span>
           </button>
@@ -1074,10 +1139,10 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
             }}
             data-testid="button-category-hi-tea"
           >
-            <img 
-              src={selectedMealCategory === "hi-tea" ? hiTeaCategoryIconWhite : hiTeaCategoryIcon} 
-              alt="Hi-Tea" 
-              className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" 
+            <img
+              src={selectedMealCategory === "hi-tea" ? hiTeaCategoryIconWhite : hiTeaCategoryIcon}
+              alt="Hi-Tea"
+              className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0"
             />
             <span className="text-[10px] sm:text-[12px] leading-none">Hi-Tea</span>
           </button>
@@ -1090,80 +1155,80 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
         <div className="space-y-2">
           {/* Filters & Sort - Single Row */}
           <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide mb-4">
-              <button
-                onClick={() => { handleInteraction(); setDietaryMode('all'); }}
-                className={cn(
-                  "flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium transition-all flex-shrink-0",
-                  dietaryMode === 'all'
-                    ? "bg-[#06352A] text-white"
-                    : "bg-gray-100 text-gray-600"
-                )}
-                style={{ fontFamily: "Sweet Sans Pro" }}
-                data-testid="filter-dietary-all"
-              >
-                <Sparkles className="w-2.5 h-2.5" />
-                All
-              </button>
-              <button
-                onClick={() => { handleInteraction(); setDietaryMode('veg'); }}
-                className={cn(
-                  "flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium transition-all flex-shrink-0",
-                  dietaryMode === 'veg'
-                    ? "bg-[#1A9952] text-white"
-                    : "bg-gray-100 text-gray-600"
-                )}
-                style={{ fontFamily: "Sweet Sans Pro" }}
-                data-testid="filter-dietary-veg"
-              >
-                <Leaf className="w-2.5 h-2.5" />
-                Veg
-              </button>
-              <button
-                onClick={() => { handleInteraction(); setDietaryMode('egg'); }}
-                className={cn(
-                  "flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium transition-all flex-shrink-0",
-                  dietaryMode === 'egg'
-                    ? "bg-[#F59E0B] text-white"
-                    : "bg-gray-100 text-gray-600"
-                )}
-                style={{ fontFamily: "Sweet Sans Pro" }}
-                data-testid="filter-dietary-egg"
-              >
-                <Egg className="w-2.5 h-2.5" />
-                Egg
-              </button>
-              <button
-                onClick={() => { handleInteraction(); setDietaryMode('non-veg'); }}
-                className={cn(
-                  "flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium transition-all flex-shrink-0",
-                  dietaryMode === 'non-veg'
-                    ? "bg-[#DC2626] text-white"
-                    : "bg-gray-100 text-gray-600"
-                )}
-                style={{ fontFamily: "Sweet Sans Pro" }}
-                data-testid="filter-dietary-nonveg"
-              >
-                <Drumstick className="w-2.5 h-2.5" />
-                Non-Veg
-              </button>
+            <button
+              onClick={() => { handleInteraction(); setDietaryMode('all'); }}
+              className={cn(
+                "flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium transition-all flex-shrink-0",
+                dietaryMode === 'all'
+                  ? "bg-[#06352A] text-white"
+                  : "bg-gray-100 text-gray-600"
+              )}
+              style={{ fontFamily: "Sweet Sans Pro" }}
+              data-testid="filter-dietary-all"
+            >
+              <Sparkles className="w-2.5 h-2.5" />
+              All
+            </button>
+            <button
+              onClick={() => { handleInteraction(); setDietaryMode('veg'); }}
+              className={cn(
+                "flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium transition-all flex-shrink-0",
+                dietaryMode === 'veg'
+                  ? "bg-[#1A9952] text-white"
+                  : "bg-gray-100 text-gray-600"
+              )}
+              style={{ fontFamily: "Sweet Sans Pro" }}
+              data-testid="filter-dietary-veg"
+            >
+              <Leaf className="w-2.5 h-2.5" />
+              Veg
+            </button>
+            <button
+              onClick={() => { handleInteraction(); setDietaryMode('egg'); }}
+              className={cn(
+                "flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium transition-all flex-shrink-0",
+                dietaryMode === 'egg'
+                  ? "bg-[#F59E0B] text-white"
+                  : "bg-gray-100 text-gray-600"
+              )}
+              style={{ fontFamily: "Sweet Sans Pro" }}
+              data-testid="filter-dietary-egg"
+            >
+              <Egg className="w-2.5 h-2.5" />
+              Egg
+            </button>
+            <button
+              onClick={() => { handleInteraction(); setDietaryMode('non-veg'); }}
+              className={cn(
+                "flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium transition-all flex-shrink-0",
+                dietaryMode === 'non-veg'
+                  ? "bg-[#DC2626] text-white"
+                  : "bg-gray-100 text-gray-600"
+              )}
+              style={{ fontFamily: "Sweet Sans Pro" }}
+              data-testid="filter-dietary-nonveg"
+            >
+              <Drumstick className="w-2.5 h-2.5" />
+              Non-Veg
+            </button>
 
-              {/* Sort Dropdown */}
-              <Select value={sortOption} onValueChange={(value) => setSortOption(value as typeof sortOption)}>
-                <SelectTrigger 
-                  className="w-auto h-6 px-2 text-[10px] bg-white border-gray-200 rounded-full gap-0.5 flex-shrink-0" 
-                  style={{ fontFamily: "Sweet Sans Pro" }}
-                  data-testid="select-sort"
-                >
-                  <ArrowUpDown className="w-2.5 h-2.5" />
-                  <SelectValue placeholder="Sort" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="price-low">Price: Low → High</SelectItem>
-                  <SelectItem value="price-high">Price: High → Low</SelectItem>
-                  <SelectItem value="name-az">Name: A → Z</SelectItem>
-                  <SelectItem value="name-za">Name: Z → A</SelectItem>
-                </SelectContent>
-              </Select>
+            {/* Sort Dropdown */}
+            <Select value={sortOption} onValueChange={(value) => setSortOption(value as typeof sortOption)}>
+              <SelectTrigger
+                className="w-auto h-6 px-2 text-[10px] bg-white border-gray-200 rounded-full gap-0.5 flex-shrink-0"
+                style={{ fontFamily: "Sweet Sans Pro" }}
+                data-testid="select-sort"
+              >
+                <ArrowUpDown className="w-2.5 h-2.5" />
+                <SelectValue placeholder="Sort" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="price-low">Price: Low → High</SelectItem>
+                <SelectItem value="price-high">Price: High → Low</SelectItem>
+                <SelectItem value="name-az">Name: A → Z</SelectItem>
+                <SelectItem value="name-za">Name: Z → A</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* CategoryPage-style Layout */}
@@ -1177,7 +1242,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                   className={cn(
                     "flex flex-col items-center gap-2 py-4 px-2 transition-all relative",
                     selectedCategory === 'all'
-                      ? "bg-primary/10 before:absolute before:left-0 before:top-3 before:bottom-3 before:w-1.5 before:bg-primary before:rounded-r" 
+                      ? "bg-primary/10 before:absolute before:left-0 before:top-3 before:bottom-3 before:w-1.5 before:bg-primary before:rounded-r"
                       : "hover-elevate"
                   )}
                   data-testid="filter-category-all"
@@ -1185,7 +1250,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                   <div className={cn(
                     "relative w-12 h-12 md:w-14 md:h-14 rounded-full overflow-hidden border-2 transition-all flex items-center justify-center",
                     selectedCategory === 'all'
-                      ? "border-primary shadow-lg scale-105 bg-primary/20" 
+                      ? "border-primary shadow-lg scale-105 bg-primary/20"
                       : "border-border bg-card"
                   )}>
                     <LayoutGrid className={cn(
@@ -1205,42 +1270,42 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
 
                 {/* Show category options (Starters, Sides, Mains, etc.) based on meal_type */}
                 {categories.map((cat) => (
-                    <button
-                      key={cat.id}
-                      onClick={() => { handleInteraction(); setSelectedCategory(cat.id); setSelectedDishType('all'); }}
-                      className={cn(
-                        "flex flex-col items-center gap-2 py-4 px-2 transition-all relative",
-                        selectedCategory === cat.id
-                          ? "bg-primary/10 before:absolute before:left-0 before:top-3 before:bottom-3 before:w-1.5 before:bg-primary before:rounded-r" 
-                          : "hover-elevate"
+                  <button
+                    key={cat.id}
+                    onClick={() => { handleInteraction(); setSelectedCategory(cat.id); setSelectedDishType('all'); }}
+                    className={cn(
+                      "flex flex-col items-center gap-2 py-4 px-2 transition-all relative",
+                      selectedCategory === cat.id
+                        ? "bg-primary/10 before:absolute before:left-0 before:top-3 before:bottom-3 before:w-1.5 before:bg-primary before:rounded-r"
+                        : "hover-elevate"
+                    )}
+                    data-testid={`filter-category-${cat.id}`}
+                  >
+                    <div className={cn(
+                      "relative w-12 h-12 md:w-14 md:h-14 rounded-full overflow-hidden border-2 transition-all",
+                      selectedCategory === cat.id
+                        ? "border-primary shadow-lg scale-105"
+                        : "border-border"
+                    )}>
+                      <img
+                        src={getCategoryImageUrl(cat.id)}
+                        alt={cat.name}
+                        loading="lazy"
+                        className="w-full h-full object-cover"
+                      />
+                      {selectedCategory === cat.id && (
+                        <div className="absolute inset-0 bg-gradient-to-t from-primary/30 to-transparent pointer-events-none" />
                       )}
-                      data-testid={`filter-category-${cat.id}`}
-                    >
-                      <div className={cn(
-                        "relative w-12 h-12 md:w-14 md:h-14 rounded-full overflow-hidden border-2 transition-all",
-                        selectedCategory === cat.id
-                          ? "border-primary shadow-lg scale-105" 
-                          : "border-border"
+                    </div>
+                    <div className="text-center w-full px-1">
+                      <span className={cn(
+                        "text-xs md:text-sm font-semibold block line-clamp-2 leading-tight",
+                        selectedCategory === cat.id ? "text-primary" : "text-foreground"
                       )}>
-                        <img 
-                          src={(cat.imageUrl && !cat.imageUrl.startsWith('/images/')) ? cat.imageUrl : (CATEGORY_IMAGES[cat.id] || idliImage1)}
-                          alt={cat.name}
-                          loading="lazy"
-                          className="w-full h-full object-cover"
-                        />
-                        {selectedCategory === cat.id && (
-                          <div className="absolute inset-0 bg-gradient-to-t from-primary/30 to-transparent pointer-events-none" />
-                        )}
-                      </div>
-                      <div className="text-center w-full px-1">
-                        <span className={cn(
-                          "text-xs md:text-sm font-semibold block line-clamp-2 leading-tight",
-                          selectedCategory === cat.id ? "text-primary" : "text-foreground"
-                        )}>
-                          {cat.name}
-                        </span>
-                      </div>
-                    </button>
+                        {cat.name}
+                      </span>
+                    </div>
+                  </button>
                 ))}
               </div>
             </aside>
@@ -1254,22 +1319,22 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                     {/* Dish type options (65's, Chilli, Fry, etc.) - Compact pill design */}
                     {dishTypes.map((dishType) => {
                       const dishTypeImage = getSubcategoryImage(dishType);
-                      
+
                       return (
                         <button
                           key={dishType}
                           onClick={() => { handleInteraction(); setSelectedDishType(dishType); }}
                           className={cn(
                             "flex items-center gap-2 px-3 py-1.5 border transition-all flex-shrink-0",
-                            selectedDishType === dishType 
-                              ? "border-[#1A9952] bg-white shadow-sm" 
+                            selectedDishType === dishType
+                              ? "border-[#1A9952] bg-white shadow-sm"
                               : "border-gray-200 bg-white hover:border-gray-300"
                           )}
                           style={{ borderRadius: '10px' }}
                           data-testid={`tab-dishtype-${dishType.toLowerCase()}`}
                         >
                           <div className="relative w-7 h-7 overflow-hidden flex-shrink-0" style={{ borderRadius: '6px' }}>
-                            <img 
+                            <img
                               src={dishTypeImage}
                               alt={dishType}
                               loading="lazy"
@@ -1332,17 +1397,17 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                     };
 
                     return (
-                      <Card 
-                        key={dish.id} 
+                      <Card
+                        key={dish.id}
                         className="overflow-hidden hover-elevate group"
                         data-testid={`card-dish-${dish.id}`}
                       >
-                        <div 
+                        <div
                           className="relative h-40 md:h-48 overflow-hidden cursor-pointer"
                           onClick={() => { handleInteraction(); openDishDetail(dish); }}
                           data-testid={`image-dish-${dish.id}`}
                         >
-                          <LazyImage 
+                          <LazyImage
                             src={getDishImage(dish.name, dish.imageUrl || undefined, dish)}
                             alt={dish.name}
                             containerClassName="w-full h-full"
@@ -1393,7 +1458,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                                 setQuantities(prev => ({ ...prev, [dishId]: parseInt(value) }));
                               }}
                             >
-                              <SelectTrigger 
+                              <SelectTrigger
                                 className="w-[60px] sm:w-[70px] h-7 text-[10px] sm:text-xs border-gray-300 px-2"
                                 style={{ fontFamily: "Sweet Sans Pro" }}
                                 data-testid={`input-quantity-${dishId}`}
@@ -1404,9 +1469,9 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                               >
                                 <SelectValue />
                               </SelectTrigger>
-                              <SelectContent 
-                                position="popper" 
-                                side="bottom" 
+                              <SelectContent
+                                position="popper"
+                                side="bottom"
                                 align="end"
                                 className="min-w-[60px]"
                               >
@@ -1439,7 +1504,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                       </Card>
                     );
                   })}
-                  </div>
+                </div>
               )}
             </div>
           </div>
@@ -1455,7 +1520,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
               Refine your search with filters
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-6 py-4">
             {/* Price Range Filter */}
             <div className="space-y-4">
@@ -1465,7 +1530,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                   ₹{priceRange[0]} - ₹{priceRange[1]}
                 </span>
               </div>
-              
+
               <Slider
                 value={priceRange}
                 onValueChange={(value) => setPriceRange(value as [number, number])}
@@ -1475,24 +1540,24 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                 className="w-full"
                 data-testid="slider-price-range"
               />
-              
+
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>₹0</span>
                 <span>₹500+</span>
               </div>
             </div>
           </div>
-          
+
           <div className="flex gap-2">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="flex-1"
               onClick={resetFilters}
               data-testid="button-reset-filters"
             >
               Reset
             </Button>
-            <Button 
+            <Button
               className="flex-1"
               onClick={() => setFilterDialogOpen(false)}
               data-testid="button-apply-filters"
@@ -1512,7 +1577,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
               Choose how to sort the dishes
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             <RadioGroup value={sortOption} onValueChange={(value) => setSortOption(value as typeof sortOption)}>
               <div className="flex items-center space-x-2">
@@ -1533,17 +1598,17 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
               </div>
             </RadioGroup>
           </div>
-          
+
           <div className="flex gap-2">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="flex-1"
               onClick={() => setSortDialogOpen(false)}
               data-testid="button-cancel-sort"
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               className="flex-1"
               onClick={() => setSortDialogOpen(false)}
               data-testid="button-apply-sort"
@@ -1563,14 +1628,14 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
               Coming soon! This feature will help you plan your perfect platter.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="py-4">
             <p className="text-sm text-muted-foreground">
               The Platter Planner feature is under development. Stay tuned for updates!
             </p>
           </div>
-          
-          <Button 
+
+          <Button
             className="w-full"
             onClick={() => setPlatterPlannerOpen(false)}
             data-testid="button-close-planner"
@@ -1604,12 +1669,12 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                 <Badge variant="outline">{detailDish.dishType}</Badge>
               )}
             </div>
-            
+
             <div className="p-4 pb-8 space-y-4 overflow-y-auto max-h-[calc(85vh-8rem)]">
               {/* Image */}
               {detailDish && (
                 <div className="relative h-64 rounded-lg overflow-hidden">
-                  <LazyImage 
+                  <LazyImage
                     src={getDishImage(detailDish.name, detailDish.imageUrl || undefined, detailDish)}
                     alt={detailDish.name}
                     containerClassName="w-full h-full"
@@ -1634,7 +1699,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                     ₹{detailDish ? parseFloat(detailDish.price as string).toFixed(0) : '0'}
                   </p>
                 </div>
-                
+
                 <div className="flex items-center gap-2">
                   <div className="relative">
                     <Input
@@ -1697,20 +1762,20 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
 
       {/* Floating Cart Bar - Green bar above bottom nav */}
       {cart.length > 0 && (
-        <div 
+        <div
           className="fixed bottom-[90px] left-0 right-0 z-40 px-4"
         >
           <button
             onClick={() => navigate("/bulk-meals-cart")}
             className="w-full flex items-center justify-between px-4 py-3 rounded-xl"
-            style={{ 
+            style={{
               backgroundColor: '#1A9952',
               boxShadow: '0 -2px 10px rgba(0, 0, 0, 0.15)'
             }}
             data-testid="button-floating-cart"
           >
             <div className="flex items-center gap-3">
-              <div 
+              <div
                 className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold"
                 style={{ backgroundColor: '#F5E9DB', color: '#1A9952' }}
               >

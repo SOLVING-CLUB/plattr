@@ -55,7 +55,7 @@ export default function Profile() {
       // Clear auth state immediately (before Supabase signout)
       // This prevents the PublicOnly guard from redirecting back to home
       clearAuthState();
-      
+
       // Clear session storage
       sessionStorage.removeItem('userId');
       sessionStorage.removeItem('username');
@@ -105,14 +105,14 @@ export default function Profile() {
 
   // Format name for display (use username as fallback)
   const displayName = userData?.username || "User";
-  const displayPhone = formatPhone(userData?.phone);
+  const displayPhone = formatPhone(userData?.phone ?? null);
   const displayEmail = userData?.email || "Not provided";
 
   return (
     <div className="h-screen overflow-hidden pb-20 relative flex flex-col">
       {/* Header Section - Solid gradient without sunburst */}
       <div className="relative overflow-hidden">
-        <div 
+        <div
           className="absolute inset-0 w-full h-full"
           style={{
             background: "linear-gradient(180deg, #562B00 0%, #DD6D02 100%)"
@@ -138,27 +138,27 @@ export default function Profile() {
             </div>
           ) : (
             <>
-          <h1 
-            className="text-2xl font-bold text-white mb-2"
-            style={{ fontFamily: "Sweet Sans Pro" }}
-            data-testid="text-user-name"
-          >
+              <h1
+                className="text-2xl font-bold text-white mb-2"
+                style={{ fontFamily: "Sweet Sans Pro" }}
+                data-testid="text-user-name"
+              >
                 {displayName}
-          </h1>
-          <p 
-            className="text-white/90 text-sm mb-1"
-            style={{ fontFamily: "Sweet Sans Pro" }}
-            data-testid="text-user-phone"
-          >
+              </h1>
+              <p
+                className="text-white/90 text-sm mb-1"
+                style={{ fontFamily: "Sweet Sans Pro" }}
+                data-testid="text-user-phone"
+              >
                 {displayPhone}
-          </p>
-          <p 
-            className="text-white/90 text-sm mb-4"
-            style={{ fontFamily: "Sweet Sans Pro" }}
-            data-testid="text-user-email"
-          >
+              </p>
+              <p
+                className="text-white/90 text-sm mb-4"
+                style={{ fontFamily: "Sweet Sans Pro" }}
+                data-testid="text-user-email"
+              >
                 {displayEmail}
-          </p>
+              </p>
             </>
           )}
 
@@ -188,6 +188,7 @@ export default function Profile() {
                 color: "#1A3A2F"
               }}
               data-testid="button-help"
+              onClick={() => setLocation("/help")}
             >
               <HelpCircle className="w-3.5 h-3.5 mr-1.5" />
               HELP
@@ -254,9 +255,8 @@ export default function Profile() {
                     setLocation("/payment-methods");
                   }
                 }}
-                className={`w-full flex items-center justify-between px-5 py-4 hover-elevate ${
-                  index < menuItems.length - 1 ? "border-b border-gray-100" : ""
-                }`}
+                className={`w-full flex items-center justify-between px-5 py-4 hover-elevate ${index < menuItems.length - 1 ? "border-b border-gray-100" : ""
+                  }`}
                 style={{ fontFamily: "Sweet Sans Pro" }}
                 data-testid={`button-${item.id}`}
               >
