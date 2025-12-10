@@ -1292,6 +1292,10 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                         alt={cat.name}
                         loading="lazy"
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = CATEGORY_IMAGES[cat.id] || idliImage1;
+                        }}
                       />
                       {selectedCategory === cat.id && (
                         <div className="absolute inset-0 bg-gradient-to-t from-primary/30 to-transparent pointer-events-none" />
