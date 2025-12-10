@@ -335,10 +335,16 @@ function App() {
           <Toaster />
           {showSplash && (
             <div
-              className={`fixed inset-0 transition-opacity duration-500 ${
+              className={`fixed transition-opacity duration-500 ${
                 fadeOut ? "opacity-0 pointer-events-none" : "opacity-100"
               }`}
-              style={{ zIndex: 10000 }}
+              style={{ 
+                zIndex: 10000,
+                top: "calc(-1 * env(safe-area-inset-top, 0px))",
+                left: "calc(-1 * env(safe-area-inset-left, 0px))",
+                right: "calc(-1 * env(safe-area-inset-right, 0px))",
+                bottom: "calc(-1 * env(safe-area-inset-bottom, 0px))",
+              }}
             >
               <SplashScreen />
             </div>

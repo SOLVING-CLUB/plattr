@@ -48,19 +48,20 @@ export default function SplashScreen() {
 
   return (
     <div
-      className="fixed inset-0 overflow-hidden"
+      className="fixed overflow-hidden"
       style={{
         backgroundColor: "#1A9952",
         width: "100vw",
-        height: "100vh",
+        minHeight: "100vh",
+        height: "100dvh",
         position: "fixed",
         margin: 0,
         padding: 0,
         zIndex: 9999,
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
+        top: "calc(-1 * env(safe-area-inset-top, 0px))",
+        left: "calc(-1 * env(safe-area-inset-left, 0px))",
+        right: "calc(-1 * env(safe-area-inset-right, 0px))",
+        bottom: "calc(-1 * env(safe-area-inset-bottom, 0px))",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -86,8 +87,8 @@ export default function SplashScreen() {
           position: "absolute",
           top: 0,
           left: 0,
-          width: "100vw",
-          height: "100vh",
+          width: "calc(100vw + env(safe-area-inset-left, 0px) + env(safe-area-inset-right, 0px))",
+          height: "calc(100dvh + env(safe-area-inset-top, 0px) + env(safe-area-inset-bottom, 0px))",
           objectFit: "cover",
         }}
         data-testid="splash-animation"
