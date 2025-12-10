@@ -77,16 +77,18 @@ export default function SplashScreen() {
         </div>
       )}
 
-      {/* Lottie Animation */}
+      {/* Lottie Animation - Full Screen */}
       <Lottie
         animationData={splashAnimation}
         loop={false}
         autoplay={true}
         style={{
-          width: "100%",
-          height: "100%",
-          maxWidth: "400px",
-          maxHeight: "400px",
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100vw",
+          height: "100vh",
+          objectFit: "cover",
         }}
         data-testid="splash-animation"
       />
