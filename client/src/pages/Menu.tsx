@@ -47,7 +47,6 @@ import breadToastImage from '@assets/image_1760599797811.png';
 // Category images
 import southIndianPlatterImage from '@assets/image_1760599912464.png';
 
-import menuBanner from "@assets/Banner_1764067296661.png";
 import lunchDinnerIcon from "@assets/game-icons_hot-meal_1763923901438.png";
 import tiffinsIcon from "@assets/fi_8174371_1763923901431.png";
 import hiTeaCategoryIcon from "@assets/fi_2673562_1763923892186.png";
@@ -689,16 +688,6 @@ export default function Menu() {
           >
             AI Menu Planner
           </button>
-        </div>
-
-        {/* Banner */}
-        <div className="rounded-xl overflow-hidden mb-2">
-          <img 
-            src={menuBanner} 
-            alt="Special 26 Offers" 
-            className="w-full h-auto object-cover"
-            data-testid="img-menu-banner"
-          />
         </div>
 
       </div>
