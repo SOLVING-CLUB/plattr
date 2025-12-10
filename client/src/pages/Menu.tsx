@@ -669,9 +669,10 @@ export default function Menu() {
         style={{
           backgroundColor: '#FDF8F3',
           boxShadow: headerScrolled ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+          paddingTop: 'env(safe-area-inset-top, 0px)',
         }}
       >
-        <div className="px-4 pt-12 pb-3">
+        <div className="px-4 pt-3 pb-2">
           <Button
             variant="ghost"
             size="sm"
