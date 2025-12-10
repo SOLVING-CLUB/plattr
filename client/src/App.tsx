@@ -45,8 +45,6 @@ import MealBoxThankyouPage from "@/pages/MealBoxThankyouPage";
 import VerificationScreen from "@/pages/VerificationScreen";
 import PhoneScreen from "@/pages/PhoneScreen";
 import NameScreen from "@/pages/NameScreen";
-import TestAuthPage from "@/pages/TestAuthPage";
-import TestOtpPasswordPage from "@/pages/TestOtpPasswordPage";
 import LocationPage from "@/pages/LocationPage";
 import MapConfirmationPage from "@/pages/MapConfirmationPage";
 import SplashScreen from "@/components/SplashScreen";
@@ -223,7 +221,7 @@ function Router() {
     return null;
   });
 
-  // Public auth pages - TestAuthPage handles its own redirects (for email verification flow)
+  // Public auth pages
   const PublicAuthPage = withPublicOnly(AuthPage);
   const PublicPhoneScreen = withPublicOnly(PhoneScreen);
   const PublicVerificationScreen = withPublicOnly(VerificationScreen);
@@ -238,8 +236,6 @@ function Router() {
         <Route path="/" component={GuardedHomePage} />
       <Route path="/menu" component={GuardedMenuPage} />
       <Route path="/explore-menu" component={GuardedExploreMenuPage} />
-      <Route path="/test-auth" component={TestAuthPage} />
-      <Route path="/test-otp-password" component={TestOtpPasswordPage} />
       <Route path="/auth" component={PublicAuthPage} />
       <Route path="/phone" component={PublicPhoneScreen} />
       <Route path="/verification" component={PublicVerificationScreen} />
