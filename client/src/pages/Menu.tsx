@@ -1,5 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { useVirtualizer } from "@tanstack/react-virtual";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useLocation } from "wouter";
 import Fuse from "fuse.js";
 import { ArrowLeft, MapPin, ShoppingCart, Search, Mic, ArrowUpDown, SlidersHorizontal, Star, Utensils, ChevronRight, UtensilsCrossed, Package, Truck, Building2, LayoutGrid, Leaf, Drumstick, Egg, Sparkles } from "lucide-react";
@@ -286,35 +285,6 @@ export default function Menu() {
   const [isStuck, setIsStuck] = useState(false);
   
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const dishContainerRef = useRef<HTMLDivElement>(null);
-  
-  // Get columns count based on viewport - simplified for performance
-  const getColumnsCount = useCallback(() => {
-    if (typeof window === 'undefined') return 2;
-    const width = window.innerWidth;
-    if (width >= 1024) return 4; // lg
-    if (width >= 768) return 3;  // md
-    return 2;                     // mobile
-  }, []);
-  
-  const [columnsCount, setColumnsCount] = useState(getColumnsCount);
-  
-  // Update columns on resize (debounced)
-  useEffect(() => {
-    let timeoutId: ReturnType<typeof setTimeout>;
-    const handleResize = () => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        setColumnsCount(getColumnsCount());
-      }, 150);
-    };
-    
-    window.addEventListener('resize', handleResize);
-    return () => {
-      clearTimeout(timeoutId);
-      window.removeEventListener('resize', handleResize);
-    };
-  }, [getColumnsCount]);
 
   const openDishDetail = (dish: Dish) => {
     setDetailDish(dish);
@@ -599,23 +569,6 @@ export default function Menu() {
         }
       });
   }, [dishes, debouncedSearchQuery, fuse, selectedDishType, dietaryMode, priceRange, sortOption, selectedCategory, priorityCategoryId]);
-
-  // Chunk dishes into rows for virtualization
-  const dishRows = useMemo(() => {
-    const rows: Dish[][] = [];
-    for (let i = 0; i < filteredAndSortedDishes.length; i += columnsCount) {
-      rows.push(filteredAndSortedDishes.slice(i, i + columnsCount));
-    }
-    return rows;
-  }, [filteredAndSortedDishes, columnsCount]);
-
-  // Row virtualizer for efficient rendering - using window scroll
-  const rowVirtualizer = useVirtualizer({
-    count: dishRows.length,
-    getScrollElement: () => dishContainerRef.current,
-    estimateSize: () => 300, // Estimated row height including card + gap
-    overscan: 5, // Render 5 extra rows above/below viewport for smoother scrolling
-  });
 
   const hasActiveFilters = priceRange[0] !== 0 || priceRange[1] !== 500;
 
@@ -1088,110 +1041,82 @@ export default function Menu() {
                 </h2>
               </div>
 
-              {/* Scroll container for virtualized dish list */}
-              <div
-                ref={dishContainerRef}
-                className="flex-1 overflow-y-auto min-h-0 pb-20"
-              >
-                {isLoadingDishes ? (
-                  <div className="text-center py-12">
-                    <p className="text-muted-foreground">Loading dishes...</p>
-                  </div>
-                ) : filteredAndSortedDishes.length === 0 ? (
-                  <div className="text-center py-12">
-                    <p className="text-muted-foreground">No dishes match the selected filters</p>
-                  </div>
-                ) : (
-                  <div
-                    style={{
-                      height: `${rowVirtualizer.getTotalSize()}px`,
-                      width: '100%',
-                      position: 'relative',
-                    }}
-                  >
-                  {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                    const rowDishes = dishRows[virtualRow.index];
-                    return (
-                      <div
-                        key={virtualRow.key}
-                        style={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: '100%',
-                          height: `${virtualRow.size}px`,
-                          transform: `translateY(${virtualRow.start}px)`,
-                        }}
+              {/* Dish Grid - optimized with lazy images */}
+              {isLoadingDishes ? (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground">Loading dishes...</p>
+                </div>
+              ) : filteredAndSortedDishes.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground">No dishes match the selected filters</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-20">
+                  {filteredAndSortedDishes.map((dish) => (
+                    <Card 
+                      key={dish.id} 
+                      className="overflow-hidden hover-elevate group"
+                      data-testid={`card-dish-${dish.id}`}
+                    >
+                      <div 
+                        className="relative h-40 md:h-48 overflow-hidden cursor-pointer"
+                        onClick={() => openDishDetail(dish)}
+                        data-testid={`image-dish-${dish.id}`}
                       >
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                          {rowDishes.map((dish) => (
-                            <Card 
-                              key={dish.id} 
-                              className="overflow-hidden hover-elevate group"
-                              data-testid={`card-dish-${dish.id}`}
+                        <LazyImage 
+                          src={getDishImage(dish.name, dish.imageUrl || undefined, dish)}
+                          alt={dish.name}
+                          containerClassName="w-full h-full"
+                          className="transition-transform duration-500 group-hover:scale-110"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                        {dish.categoryId && dish.categoryId.includes('veg') && (
+                          <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
+                            <Leaf className="w-3 h-3 text-white" />
+                          </div>
+                        )}
+                        {dish.categoryId && dish.categoryId.includes('non-veg') && (
+                          <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-red-500 flex items-center justify-center">
+                            <Drumstick className="w-3 h-3 text-white" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-3 md:p-4">
+                        <h3 className="font-bold text-sm md:text-base mb-1 line-clamp-1" data-testid={`text-dish-name-${dish.id}`}>
+                          {dish.name}
+                        </h3>
+                        <div className="mb-3">
+                          <p className="text-xs text-muted-foreground line-clamp-2" data-testid={`text-dish-description-${dish.id}`}>
+                            {dish.description}
+                          </p>
+                          {dish.description && dish.description.length > 80 && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openDishDetail(dish);
+                              }}
+                              className="text-xs text-primary hover:underline font-semibold mt-1"
+                              data-testid={`button-toggle-description-${dish.id}`}
                             >
-                              <div 
-                                className="relative h-40 md:h-48 overflow-hidden cursor-pointer"
-                                onClick={() => openDishDetail(dish)}
-                                data-testid={`image-dish-${dish.id}`}
-                              >
-                                <LazyImage 
-                                  src={getDishImage(dish.name, dish.imageUrl || undefined, dish)}
-                                  alt={dish.name}
-                                  containerClassName="w-full h-full"
-                                  className="transition-transform duration-500 group-hover:scale-110"
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                                {dish.categoryId && dish.categoryId.includes('veg') && (
-                                  <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
-                                    <Leaf className="w-3 h-3 text-white" />
-                                  </div>
-                                )}
-                                {dish.categoryId && dish.categoryId.includes('non-veg') && (
-                                  <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-red-500 flex items-center justify-center">
-                                    <Drumstick className="w-3 h-3 text-white" />
-                                  </div>
-                                )}
-                              </div>
-                              <div className="p-3 md:p-4">
-                                <h3 className="font-bold text-sm md:text-base mb-1 line-clamp-1" data-testid={`text-dish-name-${dish.id}`}>
-                                  {dish.name}
-                                </h3>
-                                <div className="mb-3">
-                                  <p className="text-xs text-muted-foreground line-clamp-2" data-testid={`text-dish-description-${dish.id}`}>
-                                    {dish.description}
-                                  </p>
-                                  {dish.description && dish.description.length > 80 && (
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        openDishDetail(dish);
-                                      }}
-                                      className="text-xs text-primary hover:underline font-semibold mt-1"
-                                      data-testid={`button-toggle-description-${dish.id}`}
-                                    >
-                                      ...more
-                                    </button>
-                                  )}
-                                </div>
-                                <div className="flex items-center justify-between gap-2">
-                                  <span className="text-primary font-bold text-lg" data-testid={`text-dish-price-${dish.id}`}>
-                                    ₹{parseFloat(dish.price as string).toFixed(0)}
-                                  </span>
-                                </div>
-                              </div>
-                            </Card>
-                          ))}
+                              ...more
+                            </button>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-primary font-bold text-lg" data-testid={`text-dish-price-${dish.id}`}>
+                            ₹{parseFloat(dish.price as string).toFixed(0)}
+                          </span>
                         </div>
                       </div>
-                    );
-                  })}
-                  </div>
-                )}
-              </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
-                    
+        </div>
+      </div>
+
       {/* Filter Dialog */}
       <Dialog open={filterDialogOpen} onOpenChange={setFilterDialogOpen}>
         <DialogContent className="sm:max-w-md">
@@ -1209,8 +1134,8 @@ export default function Menu() {
                 <Label>Price Range</Label>
                 <span className="text-sm font-medium">
                   ₹{priceRange[0]} - ₹{priceRange[1]}
-                        </span>
-                      </div>
+                </span>
+              </div>
                       
               <Slider
                 value={priceRange}
@@ -1225,9 +1150,9 @@ export default function Menu() {
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>₹0</span>
                 <span>₹500+</span>
-                        </div>
-                      </div>
-                    </div>
+              </div>
+            </div>
+          </div>
           
           <div className="flex gap-2">
             <Button 
@@ -1245,7 +1170,7 @@ export default function Menu() {
             >
               Apply Filters
             </Button>
-                  </div>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -1268,17 +1193,17 @@ export default function Menu() {
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="price-high" id="price-high" />
                 <Label htmlFor="price-high" className="cursor-pointer">Price: High to Low</Label>
-            </div>
+              </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="name-az" id="name-az" />
                 <Label htmlFor="name-az" className="cursor-pointer">Name: A to Z</Label>
-          </div>
+              </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="name-za" id="name-za" />
                 <Label htmlFor="name-za" className="cursor-pointer">Name: Z to A</Label>
-        </div>
+              </div>
             </RadioGroup>
-      </div>
+          </div>
           
           <div className="flex gap-2">
             <Button 
