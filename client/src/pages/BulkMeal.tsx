@@ -1291,8 +1291,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                         src={getCategoryImageUrl(cat.id)}
                         alt={cat.name}
                         loading="lazy"
-                        className="w-full h-full object-contain"
-                        style={{ backgroundColor: '#f5f5f5' }}
+                        className="w-full h-full object-cover"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
                           target.src = CATEGORY_IMAGES[cat.id] || idliImage1;
