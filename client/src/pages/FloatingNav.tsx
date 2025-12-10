@@ -16,7 +16,10 @@ export default function FloatingNav({
   ];
 
   return (
-    <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-md">
+    <nav 
+      className="fixed left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-md"
+      style={{ bottom: "calc(16px + env(safe-area-inset-bottom, 0px))" }}
+    >
       <div className="bg-white/40 backdrop-blur-md border border-white/20 rounded-[10px] shadow-lg">
         <div className="flex items-center justify-between gap-2 px-2 py-2">
           {tabs.map((tab) => {
