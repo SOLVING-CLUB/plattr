@@ -663,11 +663,11 @@ export default function Menu() {
       {/* Header scroll detection sentinel */}
       <div ref={headerSentinelRef} style={{ position: 'absolute', top: 0, height: '1px', width: '100%' }} />
       
-      {/* Sticky Back Button Header */}
+      {/* Sticky Back Button Header - Always solid background */}
       <div 
-        className="sticky top-0 z-50 transition-all duration-200"
+        className="sticky top-0 z-50"
         style={{
-          backgroundColor: headerScrolled ? 'white' : 'transparent',
+          backgroundColor: '#FDF8F3',
           boxShadow: headerScrolled ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
         }}
       >
@@ -675,7 +675,7 @@ export default function Menu() {
           <Button
             variant="ghost"
             size="sm"
-            className={headerScrolled ? "text-[#06352A] hover:text-[#06352A] hover:bg-gray-100" : "text-[#06352A] hover:text-[#06352A] hover:bg-black/10"}
+            className="text-[#06352A] hover:text-[#06352A] hover:bg-black/10"
             onClick={() => setLocation("/")}
             data-testid="button-back"
           >
