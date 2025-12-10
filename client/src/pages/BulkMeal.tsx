@@ -829,7 +829,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
   // Show loading skeleton while initial data loads
   if (isInitialLoading) {
     return (
-      <div className="min-h-screen pb-24 relative">
+      <div className="min-h-screen pb-24 relative overflow-x-hidden">
         {/* Blue Geometric Background Header */}
         <div
           className="absolute top-0 left-0 right-0 z-0"
@@ -909,7 +909,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
   }
 
   return (
-    <div className="min-h-screen pb-24 relative">
+    <div className="min-h-screen pb-24 relative overflow-x-hidden">
       {/* Blue Geometric Background Header */}
       <div
         className="absolute top-0 left-0 right-0 z-0"
