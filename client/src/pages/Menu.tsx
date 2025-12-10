@@ -1042,16 +1042,17 @@ export default function Menu() {
               </div>
 
               {/* Dish Grid - optimized with lazy images */}
-              {isLoadingDishes ? (
-                <div className="text-center py-12">
-                  <p className="text-muted-foreground">Loading dishes...</p>
-                </div>
-              ) : filteredAndSortedDishes.length === 0 ? (
-                <div className="text-center py-12">
-                  <p className="text-muted-foreground">No dishes match the selected filters</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-20">
+              <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
+                {isLoadingDishes ? (
+                  <div className="text-center py-12">
+                    <p className="text-muted-foreground">Loading dishes...</p>
+                  </div>
+                ) : filteredAndSortedDishes.length === 0 ? (
+                  <div className="text-center py-12">
+                    <p className="text-muted-foreground">No dishes match the selected filters</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-20">
                   {filteredAndSortedDishes.map((dish) => (
                     <Card 
                       key={dish.id} 
@@ -1110,8 +1111,9 @@ export default function Menu() {
                       </div>
                     </Card>
                   ))}
-                </div>
-              )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
