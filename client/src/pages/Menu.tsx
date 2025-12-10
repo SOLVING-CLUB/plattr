@@ -660,70 +660,66 @@ export default function Menu() {
 
   return (
     <div className="min-h-screen pb-24 relative bg-[#FDF8F3]">
-      {/* Header scroll detection sentinel */}
-      <div ref={headerSentinelRef} style={{ position: 'absolute', top: 0, height: '1px', width: '100%' }} />
+      {/* Sentinel element for sticky detection - placed at top for reliable intersection detection */}
+      <div ref={headerSentinelRef} className="absolute top-0 left-0 right-0" style={{ height: "1px" }} />
       
-      {/* Compact Header - Back, Location, AI Planner in one row */}
-      <header 
-        className="sticky top-0 z-50 bg-[#FDF8F3] border-b border-gray-100"
-        style={{ 
-          paddingTop: 'env(safe-area-inset-top, 0px)',
+      {/* Sticky Back Button Header - matches BulkMeal page structure */}
+      <div
+        className="sticky top-0 z-50 transition-all duration-200"
+        style={{
+          backgroundColor: headerScrolled ? '#FDF8F3' : '#FDF8F3',
           boxShadow: headerScrolled ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
         }}
       >
-        <div className="flex items-center gap-2 px-3 py-2">
-          {/* Back Button */}
-          <Button 
-            size="icon" 
-            variant="ghost" 
-            className="flex-shrink-0 text-[#06352A] hover:bg-black/5"
+        <div className="px-4 pt-12 pb-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-[#06352A] hover:text-[#06352A] hover:bg-gray-100"
             onClick={() => setLocation("/")}
             data-testid="button-back"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back
           </Button>
+        </div>
+      </div>
 
-          {/* Location */}
-          <button 
-            className="flex items-center gap-1 flex-shrink-0 px-2 py-1 hover:bg-black/5 rounded-lg"
-            onClick={() => setLocation("/location")}
-          >
-            <MapPin className="w-4 h-4 text-[#06352A]" />
-            <span className="text-[#06352A] font-semibold text-sm max-w-[120px] truncate" style={{ fontFamily: "Sweet Sans Pro" }}>
+      {/* Header Section with Location and AI Menu Planner */}
+      <div className="relative z-10 px-4 pt-4 pb-6">
+        <div className="flex items-center justify-between mb-6">
+          <button className="flex items-center gap-2" onClick={() => setLocation("/location")}>
+            <MapPin className="w-5 h-5 text-[#06352A]" />
+            <span className="text-[#06352A] font-semibold text-[18px]" style={{ fontFamily: "Sweet Sans Pro" }}>
               {locationLabel}
             </span>
           </button>
-
-          {/* Spacer */}
-          <div className="flex-1" />
-
-          {/* AI Menu Planner Button */}
           <button
             onClick={() => setLocation("/concierge")}
             data-testid="button-ai-menu-planner"
-            className="flex items-center justify-center px-3 py-2 rounded-[10px] shadow-md hover:opacity-90 transition-opacity flex-shrink-0"
+            className="flex items-center justify-center px-3 py-2 rounded-[10px] shadow-md hover:opacity-90 transition-opacity"
             style={{
               background: "linear-gradient(135deg, #06352A 0%, #1A9952 100%)",
               fontFamily: "Sweet Sans Pro",
-              fontSize: "11px",
+              fontSize: "12px",
               fontWeight: 500,
               color: "#F5E9DB",
-              height: "36px",
+              height: "40px",
             }}
           >
             AI Menu Planner
           </button>
         </div>
-      </header>
+      </div>
 
       {/* Sentinel element for sticky detection */}
       <div ref={sentinelRef} style={{ height: "1px" }} />
 
       {/* Sticky Search Bar and Meal Category Container */}
       <div 
-        className="sticky z-40 px-4 pb-2 pt-2 transition-all duration-200" 
+        className="sticky z-40 px-4 pb-2 pt-4 transition-all duration-200" 
         style={{ 
-          top: '52px',
+          top: '92px',
           backgroundColor: "#FDF8F3",
           boxShadow: isStuck ? "0 2px 4px rgba(0,0,0,0.1)" : "none"
         }}
