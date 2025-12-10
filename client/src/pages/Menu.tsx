@@ -994,7 +994,7 @@ export default function Menu() {
             </aside>
 
             {/* Right Content - Dishes Grid */}
-            <div className="flex-1 flex flex-col min-h-0 px-3 md:px-4 py-4 md:py-6">
+            <div className="flex-1 flex flex-col min-h-0 min-w-0 px-3 md:px-4 py-4 md:py-6">
               {/* Horizontal Dish Type Tabs (65's, Chilli, Fry, etc.) - Outside scroll container */}
               {dishTypes.length > 0 && (
                 <div className="bg-background/95 backdrop-blur-sm pb-3 mb-2 -mx-3 md:-mx-4 px-3 md:px-4 flex-shrink-0">
@@ -1042,7 +1042,7 @@ export default function Menu() {
               </div>
 
               {/* Dish Grid - optimized with lazy images */}
-              <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
+              <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 w-full">
                 {isLoadingDishes ? (
                   <div className="text-center py-12">
                     <p className="text-muted-foreground">Loading dishes...</p>
@@ -1052,7 +1052,7 @@ export default function Menu() {
                     <p className="text-muted-foreground">No dishes match the selected filters</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-20">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 pb-20 w-full">
                   {filteredAndSortedDishes.map((dish) => (
                     <Card 
                       key={dish.id} 
