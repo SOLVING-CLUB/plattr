@@ -813,7 +813,7 @@ export default function Menu() {
         {/* Dish Selection Section */}
         <div className="space-y-2">
           {/* Filters & Sort - Single Row */}
-          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide mb-4">
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide mb-1">
               <button
                 onClick={() => setDietaryMode('all')}
                 className={cn(
@@ -994,7 +994,7 @@ export default function Menu() {
             </aside>
 
             {/* Right Content - Dishes Grid */}
-            <div className="flex-1 flex flex-col min-h-0 min-w-0 px-3 md:px-4 py-4 md:py-6">
+            <div className="flex-1 flex flex-col min-h-0 min-w-0 px-3 md:px-4 py-2 md:py-3">
               {/* Horizontal Dish Type Tabs (65's, Chilli, Fry, etc.) - Outside scroll container */}
               {dishTypes.length > 0 && (
                 <div className="bg-background/95 backdrop-blur-sm pb-3 mb-2 -mx-3 md:-mx-4 px-3 md:px-4 flex-shrink-0">
