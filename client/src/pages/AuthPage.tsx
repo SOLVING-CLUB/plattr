@@ -105,11 +105,19 @@ export default function AuthPage() {
 
         console.log('OTP verified successfully', data);
         
-        // Store user info
+        // Store user info in localStorage for local auth fallback
         if (data.user) {
-        localStorage.setItem("userId", data.user.id);
-        localStorage.setItem("username", data.user.username);
+          localStorage.setItem("userId", data.user.id);
+          localStorage.setItem("phone", phone);
+          localStorage.setItem("username", data.user.username || phone);
+          if (data.user.email) {
+            localStorage.setItem("email", data.user.email);
+          }
         }
+        
+        // Refresh auth state to recognize the logged-in user
+        const { refreshAuthState } = await import('@/hooks/useAuth');
+        refreshAuthState();
         
         return data;
       } catch (error: any) {

@@ -91,11 +91,12 @@ export default function VerificationScreen() {
         // We still store some data in localStorage for backward compatibility
         if (data.user) {
           localStorage.setItem("userId", data.user.id);
+          localStorage.setItem("phone", phoneNumber); // Always store the phone we used
           if (data.user.username) {
             localStorage.setItem("username", data.user.username);
           }
-          if (data.user.phone) {
-            localStorage.setItem("phone", data.user.phone);
+          if (data.user.email) {
+            localStorage.setItem("email", data.user.email);
           }
         }
 
