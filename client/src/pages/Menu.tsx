@@ -47,7 +47,6 @@ import breadToastImage from '@assets/image_1760599797811.png';
 // Category images
 import southIndianPlatterImage from '@assets/image_1760599912464.png';
 
-import menuBanner from "@assets/Banner_1764067296661.png";
 import lunchDinnerIcon from "@assets/game-icons_hot-meal_1763923901438.png";
 import tiffinsIcon from "@assets/fi_8174371_1763923901431.png";
 import hiTeaCategoryIcon from "@assets/fi_2673562_1763923892186.png";
@@ -190,19 +189,29 @@ const LOCATION_STORAGE_KEY = "activeLocation";
 export default function Menu() {
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<"home" | "menu" | "profile">("menu");
-  const [scrollY, setScrollY] = useState(0);
+  const [headerScrolled, setHeaderScrolled] = useState(false);
   const [locationLabel, setLocationLabel] = useState("Select Address");
+  const headerSentinelRef = useRef<HTMLDivElement>(null);
 
   // Scroll to top on page load
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
-  // Track scroll position for sticky header
+  // Use IntersectionObserver for header styling instead of scroll listener
   useEffect(() => {
-    const handleScroll = () => setScrollY(window.scrollY);
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    const sentinel = headerSentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setHeaderScrolled(!entry.isIntersecting);
+      },
+      { threshold: 0, rootMargin: '-50px 0px 0px 0px' }
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
   }, []);
 
   // Location sync from localStorage
@@ -253,8 +262,17 @@ export default function Menu() {
     };
   }, []);
   const [selectedMealCategory, setSelectedMealCategory] = useState<string>("lunch-dinner");
-  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [searchInput, setSearchInput] = useState<string>("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  
+  // Debounce search input to prevent filtering on every keystroke
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setDebouncedSearchQuery(searchInput);
+    }, 200);
+    return () => clearTimeout(timeoutId);
+  }, [searchInput]);
   const [selectedDishType, setSelectedDishType] = useState<string>("all");
   const [dietaryMode, setDietaryMode] = useState<'all' | 'veg' | 'egg' | 'non-veg'>('all');
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 500]);
@@ -479,9 +497,9 @@ export default function Menu() {
     let searchResults: typeof dishes = [];
     let searchScores: Map<string, number> = new Map();
     
-    // If searching, use Fuse.js for fuzzy matching
-    if (searchQuery && searchQuery.trim()) {
-      const fuseResults = fuse.search(searchQuery);
+    // If searching, use Fuse.js for fuzzy matching (uses debounced query)
+    if (debouncedSearchQuery && debouncedSearchQuery.trim()) {
+      const fuseResults = fuse.search(debouncedSearchQuery);
       searchResults = fuseResults.map(r => r.item);
       fuseResults.forEach(r => {
         searchScores.set(r.item.id, r.score || 1);
@@ -517,7 +535,7 @@ export default function Menu() {
       })
       .sort((a, b) => {
         // When searching, sort by search relevance (lower score = better match)
-        if (searchQuery && searchQuery.trim()) {
+        if (debouncedSearchQuery && debouncedSearchQuery.trim()) {
           const scoreA = searchScores.get(a.id) ?? 1;
           const scoreB = searchScores.get(b.id) ?? 1;
           if (scoreA !== scoreB) return scoreA - scoreB;
@@ -550,7 +568,7 @@ export default function Menu() {
             return 0;
         }
       });
-  }, [dishes, searchQuery, fuse, selectedDishType, dietaryMode, priceRange, sortOption, selectedCategory, priorityCategoryId]);
+  }, [dishes, debouncedSearchQuery, fuse, selectedDishType, dietaryMode, priceRange, sortOption, selectedCategory, priorityCategoryId]);
 
   const hasActiveFilters = priceRange[0] !== 0 || priceRange[1] !== 500;
 
@@ -642,19 +660,22 @@ export default function Menu() {
 
   return (
     <div className="min-h-screen pb-24 relative bg-[#FDF8F3]">
-      {/* Sticky Back Button Header */}
-      <div 
+      {/* Sentinel element for sticky detection - placed at top for reliable intersection detection */}
+      <div ref={headerSentinelRef} className="absolute top-0 left-0 right-0" style={{ height: "1px" }} />
+      
+      {/* Sticky Back Button Header - matches BulkMeal page structure */}
+      <div
         className="sticky top-0 z-50 transition-all duration-200"
         style={{
-          backgroundColor: scrollY > 50 ? 'white' : 'transparent',
-          boxShadow: scrollY > 50 ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+          backgroundColor: headerScrolled ? '#FDF8F3' : '#FDF8F3',
+          boxShadow: headerScrolled ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
         }}
       >
         <div className="px-4 pt-12 pb-3">
           <Button
             variant="ghost"
             size="sm"
-            className={scrollY > 50 ? "text-[#06352A] hover:text-[#06352A] hover:bg-gray-100" : "text-[#06352A] hover:text-[#06352A] hover:bg-black/10"}
+            className="text-[#06352A] hover:text-[#06352A] hover:bg-gray-100"
             onClick={() => setLocation("/")}
             data-testid="button-back"
           >
@@ -664,9 +685,8 @@ export default function Menu() {
         </div>
       </div>
 
-      {/* Header Section with Location and Cart */}
+      {/* Header Section with Location and AI Menu Planner */}
       <div className="relative z-10 px-4 pt-4 pb-6">
-        {/* Location and Cart */}
         <div className="flex items-center justify-between mb-6">
           <button className="flex items-center gap-2" onClick={() => setLocation("/location")}>
             <MapPin className="w-5 h-5 text-[#06352A]" />
@@ -690,17 +710,6 @@ export default function Menu() {
             AI Menu Planner
           </button>
         </div>
-
-        {/* Banner */}
-        <div className="rounded-xl overflow-hidden mb-2">
-          <img 
-            src={menuBanner} 
-            alt="Special 26 Offers" 
-            className="w-full h-auto object-cover"
-            data-testid="img-menu-banner"
-          />
-        </div>
-
       </div>
 
       {/* Sentinel element for sticky detection */}
@@ -722,8 +731,8 @@ export default function Menu() {
             <input
               type="text"
               placeholder="Search"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               className="w-full pl-12 pr-4 py-3 bg-white text-base"
               style={{ fontFamily: "Sweet Sans Pro", borderRadius: "10px" }}
               data-testid="input-search"
@@ -802,7 +811,7 @@ export default function Menu() {
         {/* Dish Selection Section */}
         <div className="space-y-2">
           {/* Filters & Sort - Single Row */}
-          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide mb-4">
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide mb-1">
               <button
                 onClick={() => setDietaryMode('all')}
                 className={cn(
@@ -983,12 +992,11 @@ export default function Menu() {
             </aside>
 
             {/* Right Content - Dishes Grid */}
-            <div className="flex-1 px-3 md:px-4 py-4 md:py-6 min-w-0 overflow-y-auto overflow-x-hidden pb-20 md:pb-6">
-              {/* Horizontal Dish Type Tabs - Sticky (65's, Chilli, Fry, etc.) - Only show when there are dish types */}
+            <div className="flex-1 flex flex-col min-h-0 min-w-0 px-3 md:px-4 py-2 md:py-3">
+              {/* Horizontal Dish Type Tabs (65's, Chilli, Fry, etc.) - Outside scroll container */}
               {dishTypes.length > 0 && (
-                <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm pb-3 mb-2 -mx-3 md:-mx-4 px-3 md:px-4" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+                <div className="bg-background/95 backdrop-blur-sm pb-3 mb-2 -mx-3 md:-mx-4 px-3 md:px-4 flex-shrink-0">
                   <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide px-1 pt-2">
-                    {/* Dish type options (65's, Chilli, Fry, etc.) - Compact pill design */}
                     {dishTypes.map((dishType) => {
                       const dishTypeImage = getSubcategoryImage(dishType);
                       
@@ -1025,22 +1033,24 @@ export default function Menu() {
                 </div>
               )}
 
-              <div className="mb-4">
+              <div className="mb-4 flex-shrink-0">
                 <h2 className="text-xl font-bold font-serif" data-testid="text-section-title">
                   {categories.find(c => c.id === selectedCategory)?.name || 'All Categories'}
                 </h2>
               </div>
 
-              {isLoadingDishes ? (
-                <div className="text-center py-12">
-                  <p className="text-muted-foreground">Loading dishes...</p>
-                </div>
-              ) : filteredAndSortedDishes.length === 0 ? (
-                <div className="text-center py-12">
-                  <p className="text-muted-foreground">No dishes match the selected filters</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {/* Dish Grid - optimized with lazy images */}
+              <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 w-full">
+                {isLoadingDishes ? (
+                  <div className="text-center py-12">
+                    <p className="text-muted-foreground">Loading dishes...</p>
+                  </div>
+                ) : filteredAndSortedDishes.length === 0 ? (
+                  <div className="text-center py-12">
+                    <p className="text-muted-foreground">No dishes match the selected filters</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 pb-20 w-full">
                   {filteredAndSortedDishes.map((dish) => (
                     <Card 
                       key={dish.id} 
@@ -1062,24 +1072,24 @@ export default function Menu() {
                         {dish.categoryId && dish.categoryId.includes('veg') && (
                           <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
                             <Leaf className="w-3 h-3 text-white" />
-                      </div>
+                          </div>
                         )}
                         {dish.categoryId && dish.categoryId.includes('non-veg') && (
                           <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-red-500 flex items-center justify-center">
                             <Drumstick className="w-3 h-3 text-white" />
-                    </div>
+                          </div>
                         )}
                       </div>
                       <div className="p-3 md:p-4">
                         <h3 className="font-bold text-sm md:text-base mb-1 line-clamp-1" data-testid={`text-dish-name-${dish.id}`}>
                           {dish.name}
-                      </h3>
+                        </h3>
                         <div className="mb-3">
                           <p className="text-xs text-muted-foreground line-clamp-2" data-testid={`text-dish-description-${dish.id}`}>
                             {dish.description}
                           </p>
                           {dish.description && dish.description.length > 80 && (
-                <button
+                            <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 openDishDetail(dish);
@@ -1088,24 +1098,25 @@ export default function Menu() {
                               data-testid={`button-toggle-description-${dish.id}`}
                             >
                               ...more
-                </button>
+                            </button>
                           )}
-              </div>
+                        </div>
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-primary font-bold text-lg" data-testid={`text-dish-price-${dish.id}`}>
                             ₹{parseFloat(dish.price as string).toFixed(0)}
                           </span>
-              </div>
+                        </div>
                       </div>
                     </Card>
-                ))}
+                  ))}
+                  </div>
+                )}
               </div>
-              )}
             </div>
           </div>
-                      </div>
-                    </div>
-                    
+        </div>
+      </div>
+
       {/* Filter Dialog */}
       <Dialog open={filterDialogOpen} onOpenChange={setFilterDialogOpen}>
         <DialogContent className="sm:max-w-md">
@@ -1123,8 +1134,8 @@ export default function Menu() {
                 <Label>Price Range</Label>
                 <span className="text-sm font-medium">
                   ₹{priceRange[0]} - ₹{priceRange[1]}
-                        </span>
-                      </div>
+                </span>
+              </div>
                       
               <Slider
                 value={priceRange}
@@ -1139,9 +1150,9 @@ export default function Menu() {
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>₹0</span>
                 <span>₹500+</span>
-                        </div>
-                      </div>
-                    </div>
+              </div>
+            </div>
+          </div>
           
           <div className="flex gap-2">
             <Button 
@@ -1159,7 +1170,7 @@ export default function Menu() {
             >
               Apply Filters
             </Button>
-                  </div>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -1182,17 +1193,17 @@ export default function Menu() {
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="price-high" id="price-high" />
                 <Label htmlFor="price-high" className="cursor-pointer">Price: High to Low</Label>
-            </div>
+              </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="name-az" id="name-az" />
                 <Label htmlFor="name-az" className="cursor-pointer">Name: A to Z</Label>
-          </div>
+              </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="name-za" id="name-za" />
                 <Label htmlFor="name-za" className="cursor-pointer">Name: Z to A</Label>
-        </div>
+              </div>
             </RadioGroup>
-      </div>
+          </div>
           
           <div className="flex gap-2">
             <Button 

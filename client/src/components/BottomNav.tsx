@@ -15,7 +15,14 @@ export default function BottomNav({ activeTab, onTabChange, cartItemCount = 0 }:
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 md:hidden" data-testid="nav-bottom">
+    <nav 
+      className="fixed bottom-0 left-0 right-0 z-40 md:hidden" 
+      data-testid="nav-bottom"
+      style={{
+        paddingBottom: "env(safe-area-inset-bottom, 0px)",
+        backgroundColor: "#FFFFFF",
+      }}
+    >
       <div 
         className="flex items-center justify-around px-4 py-3 gap-2"
         style={{

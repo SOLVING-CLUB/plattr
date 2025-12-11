@@ -994,12 +994,14 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { useCart } from "@/context/CartContex"; 
+import { useCart } from "@/context/CartContex";
 import { mealboxOrderService, addressService } from "@/lib/supabase-service";
 import { useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
-import type { Dish, Category as CategoryType } from "@shared/schema";
-import { getSupabaseImageUrl, getDishTypeImage } from "@/lib/supabase"; 
+// import { getQueryFn } from "@/lib/queryClient"; // Duplicate removed
+// import type { Dish, Category as CategoryType } from "@shared/schema";
+import { getSupabaseImageUrl, getDishTypeImage } from "@/lib/supabase";
+// import { getSupabaseImageUrl, getDishTypeImage } from "@/lib/supabase";÷ // Duplicate with typo removed
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -1017,6 +1019,44 @@ import {
 import { cn } from "@/lib/utils";
 import { LazyImage } from "@/components/ui/lazy-image";
 import { ArrowLeft, Building2, MapPin, ShoppingCart, UtensilsCrossed, Package, Truck, Search, Check, ChevronRight, ChevronLeft, Star, ArrowUpDown, SlidersHorizontal, LayoutGrid, Leaf, Drumstick, Egg, Sparkles } from "lucide-react";
+
+// Define missing types locally to resolve import errors
+export interface Dish {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  image_url: string;
+  category_id: string;
+  dietary_type: string;
+  is_available: boolean;
+  rating?: number;
+  preparation_time?: number;
+  calories?: number;
+  protein?: number;
+  carbs?: number;
+  fat?: number;
+  tags?: string[];
+  allergens?: string[];
+  type: "veg" | "non-veg" | "egg";
+  // CamelCase properties for compatibility
+  imageUrl?: string;
+  categoryId?: string;
+  isAvailable?: boolean;
+  dietaryType?: string;
+  dishType?: string;
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  image_url: string;
+  description?: string;
+  display_order?: number;
+  imageUrl?: string;
+}
+
+export type CategoryType = Category;
 import FloatingNav from "@/pages/FloatingNav";
 import ContinueOrderBanner from "@/pages/ContinueOrderBanner";
 import mealBoxHeroPattern from "@assets/Hero Pattern - Meal Box_1763885298156.png";
@@ -1100,7 +1140,7 @@ const DISH_TYPE_IMAGES: Record<string, string> = {
   'Alcoholic': idliImage1,
   'Milkshake': idliImage1,
   'Smoothie': idliImage1,
-  
+
   // Breakfast items
   'Bread': breadToastImage,
   'EggPlate': idliImage1,
@@ -1111,19 +1151,19 @@ const DISH_TYPE_IMAGES: Record<string, string> = {
   'SavoryBakery': samosaImage,
   'Steamed': idliImage1,
   'SweetGriddle': uttapamImage,
-  
+
   // Snacks
   'Chips': samosaImage,
   'Namkeen': samosaImage,
   'Pizza': samosaImage,
-  
+
   // Chaats
   'CurdChaat': vadaImage1,
   'DryChaat': vadaImage1,
   'FusionChaat': vadaImage1,
   'StuffedDough': samosaImage,
   'WetChaat': vadaImage1,
-  
+
   // Desserts & Sweets
   'Cake': samosaImage,
   'Pastry': samosaImage,
@@ -1131,12 +1171,12 @@ const DISH_TYPE_IMAGES: Record<string, string> = {
   'ColostrumMithai': masalaDosaImage,
   'FriedMithai': vadaImage1,
   'GrainMithai': pongalImage,
-  
+
   // Salads
   'FruitSalad': platterImage,
   'LeafySalad': platterImage,
   'LegumeSalad': platterImage,
-  
+
   // Lunch/Dinner
   'Soup': thaliImage,
   'ClearSoup': thaliImage,
@@ -1146,13 +1186,22 @@ const DISH_TYPE_IMAGES: Record<string, string> = {
   'ColdBite': platterImage,
   'DryFry': vadaImage1,
   'Grill': vadaImage1,
-  
+
   // Default fallback
   'default': idliImage1,
 };
 
 // Helper function to get subcategory (dish type) image URL from Supabase with local fallback
 const getSubcategoryImage = (dishType: string): string => {
+  // Try to find image in manually fetched subcategories
+  // Using global subcategories if available (will be captured from component scope once moved)
+  // Since this function is defined outside component, it can't access component state 'subcategories'.
+  // We need to move this function INSIDE component or pass subcategories map to it.
+
+  // WAIT: This function is currently defined outside the component (lines 1195).
+  // I must move it inside the component or pass data to it.
+  // It uses DISH_TYPE_IMAGES which is global.
+
   const fallbackImage = DISH_TYPE_IMAGES[dishType] || DISH_TYPE_IMAGES['default'];
   return getDishTypeImage(dishType, fallbackImage);
 };
@@ -1161,7 +1210,7 @@ const getSubcategoryImage = (dishType: string): string => {
 const getDishImage = (dish: Dish): string => {
   // Handle both camelCase (imageUrl) and snake_case (image_url) from Supabase
   const imageUrlFromDb = dish.imageUrl || (dish as any).image_url;
-  
+
   // First, try to use the Supabase image URL from the database if it exists
   if (imageUrlFromDb && imageUrlFromDb.trim() !== '') {
     const supabaseUrl = getSupabaseImageUrl(imageUrlFromDb);
@@ -1173,35 +1222,35 @@ const getDishImage = (dish: Dish): string => {
 
   // Otherwise, fall back to local assets based on dish name
   const name = dish.name.toLowerCase();
-  
+
   // Paneer dishes
   if (name.includes('paneer tikka') || name.includes('achari paneer')) return platterImage;
   if (name.includes('paneer')) return platterImage;
   if (name.includes('tikka')) return platterImage;
-  
+
   // South Indian
   if (name.includes('dosa')) return masalaDosaImage;
   if (name.includes('idli') || name.includes('idly')) return idliImage1;
   if (name.includes('vada') || name.includes('medu')) return vadaImage1;
   if (name.includes('uttapam')) return uttapamImage;
   if (name.includes('pongal')) return pongalImage;
-  
+
   // North Indian Tiffins
   if (name.includes('aloo paratha') || name.includes('paratha')) return alooParathaImage;
   if (name.includes('chole bhature') || name.includes('bhature')) return choleBhatureImage;
   if (name.includes('poha')) return pohaImage;
   if (name.includes('upma')) return upmaImage;
   if (name.includes('bread toast') || name.includes('toast')) return breadToastImage;
-  
+
   // Snacks
   if (name.includes('samosa')) return samosaImage;
   if (name.includes('pakora') || name.includes('bajji')) return vadaImage1;
-  
+
   // Lunch/Dinner
   if (name.includes('biryani')) return biryaniImage1;
   if (name.includes('thali') || name.includes('meal')) return thaliImage;
   if (name.includes('curry') || name.includes('masala')) return platterImage;
-  
+
   // Default fallback
   return platterImage;
 };
@@ -1375,15 +1424,24 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
   const [platterPlannerOpen, setPlatterPlannerOpen] = useState(false);
   const [dishDetailOpen, setDishDetailOpen] = useState(false);
   const [detailDish, setDetailDish] = useState<Dish | null>(null);
-  
+
+  // Fetch subcategories for images
+  const { data: subcategories = [] } = useQuery<any[]>({
+    queryKey: ['/api/subcategories'],
+    staleTime: 1000 * 60 * 60, // 1 hour
+  });
+
   // Separate selections for each dietary type
   const [vegPlateSelections, setVegPlateSelections] = useState<PortionSelection[]>([]);
   const [eggPlateSelections, setEggPlateSelections] = useState<PortionSelection[]>([]);
   const [nonVegPlateSelections, setNonVegPlateSelections] = useState<PortionSelection[]>([]);
-  
+
   // Add-ons selection
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
-  
+
+  // Search state
+  const [searchQuery, setSearchQuery] = useState("");
+
   // Address form state
   const [selectedAddressId, setSelectedAddressId] = useState("");
   const [addressLine1, setAddressLine1] = useState("");
@@ -1397,7 +1455,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
     queryKey: ["addresses"],
     queryFn: () => addressService.getAll(),
   });
-  
+
   const handleSavedAddressChange = (addressId: string) => {
     setSelectedAddressId(addressId);
     setAddressLine1("");
@@ -1406,7 +1464,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
     setAddressState("");
     setPincode("");
   };
-  
+
   const selectedAddress = savedAddresses.find(addr => addr.id === selectedAddressId);
   const isAddressFieldsDisabled = !!selectedAddressId;
 
@@ -1424,7 +1482,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
       setVegBoxes(mealBoxProgress.vegBoxes);
       setEggBoxes(mealBoxProgress.eggBoxes);
       setNonVegBoxes(mealBoxProgress.nonVegBoxes);
-      
+
       // Restore selections, but resize to match selectedPortions if they don't match
       const restoredPortions = mealBoxProgress.selectedPortions;
       const resizeSelections = (selections: PortionSelection[]) => {
@@ -1432,13 +1490,13 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
           return selections;
         }
         // Resize to match restoredPortions
-        return Array.from({ length: restoredPortions }, (_, i) => 
-          i < selections.length 
-            ? selections[i] 
+        return Array.from({ length: restoredPortions }, (_, i) =>
+          i < selections.length
+            ? selections[i]
             : { slot: i, itemId: null, item: undefined }
         ).slice(0, restoredPortions);
       };
-      
+
       setVegPlateSelections(resizeSelections((mealBoxProgress.vegPlateSelections || []) as PortionSelection[]));
       setEggPlateSelections(resizeSelections((mealBoxProgress.eggPlateSelections || []) as PortionSelection[]));
       setNonVegPlateSelections(resizeSelections((mealBoxProgress.nonVegPlateSelections || []) as PortionSelection[]));
@@ -1447,18 +1505,18 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
       hasInteractedRef.current = true;
     }
   }, [mealBoxProgress]);
-  
+
   // Debug: Log step changes
   useEffect(() => {
     console.log("Current step changed to:", currentStep);
   }, [currentStep]);
-  
+
   // Save MealBox progress when key state changes
   // Use JSON.stringify to create stable dependencies and prevent infinite loops
   const vegPlateSelectionsStr = JSON.stringify(vegPlateSelections);
   const eggPlateSelectionsStr = JSON.stringify(eggPlateSelections);
   const nonVegPlateSelectionsStr = JSON.stringify(nonVegPlateSelections);
-  
+
   useEffect(() => {
     if (currentStep > 1 && !isRestoringRef.current) {
       saveMealBoxProgress({
@@ -1480,12 +1538,12 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
       isRestoringRef.current = false;
     }
   }, [currentStep, selectedPortions, mealPreference, selectedMealType, vegBoxes, eggBoxes, nonVegBoxes, vegPlateSelectionsStr, eggPlateSelectionsStr, nonVegPlateSelectionsStr, selectedAddOns, currentDietaryTab]);
-  
+
   // Track selected item IDs based on current dietary tab to prevent duplicates
   const getExcludedItemIds = useMemo(() => {
     return () => {
       const ids = new Set<string>();
-      
+
       if (currentDietaryTab === "veg") {
         // VEG tab: exclude only VEG selections
         vegPlateSelections.forEach(sel => {
@@ -1502,11 +1560,11 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
           if (sel.itemId) ids.add(sel.itemId);
         });
       }
-      
+
       return ids;
     };
   }, [currentDietaryTab, vegPlateSelections, eggPlateSelections]);
-  
+
   // Handle browser back button
   useEffect(() => {
     const handlePopState = (event: PopStateEvent) => {
@@ -1537,16 +1595,16 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
       const vegCount = parseInt(vegBoxes) || 0;
       const eggCount = parseInt(eggBoxes) || 0;
       const nonVegCount = parseInt(nonVegBoxes) || 0;
-      
+
       // Resize or initialize veg selections to match selectedPortions
       if (vegCount > 0) {
         if (vegPlateSelections.length !== selectedPortions) {
           // Resize existing selections or create new ones
           if (vegPlateSelections.length > 0) {
             // Resize: keep existing items up to new length, or pad with empty slots
-            const resized = Array.from({ length: selectedPortions }, (_, i) => 
-              i < vegPlateSelections.length 
-                ? vegPlateSelections[i] 
+            const resized = Array.from({ length: selectedPortions }, (_, i) =>
+              i < vegPlateSelections.length
+                ? vegPlateSelections[i]
                 : { slot: i, itemId: null, item: undefined }
             );
             setVegPlateSelections(resized.slice(0, selectedPortions));
@@ -1561,14 +1619,14 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
           }
         }
       }
-      
+
       // Resize or initialize egg selections to match selectedPortions
       if (eggCount > 0) {
         if (eggPlateSelections.length !== selectedPortions) {
           if (eggPlateSelections.length > 0) {
-            const resized = Array.from({ length: selectedPortions }, (_, i) => 
-              i < eggPlateSelections.length 
-                ? eggPlateSelections[i] 
+            const resized = Array.from({ length: selectedPortions }, (_, i) =>
+              i < eggPlateSelections.length
+                ? eggPlateSelections[i]
                 : { slot: i, itemId: null, item: undefined }
             );
             setEggPlateSelections(resized.slice(0, selectedPortions));
@@ -1582,14 +1640,14 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
           }
         }
       }
-      
+
       // Resize or initialize non-veg selections to match selectedPortions
       if (nonVegCount > 0) {
         if (nonVegPlateSelections.length !== selectedPortions) {
           if (nonVegPlateSelections.length > 0) {
-            const resized = Array.from({ length: selectedPortions }, (_, i) => 
-              i < nonVegPlateSelections.length 
-                ? nonVegPlateSelections[i] 
+            const resized = Array.from({ length: selectedPortions }, (_, i) =>
+              i < nonVegPlateSelections.length
+                ? nonVegPlateSelections[i]
                 : { slot: i, itemId: null, item: undefined }
             );
             setNonVegPlateSelections(resized.slice(0, selectedPortions));
@@ -1603,14 +1661,14 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
           }
         }
       }
-      
+
       // Ensure selectedSlotIndex is within bounds
       if (selectedSlotIndex >= selectedPortions) {
         setSelectedSlotIndex(Math.max(0, selectedPortions - 1));
       }
     }
   }, [currentStep, vegBoxes, eggBoxes, nonVegBoxes, selectedPortions, vegPlateSelections.length, eggPlateSelections.length, nonVegPlateSelections.length, selectedSlotIndex]);
-  
+
   // Also resize selections when selectedPortions changes (even if not on step 4)
   // This handles the case where user changes portion size after already being on step 4
   useEffect(() => {
@@ -1618,69 +1676,69 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
       const vegCount = parseInt(vegBoxes) || 0;
       const eggCount = parseInt(eggBoxes) || 0;
       const nonVegCount = parseInt(nonVegBoxes) || 0;
-      
+
       // Resize veg selections if they don't match selectedPortions
       if (vegCount > 0 && vegPlateSelections.length !== selectedPortions) {
-        const resized = Array.from({ length: selectedPortions }, (_, i) => 
-          i < vegPlateSelections.length 
-            ? vegPlateSelections[i] 
+        const resized = Array.from({ length: selectedPortions }, (_, i) =>
+          i < vegPlateSelections.length
+            ? vegPlateSelections[i]
             : { slot: i, itemId: null, item: undefined }
         );
         setVegPlateSelections(resized);
       }
-      
+
       // Resize egg selections if they don't match selectedPortions
       if (eggCount > 0 && eggPlateSelections.length !== selectedPortions) {
-        const resized = Array.from({ length: selectedPortions }, (_, i) => 
-          i < eggPlateSelections.length 
-            ? eggPlateSelections[i] 
+        const resized = Array.from({ length: selectedPortions }, (_, i) =>
+          i < eggPlateSelections.length
+            ? eggPlateSelections[i]
             : { slot: i, itemId: null, item: undefined }
         );
         setEggPlateSelections(resized);
       }
-      
+
       // Resize non-veg selections if they don't match selectedPortions
       if (nonVegCount > 0 && nonVegPlateSelections.length !== selectedPortions) {
-        const resized = Array.from({ length: selectedPortions }, (_, i) => 
-          i < nonVegPlateSelections.length 
-            ? nonVegPlateSelections[i] 
+        const resized = Array.from({ length: selectedPortions }, (_, i) =>
+          i < nonVegPlateSelections.length
+            ? nonVegPlateSelections[i]
             : { slot: i, itemId: null, item: undefined }
         );
         setNonVegPlateSelections(resized);
       }
-      
+
       // Ensure selectedSlotIndex is within bounds
       if (selectedSlotIndex >= selectedPortions) {
         setSelectedSlotIndex(Math.max(0, selectedPortions - 1));
       }
     }
   }, [selectedPortions, currentStep]);
-  
+
   // Calculate which dietary preferences are active (have non-zero member counts)
   const activeDietaryPreferences = useMemo(() => {
     const active: ("veg" | "egg" | "non-veg")[] = [];
-    
+
     // Check if veg has a non-zero value
     const vegCount = parseInt(vegBoxes) || 0;
     if (vegCount > 0) {
       active.push("veg");
     }
-    
+
     // Check if egg has a non-zero value
     const eggCount = parseInt(eggBoxes) || 0;
     if (eggCount > 0) {
       active.push("egg");
     }
-    
+
     // Check if non-veg has a non-zero value
     const nonVegCount = parseInt(nonVegBoxes) || 0;
     if (nonVegCount > 0) {
       active.push("non-veg");
     }
-    
+
     return active;
   }, [vegBoxes, eggBoxes, nonVegBoxes]);
-  
+
   // Clear box counts for inactive preferences when meal preference changes
   useEffect(() => {
     if (mealPreference === "veg") {
@@ -1693,7 +1751,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
     }
     // If NON-VEG selected, keep all boxes (user can enter values for all three)
   }, [mealPreference]);
-  
+
   // Set initial dietary tab when entering Step 4
   useEffect(() => {
     if (currentStep === 4 && activeDietaryPreferences.length > 0) {
@@ -1701,21 +1759,21 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
       setCurrentDietaryTab(activeDietaryPreferences[0]);
     }
   }, [currentStep, activeDietaryPreferences]);
-  
+
   // Get current plate selections based on active dietary tab
   const getCurrentPlateSelections = (): PortionSelection[] => {
     if (currentDietaryTab === "veg") return vegPlateSelections;
     if (currentDietaryTab === "egg") return eggPlateSelections;
     return nonVegPlateSelections;
   };
-  
+
   // Get allowed item types for current dietary tab
   const getAllowedItemTypes = (): ("veg" | "egg" | "non-veg")[] => {
     if (currentDietaryTab === "veg") return ["veg"];
     if (currentDietaryTab === "egg") return ["veg", "egg"];
     return ["veg", "egg", "non-veg"];
   };
-  
+
   // Map UI meal type selection to database meal_type filter value
   // Database meal_type column contains: "tiffins", "snacks", "lunch-dinner" (comma-separated)
   // Note: "breakfast" tab maps to "tiffins" in database, "lunch" and "dinner" both map to "lunch-dinner"
@@ -1783,7 +1841,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
     refetchOnWindowFocus: false,
   });
-  
+
   // Filter to available dishes only
   const allDishes = useMemo(() => {
     return allDishesForCounts.filter(dish => {
@@ -1837,20 +1895,20 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
           reviewCount: 0, // Default review count
           category,
           type,
-          image: dish.imageUrl ? getSupabaseImageUrl(dish.imageUrl) : "",
+          image: (dish.image_url || dish.imageUrl) ? getSupabaseImageUrl(dish.image_url || dish.imageUrl) : "",
         };
       });
   }, [dishes]);
-  
+
   // Get dish count for a category (from all dishes, respecting filters)
   const getDishCountForCategory = (categoryId: string): number => {
     const count = allDishes.filter(d => {
       // Handle both camelCase and snake_case from database
       const dishCategoryId = (d as any).category_id || d.categoryId;
-      
+
       // Filter by category
       if (dishCategoryId !== categoryId) return false;
-      
+
       // Apply dietary filter based on current dietary tab (egg is client-side name matching)
       if (currentDietaryTab === 'egg') {
         // For egg tab, filter by name containing 'egg' or dietaryType being egg/egg-veg
@@ -1866,10 +1924,10 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
         // For non-veg tab, show all (veg, egg, non-veg)
         // No filtering needed
       }
-      
+
       return true;
     }).length;
-    
+
     return count;
   };
 
@@ -1894,8 +1952,8 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
 
   // Use allUniqueDishTypes when "All" is selected, otherwise use fetched dish types
   // Filter out empty strings from fetched dish types (API may return [""] for categories with no dish types)
-  const dishTypes = selectedCategory === 'all' 
-    ? allUniqueDishTypes 
+  const dishTypes = selectedCategory === 'all'
+    ? allUniqueDishTypes
     : fetchedDishTypes.filter(dt => dt && dt.trim() !== '');
 
   // Reset dish type filter when category changes
@@ -1920,35 +1978,44 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
   const filteredItems = useMemo(() => {
     return foodItems
       .filter(item => {
+        const dish = dishes.find(d => d.id === item.id);
+        if (!dish) return false;
+
         // Category filter - check if dish belongs to selected category
         // Skip category filter if 'all' is selected (show all categories)
         if (selectedCategory && selectedCategory !== 'all') {
-          const dish = dishes.find(d => d.id === item.id);
-          if (dish) {
-            const dishCategoryId = (dish as any).category_id || dish.categoryId;
-            if (dishCategoryId !== selectedCategory) return false;
-          } else {
-            return false;
-          }
+          const dishCategoryId = (dish as any).category_id || dish.categoryId;
+          if (dishCategoryId !== selectedCategory) return false;
         }
-        
+
         // Dish type filter
         if (selectedDishType !== 'all') {
-          const dish = dishes.find(d => d.id === item.id);
-          if (dish) {
-            const dishDishType = (dish as any).dish_type || dish.dishType;
-            if (dishDishType !== selectedDishType) return false;
-          }
+          const dishDishType = (dish as any).dish_type || dish.dishType;
+          if (dishDishType !== selectedDishType) return false;
         }
-        
+
         // Only show items allowed for current plate type
         const allowedTypes = getAllowedItemTypes();
         if (!allowedTypes.includes(item.type)) return false;
-        
+
+        // Filter by subcategory (grilled/fried/etc) if selected
+        if (selectedSubcategory !== 'all') {
+          const matchesSubcategory = dish.tags && dish.tags.includes(selectedSubcategory);
+          if (!matchesSubcategory) return false;
+        }
+
+        // Filter by search query
+        if (searchQuery) {
+          const query = searchQuery.toLowerCase();
+          if (!(dish.name.toLowerCase().includes(query) || (dish.description && dish.description.toLowerCase().includes(query)))) {
+            return false;
+          }
+        }
+
         // Exclude already selected items (no duplicates) based on current dietary tab
         const excludedIds = getExcludedItemIds();
         if (excludedIds.has(item.id)) return false;
-        
+
         return true;
       })
       .sort((a, b) => {
@@ -1960,22 +2027,22 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
           const bCategoryId = dishB ? ((dishB as any).category_id || dishB.categoryId) : '';
           const aIsPriority = aCategoryId === priorityCategoryId;
           const bIsPriority = bCategoryId === priorityCategoryId;
-          
+
           if (aIsPriority && !bIsPriority) return -1;
           if (!aIsPriority && bIsPriority) return 1;
         }
-        
+
         // Default: sort by name
         return a.name.localeCompare(b.name);
       });
-  }, [foodItems, dishes, selectedCategory, selectedDishType, priorityCategoryId]);
+  }, [foodItems, dishes, selectedCategory, selectedDishType, priorityCategoryId, searchQuery, selectedSubcategory]);
 
   // Check if all slots for current dietary tab are filled
   const currentPlateSelections = getCurrentPlateSelections();
   const allSlotsFilled = currentPlateSelections.length > 0 && currentPlateSelections.every(sel => sel.itemId !== null);
-  
+
   // Check if ALL slots across ALL dietary types are filled
-  const allPlatesFilled = 
+  const allPlatesFilled =
     vegPlateSelections.every(sel => sel.itemId !== null) &&
     eggPlateSelections.every(sel => sel.itemId !== null) &&
     nonVegPlateSelections.every(sel => sel.itemId !== null);
@@ -2096,24 +2163,41 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
   // Helper to get category image
   const getCategoryImageUrl = (categoryId: string): string => {
     const category = categories.find(c => c.id === categoryId);
-    if (category?.imageUrl && !category.imageUrl.startsWith('/images/')) {
-      return category.imageUrl;
+
+    // Check for DB image_url (snake_case) or imageUrl (camelCase)
+    const dbImage = (category as any)?.image_url || category?.imageUrl;
+
+    if (dbImage && !dbImage.startsWith('/images/')) {
+      return getSupabaseImageUrl(dbImage);
     }
     return CATEGORY_IMAGES[categoryId] || idliImage1;
+  };
+
+  // Helper to get subcategory (dish type) image URL from Supabase with local fallback
+  // Moved inside component to access subcategories state
+  const getSubcategoryImage = (dishType: string): string => {
+    // Try to find image in fetched subcategories
+    const subcat = subcategories.find((s: any) => s.name === dishType);
+    if (subcat?.image_url) {
+      return getSupabaseImageUrl(subcat.image_url);
+    }
+
+    const fallbackImage = DISH_TYPE_IMAGES[dishType] || DISH_TYPE_IMAGES['default'];
+    return getDishTypeImage(dishType, fallbackImage);
   };
 
   // Handle food item selection - allow selecting any item, fill next available slot
   const handleItemSelection = (item: FoodItem) => {
     const currentSelections = getCurrentPlateSelections();
-    
+
     // Check if item is already selected
     const existingIndex = currentSelections.findIndex(sel => sel.itemId === item.id);
     if (existingIndex !== -1) {
       // Item already selected, remove it
-      const updatedSelections = currentSelections.map((sel, idx) => 
+      const updatedSelections = currentSelections.map((sel, idx) =>
         idx === existingIndex ? { slot: idx, itemId: null, item: undefined } : sel
       );
-      
+
       if (currentDietaryTab === "veg") {
         setVegPlateSelections(updatedSelections);
       } else if (currentDietaryTab === "egg") {
@@ -2121,12 +2205,12 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
       } else {
         setNonVegPlateSelections(updatedSelections);
       }
-      
+
       // Update selected slot index to the removed slot
       setSelectedSlotIndex(existingIndex);
       return;
     }
-    
+
     // Find the first empty slot
     const emptySlotIndex = currentSelections.findIndex(sel => sel.itemId === null);
     if (emptySlotIndex === -1) {
@@ -2138,7 +2222,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
         itemId: item.id,
         item: item
       };
-      
+
       if (currentDietaryTab === "veg") {
         setVegPlateSelections(updatedSelections);
       } else if (currentDietaryTab === "egg") {
@@ -2146,11 +2230,11 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
       } else {
         setNonVegPlateSelections(updatedSelections);
       }
-      
+
       setSelectedSlotIndex(slotToReplace);
       return;
     }
-    
+
     // Fill the first empty slot
     const updatedSelections = [...currentSelections];
     updatedSelections[emptySlotIndex] = {
@@ -2158,7 +2242,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
       itemId: item.id,
       item: item
     };
-    
+
     // Update the appropriate state based on current dietary tab
     if (currentDietaryTab === "veg") {
       setVegPlateSelections(updatedSelections);
@@ -2167,7 +2251,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
     } else {
       setNonVegPlateSelections(updatedSelections);
     }
-    
+
     // Auto-advance to next empty slot if available
     const nextEmptySlot = updatedSelections.findIndex((sel, idx) => idx > emptySlotIndex && sel.itemId === null);
     if (nextEmptySlot !== -1) {
@@ -2193,7 +2277,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
       }
       return sel;
     });
-    
+
     // Update the appropriate state based on current dietary tab
     if (currentDietaryTab === "veg") {
       setVegPlateSelections(updatedSelections);
@@ -2205,7 +2289,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
   };
 
   return (
-    <div className="min-h-screen pb-24 relative bg-gray-50 overflow-x-hidden">
+    <div className="min-h-screen pb-24 relative bg-gray-50">
       {/* Green Geometric Background Header */}
       <div
         className="absolute top-0 left-0 right-0 z-0"
@@ -2218,7 +2302,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
         }}
       />
       {/* Sticky Back Button Header */}
-      <div 
+      <div
         className="sticky top-0 z-50 transition-all duration-200"
         style={{
           backgroundColor: scrollY > 50 ? 'white' : 'transparent',
@@ -2249,7 +2333,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
       <div className="relative z-10 px-4 pt-4 pb-6">
         {/* Location and Cart */}
         <div className="flex items-center justify-between mb-6">
-          <button 
+          <button
             className="flex items-center gap-2 hover:opacity-80 transition-opacity"
             onClick={() => navigate("/location")}
             data-testid="button-location"
@@ -2292,7 +2376,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
             }}
           >
             <UtensilsCrossed className="w-6 h-6 mb-1" />
-            <span 
+            <span
               className="text-[9px] xs:text-[10px] sm:text-xs font-semibold text-center leading-tight"
               style={{ fontFamily: "Sweet Sans Pro" }}
             >
@@ -2311,7 +2395,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
             }}
           >
             <Package className="w-6 h-6 mb-1" />
-            <span 
+            <span
               className="text-[9px] xs:text-[10px] sm:text-xs font-semibold text-center leading-tight"
               style={{ fontFamily: "Sweet Sans Pro" }}
             >
@@ -2321,59 +2405,59 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
 
           {!onNavigate && (
             <>
-          <button
-            onClick={() => {
-              setSelectedService("catering");
+              <button
+                onClick={() => {
+                  setSelectedService("catering");
                   navigate("/catering");
-            }}
-            data-testid="service-tab-catering"
-            className="flex flex-col items-center justify-center p-3 transition-all hover-elevate active-elevate-2 aspect-square"
-            style={{
-              borderRadius: "10px",
-              backgroundColor: selectedService === "catering" ? "#06352A" : "#FFFFFF",
-              color: selectedService === "catering" ? "#F5E9DB" : "#06352A",
-            }}
-          >
-            <Truck className="w-6 h-6 mb-1" />
-            <span 
-              className="text-[9px] xs:text-[10px] sm:text-xs font-semibold text-center leading-tight"
-              style={{ fontFamily: "Sweet Sans Pro" }}
-            >
-              Catering
-            </span>
-          </button>
+                }}
+                data-testid="service-tab-catering"
+                className="flex flex-col items-center justify-center p-3 transition-all hover-elevate active-elevate-2 aspect-square"
+                style={{
+                  borderRadius: "10px",
+                  backgroundColor: selectedService === "catering" ? "#06352A" : "#FFFFFF",
+                  color: selectedService === "catering" ? "#F5E9DB" : "#06352A",
+                }}
+              >
+                <Truck className="w-6 h-6 mb-1" />
+                <span
+                  className="text-[9px] xs:text-[10px] sm:text-xs font-semibold text-center leading-tight"
+                  style={{ fontFamily: "Sweet Sans Pro" }}
+                >
+                  Catering
+                </span>
+              </button>
 
-          <button
-            onClick={() => {
-              setSelectedService("corporate");
+              <button
+                onClick={() => {
+                  setSelectedService("corporate");
                   navigate("/corporate");
-            }}
-            data-testid="service-tab-corporate"
-            className="flex flex-col items-center justify-center p-3 transition-all hover-elevate active-elevate-2 aspect-square"
-            style={{
-              borderRadius: "10px",
-              backgroundColor: selectedService === "corporate" ? "#06352A" : "#FFFFFF",
-              color: selectedService === "corporate" ? "#F5E9DB" : "#06352A",
-            }}
-          >
-            <Building2 className="w-6 h-6 mb-1" />
-            <span 
-              className="text-[9px] xs:text-[10px] sm:text-xs font-semibold text-center leading-tight"
-              style={{ fontFamily: "Sweet Sans Pro" }}
-            >
-              Corporate
-            </span>
-          </button>
+                }}
+                data-testid="service-tab-corporate"
+                className="flex flex-col items-center justify-center p-3 transition-all hover-elevate active-elevate-2 aspect-square"
+                style={{
+                  borderRadius: "10px",
+                  backgroundColor: selectedService === "corporate" ? "#06352A" : "#FFFFFF",
+                  color: selectedService === "corporate" ? "#F5E9DB" : "#06352A",
+                }}
+              >
+                <Building2 className="w-6 h-6 mb-1" />
+                <span
+                  className="text-[9px] xs:text-[10px] sm:text-xs font-semibold text-center leading-tight"
+                  style={{ fontFamily: "Sweet Sans Pro" }}
+                >
+                  Corporate
+                </span>
+              </button>
             </>
           )}
         </div>
       </div>
       {/* Content below green background */}
       <div className="relative z-10 px-4" style={{ marginTop: "20px" }}>
-        
+
         {/* Back Navigation - Sticky for steps 4 & 5, non-sticky for others */}
         {currentStep > 1 && (
-          <div 
+          <div
             className={`-mx-4 px-4 ${(currentStep === 4 || currentStep === 5) ? 'sticky top-0 z-50 bg-white py-2' : 'mb-4'}`}
           >
             <button
@@ -2385,13 +2469,13 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
               <div className="flex items-center gap-2">
                 <ArrowLeft className="w-4 h-4" />
                 <span className="font-medium text-xs sm:text-sm">
-                  {currentStep === 2 ? "Choose Portion Size" : 
-                   currentStep === 3 ? "Choose Meal Preference" :
-                   currentStep === 4 ? "Choose Meal Type" :
-                   currentStep === 5 ? "Build Your MealBox" :
-                   currentStep === 6 ? "Select Add-Ons" :
-                   currentStep === 7 ? "Proceed to Payment" :
-                   ""}
+                  {currentStep === 2 ? "Choose Portion Size" :
+                    currentStep === 3 ? "Choose Meal Preference" :
+                      currentStep === 4 ? "Choose Meal Type" :
+                        currentStep === 5 ? "Build Your MealBox" :
+                          currentStep === 6 ? "Select Add-Ons" :
+                            currentStep === 7 ? "Proceed to Payment" :
+                              ""}
                 </span>
               </div>
               {(currentStep === 4 || currentStep === 5) && (
@@ -2405,13 +2489,13 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
         {currentStep === 1 && (
           <div className="flex items-start justify-between mb-6 mt-16">
             <div>
-              <h1 
+              <h1
                 className="font-bold mb-2 text-lg sm:text-xl md:text-2xl"
                 style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}
               >
                 Build Your MealBox
               </h1>
-              <p 
+              <p
                 className="text-gray-600 text-xs sm:text-sm"
                 style={{ fontFamily: "Sweet Sans Pro" }}
               >
@@ -2420,9 +2504,9 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
               </p>
             </div>
             <div className="w-24 h-24 flex-shrink-0">
-              <img 
-                src={mealBoxImage} 
-                alt="Meal Box" 
+              <img
+                src={mealBoxImage}
+                alt="Meal Box"
                 className="w-full h-full object-contain"
               />
             </div>
@@ -2433,31 +2517,31 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
         {currentStep <= 3 && (
           <div className="mb-8">
             <div className="flex gap-2">
-              <div 
+              <div
                 className="h-1.5 flex-1 rounded-full"
                 style={{ backgroundColor: currentStep >= 1 ? "#1A9952" : "#E5E7EB" }}
               />
-              <div 
+              <div
                 className="h-1.5 flex-1 rounded-full"
                 style={{ backgroundColor: currentStep >= 2 ? "#1A9952" : "#E5E7EB" }}
               />
-              <div 
+              <div
                 className="h-1.5 flex-1 rounded-full"
                 style={{ backgroundColor: currentStep >= 3 ? "#1A9952" : "#E5E7EB" }}
               />
-              <div 
+              <div
                 className="h-1.5 flex-1 rounded-full"
                 style={{ backgroundColor: currentStep >= 4 ? "#1A9952" : "#E5E7EB" }}
               />
-              <div 
+              <div
                 className="h-1.5 flex-1 rounded-full"
                 style={{ backgroundColor: currentStep >= 5 ? "#1A9952" : "#E5E7EB" }}
               />
-              <div 
+              <div
                 className="h-1.5 flex-1 rounded-full"
                 style={{ backgroundColor: currentStep >= 6 ? "#1A9952" : "#E5E7EB" }}
               />
-              <div 
+              <div
                 className="h-1.5 flex-1 rounded-full"
                 style={{ backgroundColor: currentStep >= 7 ? "#1A9952" : "#E5E7EB" }}
               />
@@ -2465,16 +2549,16 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
           </div>
         )}
 
-          {/* Step 1: Portion Selection */}
-          {currentStep === 1 && (
+        {/* Step 1: Portion Selection */}
+        {currentStep === 1 && (
           <div>
-            <h2 
+            <h2
               className="font-bold mb-2 text-sm sm:text-base md:text-lg"
               style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}
             >
               How big should your meal box be?
             </h2>
-            <p 
+            <p
               className="text-gray-600 mb-6 text-xs sm:text-sm"
               style={{ fontFamily: "Sweet Sans Pro" }}
             >
@@ -2494,9 +2578,9 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
               >
                 <div className="flex items-center gap-2">
                   <div className="flex flex-col gap-2">
-                    <div 
+                    <div
                       className="w-8 h-8 rounded-full border-2 flex items-center justify-center flex-shrink-0"
-                      style={{ 
+                      style={{
                         borderColor: "#1A9952",
                         backgroundColor: selectedPortions === 3 ? "#1A9952" : "white"
                       }}
@@ -2505,7 +2589,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                         <Check className="w-5 h-5 text-white" />
                       )}
                     </div>
-                    <span 
+                    <span
                       className="font-bold text-sm sm:text-base text-left"
                       style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}
                     >
@@ -2527,9 +2611,9 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
               >
                 <div className="flex items-center gap-2">
                   <div className="flex flex-col gap-2">
-                    <div 
+                    <div
                       className="w-8 h-8 rounded-full border-2 flex items-center justify-center flex-shrink-0"
-                      style={{ 
+                      style={{
                         borderColor: "#1A9952",
                         backgroundColor: selectedPortions === 5 ? "#1A9952" : "white"
                       }}
@@ -2538,7 +2622,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                         <Check className="w-5 h-5 text-white" />
                       )}
                     </div>
-                    <span 
+                    <span
                       className="font-bold text-sm sm:text-base text-left"
                       style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}
                     >
@@ -2560,9 +2644,9 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
               >
                 <div className="flex items-center gap-2">
                   <div className="flex flex-col gap-2">
-                    <div 
+                    <div
                       className="w-8 h-8 rounded-full border-2 flex items-center justify-center flex-shrink-0"
-                      style={{ 
+                      style={{
                         borderColor: "#1A9952",
                         backgroundColor: selectedPortions === 6 ? "#1A9952" : "white"
                       }}
@@ -2571,7 +2655,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                         <Check className="w-5 h-5 text-white" />
                       )}
                     </div>
-                    <span 
+                    <span
                       className="font-bold text-sm sm:text-base text-left"
                       style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}
                     >
@@ -2593,9 +2677,9 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
               >
                 <div className="flex items-center gap-2">
                   <div className="flex flex-col gap-2">
-                    <div 
+                    <div
                       className="w-8 h-8 rounded-full border-2 flex items-center justify-center flex-shrink-0"
-                      style={{ 
+                      style={{
                         borderColor: "#1A9952",
                         backgroundColor: selectedPortions === 8 ? "#1A9952" : "white"
                       }}
@@ -2604,7 +2688,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                         <Check className="w-5 h-5 text-white" />
                       )}
                     </div>
-                    <span 
+                    <span
                       className="font-bold text-sm sm:text-base text-left"
                       style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}
                     >
@@ -2621,7 +2705,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
               <Button
                 onClick={handleNextStep}
                 className="px-4 py-2 text-base font-semibold border-0"
-                style={{ 
+                style={{
                   fontFamily: "Sweet Sans Pro",
                   backgroundColor: "#1A9952",
                   borderRadius: "10px"
@@ -2633,20 +2717,20 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
               </Button>
             </div>
           </div>
-          )}
+        )}
 
-          {/* Step 2: Meal Preferences */}
-          {currentStep === 2 && (
+        {/* Step 2: Meal Preferences */}
+        {currentStep === 2 && (
           <div>
             {/* What's your meal preference? */}
             <div className="mb-4">
-              <h2 
+              <h2
                 className="font-bold mb-1.5 text-sm sm:text-base"
                 style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}
               >
                 What's your meal preference?
               </h2>
-              <p 
+              <p
                 className="text-gray-600 mb-3 text-xs"
                 style={{ fontFamily: "Sweet Sans Pro" }}
               >
@@ -2664,9 +2748,9 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                   }}
                   data-testid="preference-veg"
                 >
-                  <div 
+                  <div
                     className="w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0"
-                    style={{ 
+                    style={{
                       borderColor: "#1A9952",
                       backgroundColor: mealPreference === "veg" ? "#1A9952" : "white"
                     }}
@@ -2687,9 +2771,9 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                   }}
                   data-testid="preference-egg"
                 >
-                  <div 
+                  <div
                     className="w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0"
-                    style={{ 
+                    style={{
                       borderColor: "#F97316",
                       backgroundColor: mealPreference === "egg" ? "#F97316" : "white"
                     }}
@@ -2710,9 +2794,9 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                   }}
                   data-testid="preference-non-veg"
                 >
-                  <div 
+                  <div
                     className="w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0"
-                    style={{ 
+                    style={{
                       borderColor: "#DC2626",
                       backgroundColor: mealPreference === "non-veg" ? "#DC2626" : "white"
                     }}
@@ -2725,7 +2809,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                 </button>
               </div>
 
-              <p 
+              <p
                 className="text-gray-500 text-[9px] sm:text-[10px]"
                 style={{ fontFamily: "Sweet Sans Pro" }}
               >Choose Egg to create a mix of Veg and Egg if needed. Choose Non-Veg to create a mix of all three if needed.</p>
@@ -2733,13 +2817,13 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
 
             {/* How many people are you ordering for? */}
             <div className="mb-8">
-              <h2 
+              <h2
                 className="font-bold mb-2 text-sm sm:text-base md:text-lg"
                 style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}
               >
                 How many people are you ordering for?
               </h2>
-              <p 
+              <p
                 className="text-gray-600 mb-4 text-xs sm:text-sm"
                 style={{ fontFamily: "Sweet Sans Pro" }}
               >
@@ -2751,7 +2835,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                 {/* VEG Box Input - Show for all preferences */}
                 {(mealPreference === "veg" || mealPreference === "egg" || mealPreference === "non-veg") && (
                   <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                    <div 
+                    <div
                       className="w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0"
                       style={{ borderColor: "#1A9952" }}
                     >
@@ -2762,7 +2846,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                       value={vegBoxes}
                       onChange={(e) => handleVegBoxesChange(e.target.value)}
                       className="w-full px-2 py-2 border-2 rounded-lg text-center font-bold text-xs sm:text-sm"
-                      style={{ 
+                      style={{
                         fontFamily: "Sweet Sans Pro",
                         borderColor: "#1A9952",
                         color: "#1A9952"
@@ -2776,7 +2860,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                 {/* EGG Box Input - Show for egg and non-veg */}
                 {(mealPreference === "egg" || mealPreference === "non-veg") && (
                   <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                    <div 
+                    <div
                       className="w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0"
                       style={{ borderColor: "#F97316" }}
                     >
@@ -2787,7 +2871,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                       value={eggBoxes}
                       onChange={(e) => handleEggBoxesChange(e.target.value)}
                       className="w-full px-2 py-2 border-2 rounded-lg text-center font-bold text-xs sm:text-sm"
-                      style={{ 
+                      style={{
                         fontFamily: "Sweet Sans Pro",
                         borderColor: "#F97316",
                         color: "#F97316"
@@ -2801,7 +2885,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                 {/* NON-VEG Box Input - Show only for non-veg */}
                 {mealPreference === "non-veg" && (
                   <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                    <div 
+                    <div
                       className="w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0"
                       style={{ borderColor: "#DC2626" }}
                     >
@@ -2812,7 +2896,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                       value={nonVegBoxes}
                       onChange={(e) => handleNonVegBoxesChange(e.target.value)}
                       className="w-full px-2 py-2 border-2 rounded-lg text-center font-bold text-xs sm:text-sm"
-                      style={{ 
+                      style={{
                         fontFamily: "Sweet Sans Pro",
                         borderColor: "#DC2626",
                         color: "#DC2626"
@@ -2823,8 +2907,8 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                   </div>
                 )}
               </div>
-              
-              <p 
+
+              <p
                 className="text-gray-500 text-[10px] sm:text-xs mt-2"
                 style={{ fontFamily: "Sweet Sans Pro" }}
               >Enter "0" for any dietary options not required.</p>
@@ -2835,7 +2919,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
               <Button
                 onClick={handleNextStep}
                 className="px-4 py-2 text-sm sm:text-base font-semibold border-0"
-                style={{ 
+                style={{
                   fontFamily: "Sweet Sans Pro",
                   backgroundColor: "#1A9952",
                   borderRadius: "10px"
@@ -2847,14 +2931,14 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
               </Button>
             </div>
           </div>
-          )}
+        )}
 
-          {/* Step 3: Meal Type Selection */}
-          {currentStep === 3 && (
+        {/* Step 3: Meal Type Selection */}
+        {currentStep === 3 && (
           <div>
             {/* What kind of food are you serving? */}
             <div className="mb-8">
-              <h2 
+              <h2
                 className="font-bold mb-6 text-sm sm:text-base md:text-lg"
                 style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}
               >
@@ -2873,9 +2957,9 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                   }}
                   data-testid="meal-type-hi-tea"
                 >
-                  <div 
+                  <div
                     className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0"
-                    style={{ 
+                    style={{
                       borderColor: "#1A9952",
                       backgroundColor: selectedMealType === "hi-tea" ? "#1A9952" : "white"
                     }}
@@ -2898,9 +2982,9 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                   }}
                   data-testid="meal-type-breakfast"
                 >
-                  <div 
+                  <div
                     className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0"
-                    style={{ 
+                    style={{
                       borderColor: "#1A9952",
                       backgroundColor: selectedMealType === "breakfast" ? "#1A9952" : "white"
                     }}
@@ -2923,9 +3007,9 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                   }}
                   data-testid="meal-type-lunch"
                 >
-                  <div 
+                  <div
                     className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0"
-                    style={{ 
+                    style={{
                       borderColor: "#1A9952",
                       backgroundColor: selectedMealType === "lunch" ? "#1A9952" : "white"
                     }}
@@ -2948,9 +3032,9 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                   }}
                   data-testid="meal-type-dinner"
                 >
-                  <div 
+                  <div
                     className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0"
-                    style={{ 
+                    style={{
                       borderColor: "#1A9952",
                       backgroundColor: selectedMealType === "dinner" ? "#1A9952" : "white"
                     }}
@@ -2970,7 +3054,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
               <Button
                 onClick={handleNextStep}
                 className="px-4 py-2 text-base font-semibold border-0"
-                style={{ 
+                style={{
                   fontFamily: "Sweet Sans Pro",
                   backgroundColor: "#1A9952",
                   borderRadius: "10px"
@@ -2982,30 +3066,30 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
               </Button>
             </div>
           </div>
-          )}
+        )}
 
         {/* Step 4: Choose Food Category */}
         {currentStep === 4 && (
-        <div>
+          <div>
             {/* Sticky Proceed Card Section - below back navigation (top: 92px) */}
             <div className="sticky -mx-4 px-4 pt-0 pb-2 bg-white" style={{ top: "92px", zIndex: 55 }}>
               <div className="flex items-center justify-between p-4 rounded-lg" style={{ backgroundColor: "#1A9952" }}>
-              <div className="flex items-center gap-3">
-                <img src={mealBoxImage} alt="Meal Box" className="w-12 h-12 object-contain" />
-                <div>
-                  <p className="text-white font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro" }}>
-                    Proceed By Creating
-                  </p>
-                  <p className="text-white font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro" }}>
-                    Your Meal Box
-                  </p>
+                <div className="flex items-center gap-3">
+                  <img src={mealBoxImage} alt="Meal Box" className="w-12 h-12 object-contain" />
+                  <div>
+                    <p className="text-white font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro" }}>
+                      Proceed By Creating
+                    </p>
+                    <p className="text-white font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro" }}>
+                      Your Meal Box
+                    </p>
+                  </div>
                 </div>
-              </div>
                 <Button
                   onClick={handleNextStep}
                   disabled={!allSlotsFilled}
                   className="px-4 py-2 text-sm font-semibold border-0"
-                  style={{ 
+                  style={{
                     fontFamily: "Sweet Sans Pro",
                     color: allSlotsFilled ? "#1A9952" : "#9CA3AF",
                     backgroundColor: allSlotsFilled ? "white" : "#E5E7EB",
@@ -3028,6 +3112,8 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                 <input
                   type="text"
                   placeholder="Search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   className="flex-1 outline-none text-base bg-transparent"
                   style={{ fontFamily: "Sweet Sans Pro" }}
                   data-testid="input-search-step4"
@@ -3037,80 +3123,80 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
 
             {/* Filters & Sort - Single Row */}
             <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide mb-4">
-                <button
-                  onClick={() => { handleInteraction(); setDietaryMode('all'); }}
-                  className={cn(
-                    "flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium transition-all flex-shrink-0",
-                    dietaryMode === 'all'
-                      ? "bg-[#06352A] text-white"
-                      : "bg-gray-100 text-gray-600"
-                  )}
-                  style={{ fontFamily: "Sweet Sans Pro" }}
-                  data-testid="filter-dietary-all"
-                >
-                  <Sparkles className="w-2.5 h-2.5" />
-                  All
-                </button>
-                <button
-                  onClick={() => { handleInteraction(); setDietaryMode('veg'); }}
-                  className={cn(
-                    "flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium transition-all flex-shrink-0",
-                    dietaryMode === 'veg'
-                      ? "bg-[#1A9952] text-white"
-                      : "bg-gray-100 text-gray-600"
-                  )}
-                  style={{ fontFamily: "Sweet Sans Pro" }}
-                  data-testid="filter-dietary-veg"
-                >
-                  <Leaf className="w-2.5 h-2.5" />
-                  Veg
-                </button>
-                <button
-                  onClick={() => { handleInteraction(); setDietaryMode('egg'); }}
-                  className={cn(
-                    "flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium transition-all flex-shrink-0",
-                    dietaryMode === 'egg'
-                      ? "bg-[#F59E0B] text-white"
-                      : "bg-gray-100 text-gray-600"
-                  )}
-                  style={{ fontFamily: "Sweet Sans Pro" }}
-                  data-testid="filter-dietary-egg"
-                >
-                  <Egg className="w-2.5 h-2.5" />
-                  Egg
-                </button>
-                <button
-                  onClick={() => { handleInteraction(); setDietaryMode('non-veg'); }}
-                  className={cn(
-                    "flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium transition-all flex-shrink-0",
-                    dietaryMode === 'non-veg'
-                      ? "bg-[#DC2626] text-white"
-                      : "bg-gray-100 text-gray-600"
-                  )}
-                  style={{ fontFamily: "Sweet Sans Pro" }}
-                  data-testid="filter-dietary-nonveg"
-                >
-                  <Drumstick className="w-2.5 h-2.5" />
-                  Non-Veg
-                </button>
+              <button
+                onClick={() => { handleInteraction(); setDietaryMode('all'); }}
+                className={cn(
+                  "flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium transition-all flex-shrink-0",
+                  dietaryMode === 'all'
+                    ? "bg-[#06352A] text-white"
+                    : "bg-gray-100 text-gray-600"
+                )}
+                style={{ fontFamily: "Sweet Sans Pro" }}
+                data-testid="filter-dietary-all"
+              >
+                <Sparkles className="w-2.5 h-2.5" />
+                All
+              </button>
+              <button
+                onClick={() => { handleInteraction(); setDietaryMode('veg'); }}
+                className={cn(
+                  "flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium transition-all flex-shrink-0",
+                  dietaryMode === 'veg'
+                    ? "bg-[#1A9952] text-white"
+                    : "bg-gray-100 text-gray-600"
+                )}
+                style={{ fontFamily: "Sweet Sans Pro" }}
+                data-testid="filter-dietary-veg"
+              >
+                <Leaf className="w-2.5 h-2.5" />
+                Veg
+              </button>
+              <button
+                onClick={() => { handleInteraction(); setDietaryMode('egg'); }}
+                className={cn(
+                  "flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium transition-all flex-shrink-0",
+                  dietaryMode === 'egg'
+                    ? "bg-[#F59E0B] text-white"
+                    : "bg-gray-100 text-gray-600"
+                )}
+                style={{ fontFamily: "Sweet Sans Pro" }}
+                data-testid="filter-dietary-egg"
+              >
+                <Egg className="w-2.5 h-2.5" />
+                Egg
+              </button>
+              <button
+                onClick={() => { handleInteraction(); setDietaryMode('non-veg'); }}
+                className={cn(
+                  "flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium transition-all flex-shrink-0",
+                  dietaryMode === 'non-veg'
+                    ? "bg-[#DC2626] text-white"
+                    : "bg-gray-100 text-gray-600"
+                )}
+                style={{ fontFamily: "Sweet Sans Pro" }}
+                data-testid="filter-dietary-nonveg"
+              >
+                <Drumstick className="w-2.5 h-2.5" />
+                Non-Veg
+              </button>
 
-                {/* Sort Dropdown */}
-                <Select value={sortOption} onValueChange={(value) => setSortOption(value as typeof sortOption)}>
-                  <SelectTrigger 
-                    className="w-auto h-6 px-2 text-[10px] bg-white border-gray-200 rounded-full gap-0.5 flex-shrink-0" 
-                    style={{ fontFamily: "Sweet Sans Pro" }}
-                    data-testid="select-sort"
-                  >
-                    <ArrowUpDown className="w-2.5 h-2.5" />
-                    <SelectValue placeholder="Sort" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="price-low">Price: Low → High</SelectItem>
-                    <SelectItem value="price-high">Price: High → Low</SelectItem>
-                    <SelectItem value="name-az">Name: A → Z</SelectItem>
-                    <SelectItem value="name-za">Name: Z → A</SelectItem>
-                  </SelectContent>
-                </Select>
+              {/* Sort Dropdown */}
+              <Select value={sortOption} onValueChange={(value) => setSortOption(value as typeof sortOption)}>
+                <SelectTrigger
+                  className="w-auto h-6 px-2 text-[10px] bg-white border-gray-200 rounded-full gap-0.5 flex-shrink-0"
+                  style={{ fontFamily: "Sweet Sans Pro" }}
+                  data-testid="select-sort"
+                >
+                  <ArrowUpDown className="w-2.5 h-2.5" />
+                  <SelectValue placeholder="Sort" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="price-low">Price: Low → High</SelectItem>
+                  <SelectItem value="price-high">Price: High → Low</SelectItem>
+                  <SelectItem value="name-az">Name: A → Z</SelectItem>
+                  <SelectItem value="name-za">Name: Z → A</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Helper text explaining template behavior */}
@@ -3140,14 +3226,14 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                   }}
                   data-testid="filter-veg"
                 >
-                  <div 
+                  <div
                     className="w-4 h-4 border-2 flex items-center justify-center"
-                    style={{ 
+                    style={{
                       borderColor: "#1A9952",
                       backgroundColor: "white"
                     }}
                   >
-                    <div 
+                    <div
                       className="w-2 h-2"
                       style={{ backgroundColor: "#1A9952" }}
                     />
@@ -3167,14 +3253,14 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                   }}
                   data-testid="filter-egg"
                 >
-                  <div 
+                  <div
                     className="w-4 h-4 border-2 flex items-center justify-center"
-                    style={{ 
+                    style={{
                       borderColor: "#F97316",
                       backgroundColor: "white"
                     }}
                   >
-                    <div 
+                    <div
                       className="w-2 h-2"
                       style={{ backgroundColor: "#F97316" }}
                     />
@@ -3194,14 +3280,14 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                   }}
                   data-testid="filter-non-veg"
                 >
-                  <div 
+                  <div
                     className="w-4 h-4 border-2 flex items-center justify-center"
-                    style={{ 
+                    style={{
                       borderColor: "#DC2626",
                       backgroundColor: "white"
                     }}
                   >
-                    <div 
+                    <div
                       className="w-2 h-2"
                       style={{ backgroundColor: "#DC2626" }}
                     />
@@ -3220,7 +3306,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                 const isFilled = selection.itemId !== null;
                 const foodType = selection.item?.type;
                 const typeColor = foodType === "veg" ? "#1A9952" : foodType === "egg" ? "#F97316" : "#DC2626";
-                
+
                 return (
                   <button
                     key={idx}
@@ -3234,19 +3320,19 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                     }}
                     data-testid={`slot-item-${idx + 1}`}
                   >
-                    <div 
+                    <div
                       className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
                       style={{ backgroundColor: isFilled ? "#F3F4F6" : "#E5E7EB" }}
                     >
                       {isFilled ? (
-                        <div 
+                        <div
                           className="w-4 h-4 border-2 flex items-center justify-center"
-                          style={{ 
+                          style={{
                             borderColor: typeColor,
                             backgroundColor: "white"
                           }}
                         >
-                          <div 
+                          <div
                             className="w-2 h-2"
                             style={{ backgroundColor: typeColor }}
                           />
@@ -3297,7 +3383,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                     className={cn(
                       "flex flex-col items-center gap-2 py-4 px-2 transition-all relative",
                       selectedCategory === 'all'
-                        ? "bg-primary/10 before:absolute before:left-0 before:top-3 before:bottom-3 before:w-1.5 before:bg-primary before:rounded-r" 
+                        ? "bg-primary/10 before:absolute before:left-0 before:top-3 before:bottom-3 before:w-1.5 before:bg-primary before:rounded-r"
                         : "hover-elevate"
                     )}
                     data-testid="filter-category-all"
@@ -3305,7 +3391,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                     <div className={cn(
                       "relative w-12 h-12 md:w-14 md:h-14 rounded-full overflow-hidden border-2 transition-all flex items-center justify-center",
                       selectedCategory === 'all'
-                        ? "border-primary shadow-lg scale-105 bg-primary/20" 
+                        ? "border-primary shadow-lg scale-105 bg-primary/20"
                         : "border-border bg-card"
                     )}>
                       <LayoutGrid className={cn(
@@ -3325,41 +3411,41 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
 
                   {/* Show category options (Starters, Sides, Mains, etc.) */}
                   {categories.map((cat) => (
-                      <button
-                        key={cat.id}
-                        onClick={() => { handleInteraction(); setSelectedCategory(cat.id); setSelectedDishType('all'); }}
-                        className={cn(
-                          "flex flex-col items-center gap-2 py-4 px-2 transition-all relative",
-                          selectedCategory === cat.id
-                            ? "bg-primary/10 before:absolute before:left-0 before:top-3 before:bottom-3 before:w-1.5 before:bg-primary before:rounded-r" 
-                            : "hover-elevate"
+                    <button
+                      key={cat.id}
+                      onClick={() => { handleInteraction(); setSelectedCategory(cat.id); setSelectedDishType('all'); }}
+                      className={cn(
+                        "flex flex-col items-center gap-2 py-4 px-2 transition-all relative",
+                        selectedCategory === cat.id
+                          ? "bg-primary/10 before:absolute before:left-0 before:top-3 before:bottom-3 before:w-1.5 before:bg-primary before:rounded-r"
+                          : "hover-elevate"
+                      )}
+                      data-testid={`filter-category-${cat.id}`}
+                    >
+                      <div className={cn(
+                        "relative w-12 h-12 md:w-14 md:h-14 rounded-full overflow-hidden border-2 transition-all",
+                        selectedCategory === cat.id
+                          ? "border-primary shadow-lg scale-105"
+                          : "border-border"
+                      )}>
+                        <img
+                          src={getCategoryImageUrl(cat.id)}
+                          alt={cat.name}
+                          className="w-full h-full object-cover"
+                        />
+                        {selectedCategory === cat.id && (
+                          <div className="absolute inset-0 bg-gradient-to-t from-primary/30 to-transparent pointer-events-none" />
                         )}
-                        data-testid={`filter-category-${cat.id}`}
-                      >
-                        <div className={cn(
-                          "relative w-12 h-12 md:w-14 md:h-14 rounded-full overflow-hidden border-2 transition-all",
-                          selectedCategory === cat.id
-                            ? "border-primary shadow-lg scale-105" 
-                            : "border-border"
+                      </div>
+                      <div className="text-center w-full px-1">
+                        <span className={cn(
+                          "text-xs md:text-sm font-semibold block line-clamp-2 leading-tight",
+                          selectedCategory === cat.id ? "text-primary" : "text-foreground"
                         )}>
-                          <img 
-                            src={getCategoryImageUrl(cat.id)}
-                            alt={cat.name}
-                            className="w-full h-full object-cover"
-                          />
-                          {selectedCategory === cat.id && (
-                            <div className="absolute inset-0 bg-gradient-to-t from-primary/30 to-transparent pointer-events-none" />
-                          )}
-                        </div>
-                        <div className="text-center w-full px-1">
-                          <span className={cn(
-                            "text-xs md:text-sm font-semibold block line-clamp-2 leading-tight",
-                            selectedCategory === cat.id ? "text-primary" : "text-foreground"
-                          )}>
-                            {cat.name}
-                          </span>
-                        </div>
-                      </button>
+                          {cat.name}
+                        </span>
+                      </div>
+                    </button>
                   ))}
                 </div>
               </aside>
@@ -3373,22 +3459,22 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                       {/* Dish type options (65's, Chilli, Fry, etc.) - Compact pill design */}
                       {dishTypes.map((dishType) => {
                         const dishTypeImage = getSubcategoryImage(dishType);
-                        
+
                         return (
                           <button
                             key={dishType}
                             onClick={() => { handleInteraction(); setSelectedDishType(dishType); }}
                             className={cn(
                               "flex items-center gap-2 px-3 py-1.5 border transition-all flex-shrink-0",
-                              selectedDishType === dishType 
-                                ? "border-[#1A9952] bg-white shadow-sm" 
+                              selectedDishType === dishType
+                                ? "border-[#1A9952] bg-white shadow-sm"
                                 : "border-gray-200 bg-white hover:border-gray-300"
                             )}
                             style={{ borderRadius: '10px' }}
                             data-testid={`tab-dishtype-${dishType.toLowerCase()}`}
                           >
                             <div className="relative w-7 h-7 overflow-hidden flex-shrink-0" style={{ borderRadius: '6px' }}>
-                              <img 
+                              <img
                                 src={dishTypeImage}
                                 alt={dishType}
                                 className="w-full h-full object-cover"
@@ -3423,59 +3509,59 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {filteredItems.map((item) => {
-                    const currentSelections = getCurrentPlateSelections();
-                    const isSelected = currentSelections.some(sel => sel.itemId === item.id);
+                    {filteredItems.map((item) => {
+                      const currentSelections = getCurrentPlateSelections();
+                      const isSelected = currentSelections.some(sel => sel.itemId === item.id);
                       const dish = dishes.find(d => d.id === item.id);
-                    
-                    return (
-                        <Card 
-                        key={item.id} 
+
+                      return (
+                        <Card
+                          key={item.id}
                           className={cn(
                             "overflow-hidden hover-elevate group",
                             isSelected && "ring-2 ring-primary"
                           )}
                           data-testid={`card-dish-${item.id}`}
                         >
-                          <div 
+                          <div
                             className="relative h-40 md:h-48 overflow-hidden cursor-pointer"
                             onClick={() => { handleInteraction(); if (dish) openDishDetail(dish); }}
                             data-testid={`image-dish-${item.id}`}
                           >
-                            <LazyImage 
+                            <LazyImage
                               src={dish ? getDishImage(dish) : item.image || idliImage1}
                               alt={item.name}
                               containerClassName="w-full h-full"
                               className="transition-transform duration-500 group-hover:scale-110"
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                        {isSelected && (
-                          <div className="absolute top-2 right-2 z-10">
-                            <div className="w-6 h-6 bg-[#1A9952] rounded-full flex items-center justify-center">
-                              <Check className="w-4 h-4 text-white" />
-                            </div>
-                          </div>
-                        )}
+                            {isSelected && (
+                              <div className="absolute top-2 right-2 z-10">
+                                <div className="w-6 h-6 bg-[#1A9952] rounded-full flex items-center justify-center">
+                                  <Check className="w-4 h-4 text-white" />
+                                </div>
+                              </div>
+                            )}
                             {item.type === "veg" && (
                               <div className="absolute top-2 left-2 w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
                                 <Leaf className="w-3 h-3 text-white" />
-                          </div>
+                              </div>
                             )}
                             {item.type === "egg" && (
                               <div className="absolute top-2 left-2 w-5 h-5 rounded-full bg-yellow-500 flex items-center justify-center">
                                 <Egg className="w-3 h-3 text-white" />
-                        </div>
+                              </div>
                             )}
                             {item.type === "non-veg" && (
                               <div className="absolute top-2 left-2 w-5 h-5 rounded-full bg-red-500 flex items-center justify-center">
                                 <Drumstick className="w-3 h-3 text-white" />
-                          </div>
+                              </div>
                             )}
                           </div>
                           <div className="p-3 md:p-4">
                             <h3 className="font-bold text-sm md:text-base mb-1 line-clamp-1" data-testid={`text-dish-name-${item.id}`}>
-                            {item.name}
-                          </h3>
+                              {item.name}
+                            </h3>
                             {dish?.description && (
                               <div className="mb-3">
                                 <p className="text-xs text-muted-foreground line-clamp-2" data-testid={`text-dish-description-${item.id}`}>
@@ -3486,7 +3572,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                             <div className="flex items-center justify-between gap-2 mb-2">
                               <span className="text-primary font-bold text-lg" data-testid={`text-dish-price-${item.id}`}>
                                 ₹{item.price.toFixed(0)}
-                            </span>
+                              </span>
                             </div>
                             <Button
                               size="sm"
@@ -3503,9 +3589,9 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                             </Button>
                           </div>
                         </Card>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
             </div>
@@ -3516,9 +3602,9 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
         {currentStep === 5 && (
           <div className="pb-4">
             {/* Sticky Cart Total Bar Section - below back navigation (top: 40px) */}
-            <div 
+            <div
               className="sticky z-40 bg-white border-b border-gray-200 -mx-4 px-4 py-3 mb-4"
-              style={{ 
+              style={{
                 boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
                 top: "40px"
               }}
@@ -3532,7 +3618,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                     For a {selectedPortions} Portion MealBox
                   </p>
                 </div>
-                <button 
+                <button
                   onClick={() => setCurrentStep(6)}
                   className="px-3 sm:px-4 py-2 rounded-lg flex items-center gap-2 hover-elevate active-elevate-2 transition-all"
                   style={{ backgroundColor: "#1A9952" }}
@@ -3543,12 +3629,12 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                       const vegCount = parseInt(vegBoxes) || 0;
                       const eggCount = parseInt(eggBoxes) || 0;
                       const nonVegCount = parseInt(nonVegBoxes) || 0;
-                      
+
                       // Calculate total for each dietary type separately
                       const vegTotal = vegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * vegCount;
                       const eggTotal = eggPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * eggCount;
                       const nonVegTotal = nonVegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * nonVegCount;
-                      
+
                       const subtotal = vegTotal + eggTotal + nonVegTotal;
                       const gst = Math.round(subtotal * 0.18);
                       const platformFee = 499;
@@ -3563,7 +3649,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
             </div>
 
             {/* Receipt Container */}
-            <div 
+            <div
               className="relative bg-white rounded-lg p-4 sm:p-6"
               style={{
                 backgroundImage: `
@@ -3588,305 +3674,326 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                 </p>
               </div>
 
-            {/* Veg Section */}
-            {parseInt(vegBoxes) > 0 && vegPlateSelections.length > 0 && (
-              <div className="mb-6">
-                <div className="flex items-center gap-2 mb-3">
-                  <div 
-                    className="w-4 h-4 border-2 flex items-center justify-center"
-                    style={{ borderColor: "#1A9952", backgroundColor: "white" }}
-                  >
-                    <div className="w-2 h-2" style={{ backgroundColor: "#1A9952" }} />
-                  </div>
-                  <span className="font-semibold text-sm sm:text-base" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                    Veg
-                  </span>
-                  <span className="font-bold text-sm sm:text-base ml-auto" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                    ×{vegBoxes}
-                  </span>
-                </div>
-
-                {/* Veg Items */}
-                <div className="space-y-3 mb-3">
-                  {vegPlateSelections.map((selection, index) => (
-                    <div key={index} className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-lg bg-gray-200 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-xs sm:text-sm truncate" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                          {selection.item?.name || "Item"}
-                        </p>
-                        <p className="text-[10px] sm:text-xs text-gray-500" style={{ fontFamily: "Sweet Sans Pro" }}>
-                          Item {index + 1}
-                        </p>
-                      </div>
-                      <span className="font-semibold text-xs sm:text-sm flex-shrink-0" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                        ₹{selection.item?.price || 0}
-                      </span>
+              {/* Veg Section */}
+              {parseInt(vegBoxes) > 0 && vegPlateSelections.length > 0 && (
+                <div className="mb-6">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div
+                      className="w-4 h-4 border-2 flex items-center justify-center"
+                      style={{ borderColor: "#1A9952", backgroundColor: "white" }}
+                    >
+                      <div className="w-2 h-2" style={{ backgroundColor: "#1A9952" }} />
                     </div>
-                  ))}
-                </div>
-
-                {/* Total per MealBox */}
-                <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg mb-2">
-                  <div className="w-12 h-12 rounded-lg bg-white flex items-center justify-center">
-                    <Package className="w-6 h-6 text-green-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                      Total
-                    </p>
-                    <p className="text-xs text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
-                      per MealBox
-                    </p>
-                  </div>
-                  <span className="font-bold text-base" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                    ₹{vegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0)}
-                  </span>
-                </div>
-
-                {/* Total for All Veg MealBoxes */}
-                <div className="bg-gray-50 p-3 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <p className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                      Total
-                    </p>
-                    <span className="font-bold text-lg" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                      ₹{(vegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * parseInt(vegBoxes)).toLocaleString('en-IN')}
+                    <span className="font-semibold text-sm sm:text-base" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                      Veg
+                    </span>
+                    <span className="font-bold text-sm sm:text-base ml-auto" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                      ×{vegBoxes}
                     </span>
                   </div>
-                  <p className="text-xs text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
-                    For {vegBoxes} Veg MealBoxes
-                  </p>
-                </div>
-              </div>
-            )}
 
-            {/* Egg Section */}
-            {parseInt(eggBoxes) > 0 && eggPlateSelections.length > 0 && (
-              <div className="mb-6">
-                <div className="flex items-center gap-2 mb-3">
-                  <div 
-                    className="w-4 h-4 border-2 flex items-center justify-center"
-                    style={{ borderColor: "#F97316", backgroundColor: "white" }}
-                  >
-                    <div className="w-2 h-2" style={{ backgroundColor: "#F97316" }} />
-                  </div>
-                  <span className="font-semibold text-sm sm:text-base" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                    Egg
-                  </span>
-                  <span className="font-bold text-sm sm:text-base ml-auto" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                    ×{eggBoxes}
-                  </span>
-                </div>
-
-                {/* Egg Items */}
-                <div className="space-y-3 mb-3">
-                  {eggPlateSelections.map((selection, index) => (
-                    <div key={index} className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-lg bg-gray-200 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-xs sm:text-sm truncate" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                          {selection.item?.name || "Item"}
-                        </p>
-                        <p className="text-[10px] sm:text-xs text-gray-500" style={{ fontFamily: "Sweet Sans Pro" }}>
-                          Item {index + 1}
-                        </p>
+                  {/* Veg Items */}
+                  <div className="space-y-3 mb-3">
+                    {vegPlateSelections.map((selection, index) => (
+                      <div key={index} className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
+                          <LazyImage
+                            src={selection.item?.image || "/images/placeholder.jpg"}
+                            alt={selection.item?.name || "Dish"}
+                            containerClassName="w-full h-full"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-xs sm:text-sm truncate" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                            {selection.item?.name || "Item"}
+                          </p>
+                          <p className="text-[10px] sm:text-xs text-gray-500" style={{ fontFamily: "Sweet Sans Pro" }}>
+                            Item {index + 1}
+                          </p>
+                        </div>
+                        <span className="font-semibold text-xs sm:text-sm flex-shrink-0" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                          ₹{selection.item?.price || 0}
+                        </span>
                       </div>
-                      <span className="font-semibold text-xs sm:text-sm flex-shrink-0" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                        ₹{selection.item?.price || 0}
-                      </span>
+                    ))}
+                  </div>
+
+                  {/* Total per MealBox */}
+                  <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg mb-2">
+                    <div className="w-12 h-12 rounded-lg bg-white flex items-center justify-center">
+                      <Package className="w-6 h-6 text-green-600" />
                     </div>
-                  ))}
-                </div>
-
-                {/* Total per MealBox */}
-                <div className="flex items-center gap-3 p-3 bg-orange-50 rounded-lg mb-2">
-                  <div className="w-12 h-12 rounded-lg bg-white flex items-center justify-center">
-                    <Package className="w-6 h-6 text-orange-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                      Total
-                    </p>
-                    <p className="text-xs text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
-                      per MealBox
-                    </p>
-                  </div>
-                  <span className="font-bold text-base" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                    ₹{eggPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0)}
-                  </span>
-                </div>
-
-                {/* Total for All Egg MealBoxes */}
-                <div className="bg-gray-50 p-3 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <p className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                      Total
-                    </p>
-                    <span className="font-bold text-lg" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                      ₹{(eggPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * parseInt(eggBoxes)).toLocaleString('en-IN')}
+                    <div className="flex-1">
+                      <p className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                        Total
+                      </p>
+                      <p className="text-xs text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
+                        per MealBox
+                      </p>
+                    </div>
+                    <span className="font-bold text-base" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                      ₹{vegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0)}
                     </span>
                   </div>
-                  <p className="text-xs text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
-                    For {eggBoxes} Egg MealBoxes
-                  </p>
-                </div>
-              </div>
-            )}
 
-            {/* Non-Veg Section */}
-            {parseInt(nonVegBoxes) > 0 && nonVegPlateSelections.length > 0 && (
-              <div className="mb-6">
-                <div className="flex items-center gap-2 mb-3">
-                  <div 
-                    className="w-4 h-4 border-2 flex items-center justify-center"
-                    style={{ borderColor: "#DC2626", backgroundColor: "white" }}
-                  >
-                    <div className="w-2 h-2" style={{ backgroundColor: "#DC2626" }} />
-                  </div>
-                  <span className="font-semibold text-sm sm:text-base" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                    Non-Veg
-                  </span>
-                  <span className="font-bold text-sm sm:text-base ml-auto" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                    ×{nonVegBoxes}
-                  </span>
-                </div>
-
-                {/* Non-Veg Items */}
-                <div className="space-y-3 mb-3">
-                  {nonVegPlateSelections.map((selection, index) => (
-                    <div key={index} className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-lg bg-gray-200 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-xs sm:text-sm truncate" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                          {selection.item?.name || "Item"}
-                        </p>
-                        <p className="text-[10px] sm:text-xs text-gray-500" style={{ fontFamily: "Sweet Sans Pro" }}>
-                          Item {index + 1}
-                        </p>
-                      </div>
-                      <span className="font-semibold text-xs sm:text-sm flex-shrink-0" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                        ₹{selection.item?.price || 0}
+                  {/* Total for All Veg MealBoxes */}
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <p className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                        Total
+                      </p>
+                      <span className="font-bold text-lg" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                        ₹{(vegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * parseInt(vegBoxes)).toLocaleString('en-IN')}
                       </span>
                     </div>
-                  ))}
-                </div>
-
-                {/* Total per MealBox */}
-                <div className="flex items-center gap-3 p-3 bg-red-50 rounded-lg mb-2">
-                  <div className="w-12 h-12 rounded-lg bg-white flex items-center justify-center">
-                    <Package className="w-6 h-6 text-red-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                      Total
-                    </p>
                     <p className="text-xs text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
-                      per MealBox
+                      For {vegBoxes} Veg MealBoxes
                     </p>
                   </div>
-                  <span className="font-bold text-base" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                    ₹{nonVegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0)}
-                  </span>
                 </div>
+              )}
 
-                {/* Total for All Non-Veg MealBoxes */}
-                <div className="bg-gray-50 p-3 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <p className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                      Total
-                    </p>
-                    <span className="font-bold text-lg" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                      ₹{(nonVegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * parseInt(nonVegBoxes)).toLocaleString('en-IN')}
+              {/* Egg Section */}
+              {parseInt(eggBoxes) > 0 && eggPlateSelections.length > 0 && (
+                <div className="mb-6">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div
+                      className="w-4 h-4 border-2 flex items-center justify-center"
+                      style={{ borderColor: "#F97316", backgroundColor: "white" }}
+                    >
+                      <div className="w-2 h-2" style={{ backgroundColor: "#F97316" }} />
+                    </div>
+                    <span className="font-semibold text-sm sm:text-base" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                      Egg
+                    </span>
+                    <span className="font-bold text-sm sm:text-base ml-auto" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                      ×{eggBoxes}
                     </span>
                   </div>
-                  <p className="text-xs text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
-                    For {nonVegBoxes} Non-Veg MealBoxes
-                  </p>
+
+                  {/* Egg Items */}
+                  <div className="space-y-3 mb-3">
+                    {eggPlateSelections.map((selection, index) => (
+                      <div key={index} className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
+                          <LazyImage
+                            src={selection.item?.image || "/images/placeholder.jpg"}
+                            alt={selection.item?.name || "Dish"}
+                            containerClassName="w-full h-full"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-xs sm:text-sm truncate" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                            {selection.item?.name || "Item"}
+                          </p>
+                          <p className="text-[10px] sm:text-xs text-gray-500" style={{ fontFamily: "Sweet Sans Pro" }}>
+                            Item {index + 1}
+                          </p>
+                        </div>
+                        <span className="font-semibold text-xs sm:text-sm flex-shrink-0" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                          ₹{selection.item?.price || 0}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Total per MealBox */}
+                  <div className="flex items-center gap-3 p-3 bg-orange-50 rounded-lg mb-2">
+                    <div className="w-12 h-12 rounded-lg bg-white flex items-center justify-center">
+                      <Package className="w-6 h-6 text-orange-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                        Total
+                      </p>
+                      <p className="text-xs text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
+                        per MealBox
+                      </p>
+                    </div>
+                    <span className="font-bold text-base" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                      ₹{eggPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0)}
+                    </span>
+                  </div>
+
+                  {/* Total for All Egg MealBoxes */}
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <p className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                        Total
+                      </p>
+                      <span className="font-bold text-lg" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                        ₹{(eggPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * parseInt(eggBoxes)).toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
+                      For {eggBoxes} Egg MealBoxes
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Non-Veg Section */}
+              {parseInt(nonVegBoxes) > 0 && nonVegPlateSelections.length > 0 && (
+                <div className="mb-6">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div
+                      className="w-4 h-4 border-2 flex items-center justify-center"
+                      style={{ borderColor: "#DC2626", backgroundColor: "white" }}
+                    >
+                      <div className="w-2 h-2" style={{ backgroundColor: "#DC2626" }} />
+                    </div>
+                    <span className="font-semibold text-sm sm:text-base" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                      Non-Veg
+                    </span>
+                    <span className="font-bold text-sm sm:text-base ml-auto" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                      ×{nonVegBoxes}
+                    </span>
+                  </div>
+
+                  {/* Non-Veg Items */}
+                  <div className="space-y-3 mb-3">
+                    {nonVegPlateSelections.map((selection, index) => (
+                      <div key={index} className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
+                          <LazyImage
+                            src={selection.item?.image || "/images/placeholder.jpg"}
+                            alt={selection.item?.name || "Dish"}
+                            containerClassName="w-full h-full"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-xs sm:text-sm truncate" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                            {selection.item?.name || "Item"}
+                          </p>
+                          <p className="text-[10px] sm:text-xs text-gray-500" style={{ fontFamily: "Sweet Sans Pro" }}>
+                            Item {index + 1}
+                          </p>
+                        </div>
+                        <span className="font-semibold text-xs sm:text-sm flex-shrink-0" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                          ₹{selection.item?.price || 0}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Total per MealBox */}
+                  <div className="flex items-center gap-3 p-3 bg-red-50 rounded-lg mb-2">
+                    <div className="w-12 h-12 rounded-lg bg-white flex items-center justify-center">
+                      <Package className="w-6 h-6 text-red-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                        Total
+                      </p>
+                      <p className="text-xs text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
+                        per MealBox
+                      </p>
+                    </div>
+                    <span className="font-bold text-base" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                      ₹{nonVegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0)}
+                    </span>
+                  </div>
+
+                  {/* Total for All Non-Veg MealBoxes */}
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <p className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                        Total
+                      </p>
+                      <span className="font-bold text-lg" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                        ₹{(nonVegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * parseInt(nonVegBoxes)).toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
+                      For {nonVegBoxes} Non-Veg MealBoxes
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Total Amount Section */}
+              <div className="border-t-2 border-b-2 border-gray-200 py-4 mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-semibold text-base" style={{ fontFamily: "Sweet Sans Pro", color: "#1A9952" }}>
+                    Total Amount
+                  </span>
+                  <span className="font-bold text-lg" style={{ fontFamily: "Sweet Sans Pro", color: "#1A9952" }}>
+                    ₹{(() => {
+                      const vegCount = parseInt(vegBoxes) || 0;
+                      const eggCount = parseInt(eggBoxes) || 0;
+                      const nonVegCount = parseInt(nonVegBoxes) || 0;
+                      const vegTotal = vegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * vegCount;
+                      const eggTotal = eggPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * eggCount;
+                      const nonVegTotal = nonVegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * nonVegCount;
+                      return (vegTotal + eggTotal + nonVegTotal).toLocaleString('en-IN');
+                    })()}
+                  </span>
                 </div>
               </div>
-            )}
 
-            {/* Total Amount Section */}
-            <div className="border-t-2 border-b-2 border-gray-200 py-4 mb-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-semibold text-base" style={{ fontFamily: "Sweet Sans Pro", color: "#1A9952" }}>
-                  Total Amount
-                </span>
-                <span className="font-bold text-lg" style={{ fontFamily: "Sweet Sans Pro", color: "#1A9952" }}>
-                  ₹{(() => {
-                    const vegCount = parseInt(vegBoxes) || 0;
-                    const eggCount = parseInt(eggBoxes) || 0;
-                    const nonVegCount = parseInt(nonVegBoxes) || 0;
-                    const vegTotal = vegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * vegCount;
-                    const eggTotal = eggPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * eggCount;
-                    const nonVegTotal = nonVegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * nonVegCount;
-                    return (vegTotal + eggTotal + nonVegTotal).toLocaleString('en-IN');
-                  })()}
-                </span>
+              {/* Fees Breakdown */}
+              <div className="space-y-3 mb-6">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-700" style={{ fontFamily: "Sweet Sans Pro" }}>
+                    GST
+                  </span>
+                  <span className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                    ₹{(() => {
+                      const vegCount = parseInt(vegBoxes) || 0;
+                      const eggCount = parseInt(eggBoxes) || 0;
+                      const nonVegCount = parseInt(nonVegBoxes) || 0;
+                      const vegTotal = vegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * vegCount;
+                      const eggTotal = eggPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * eggCount;
+                      const nonVegTotal = nonVegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * nonVegCount;
+                      const subtotal = vegTotal + eggTotal + nonVegTotal;
+                      return Math.round(subtotal * 0.18).toLocaleString('en-IN');
+                    })()}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-700" style={{ fontFamily: "Sweet Sans Pro" }}>
+                    Platform Fee
+                  </span>
+                  <span className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                    ₹499
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-700" style={{ fontFamily: "Sweet Sans Pro" }}>
+                    Packaging & Handling Fee
+                  </span>
+                  <span className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                    ₹399
+                  </span>
+                </div>
               </div>
-            </div>
 
-            {/* Fees Breakdown */}
-            <div className="space-y-3 mb-6">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-700" style={{ fontFamily: "Sweet Sans Pro" }}>
-                  GST
-                </span>
-                <span className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                  ₹{(() => {
-                    const vegCount = parseInt(vegBoxes) || 0;
-                    const eggCount = parseInt(eggBoxes) || 0;
-                    const nonVegCount = parseInt(nonVegBoxes) || 0;
-                    const vegTotal = vegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * vegCount;
-                    const eggTotal = eggPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * eggCount;
-                    const nonVegTotal = nonVegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * nonVegCount;
-                    const subtotal = vegTotal + eggTotal + nonVegTotal;
-                    return Math.round(subtotal * 0.18).toLocaleString('en-IN');
-                  })()}
-                </span>
+              {/* Grand Total */}
+              <div className="bg-green-50 p-4 rounded-lg mb-6">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-lg" style={{ fontFamily: "Sweet Sans Pro", color: "#1A9952" }}>
+                    Grand Total
+                  </span>
+                  <span className="font-bold text-2xl" style={{ fontFamily: "Sweet Sans Pro", color: "#1A9952" }}>
+                    ₹{(() => {
+                      const vegCount = parseInt(vegBoxes) || 0;
+                      const eggCount = parseInt(eggBoxes) || 0;
+                      const nonVegCount = parseInt(nonVegBoxes) || 0;
+                      const vegTotal = vegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * vegCount;
+                      const eggTotal = eggPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * eggCount;
+                      const nonVegTotal = nonVegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * nonVegCount;
+                      const subtotal = vegTotal + eggTotal + nonVegTotal;
+                      const gst = Math.round(subtotal * 0.18);
+                      const platformFee = 499;
+                      const packagingFee = 399;
+                      return (subtotal + gst + platformFee + packagingFee).toLocaleString('en-IN');
+                    })()}
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-700" style={{ fontFamily: "Sweet Sans Pro" }}>
-                  Platform Fee
-                </span>
-                <span className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                  ₹499
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-700" style={{ fontFamily: "Sweet Sans Pro" }}>
-                  Packaging & Handling Fee
-                </span>
-                <span className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                  ₹399
-                </span>
-              </div>
-            </div>
-
-            {/* Grand Total */}
-            <div className="bg-green-50 p-4 rounded-lg mb-6">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-lg" style={{ fontFamily: "Sweet Sans Pro", color: "#1A9952" }}>
-                  Grand Total
-                </span>
-                <span className="font-bold text-2xl" style={{ fontFamily: "Sweet Sans Pro", color: "#1A9952" }}>
-                  ₹{(() => {
-                    const vegCount = parseInt(vegBoxes) || 0;
-                    const eggCount = parseInt(eggBoxes) || 0;
-                    const nonVegCount = parseInt(nonVegBoxes) || 0;
-                    const vegTotal = vegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * vegCount;
-                    const eggTotal = eggPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * eggCount;
-                    const nonVegTotal = nonVegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * nonVegCount;
-                    const subtotal = vegTotal + eggTotal + nonVegTotal;
-                    const gst = Math.round(subtotal * 0.18);
-                    const platformFee = 499;
-                    const packagingFee = 399;
-                    return (subtotal + gst + platformFee + packagingFee).toLocaleString('en-IN');
-                  })()}
-                </span>
-              </div>
-            </div>
             </div>
 
             {/* Select Add-Ons Button */}
@@ -3897,7 +4004,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                 setCurrentStep(6);
               }}
               className="w-full mt-4 py-6 text-lg font-semibold border-0 flex items-center justify-between"
-              style={{ 
+              style={{
                 fontFamily: "Sweet Sans Pro",
                 backgroundColor: "#1A9952",
                 color: "white",
@@ -3961,9 +4068,9 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
             {/* Add-Ons List */}
             <div className="space-y-4 mb-6">
               {/* Live Cooking Counters */}
-              <div 
+              <div
                 className="flex items-start gap-4 p-4 border-2 rounded-lg"
-                style={{ 
+                style={{
                   borderColor: selectedAddOns.includes('cooking') ? "#1A9952" : "#E5E7EB",
                   backgroundColor: selectedAddOns.includes('cooking') ? "#F0F9F4" : "white"
                 }}
@@ -3979,8 +4086,8 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                 </div>
                 <button
                   onClick={() => {
-                    setSelectedAddOns(prev => 
-                      prev.includes('cooking') 
+                    setSelectedAddOns(prev =>
+                      prev.includes('cooking')
                         ? prev.filter(id => id !== 'cooking')
                         : [...prev, 'cooking']
                     );
@@ -3997,9 +4104,9 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
               </div>
 
               {/* Serving Staff */}
-              <div 
+              <div
                 className="flex items-start gap-4 p-4 border-2 rounded-lg"
-                style={{ 
+                style={{
                   borderColor: selectedAddOns.includes('staff') ? "#1A9952" : "#E5E7EB",
                   backgroundColor: selectedAddOns.includes('staff') ? "#F0F9F4" : "white"
                 }}
@@ -4015,8 +4122,8 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                 </div>
                 <button
                   onClick={() => {
-                    setSelectedAddOns(prev => 
-                      prev.includes('staff') 
+                    setSelectedAddOns(prev =>
+                      prev.includes('staff')
                         ? prev.filter(id => id !== 'staff')
                         : [...prev, 'staff']
                     );
@@ -4033,9 +4140,9 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
               </div>
 
               {/* Decor */}
-              <div 
+              <div
                 className="flex items-start gap-4 p-4 border-2 rounded-lg"
-                style={{ 
+                style={{
                   borderColor: selectedAddOns.includes('decor') ? "#1A9952" : "#E5E7EB",
                   backgroundColor: selectedAddOns.includes('decor') ? "#F0F9F4" : "white"
                 }}
@@ -4051,8 +4158,8 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                 </div>
                 <button
                   onClick={() => {
-                    setSelectedAddOns(prev => 
-                      prev.includes('decor') 
+                    setSelectedAddOns(prev =>
+                      prev.includes('decor')
                         ? prev.filter(id => id !== 'decor')
                         : [...prev, 'decor']
                     );
@@ -4069,9 +4176,9 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
               </div>
 
               {/* Tableware & Crockery */}
-              <div 
+              <div
                 className="flex items-start gap-4 p-4 border-2 rounded-lg"
-                style={{ 
+                style={{
                   borderColor: selectedAddOns.includes('tableware') ? "#1A9952" : "#E5E7EB",
                   backgroundColor: selectedAddOns.includes('tableware') ? "#F0F9F4" : "white"
                 }}
@@ -4087,8 +4194,8 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                 </div>
                 <button
                   onClick={() => {
-                    setSelectedAddOns(prev => 
-                      prev.includes('tableware') 
+                    setSelectedAddOns(prev =>
+                      prev.includes('tableware')
                         ? prev.filter(id => id !== 'tableware')
                         : [...prev, 'tableware']
                     );
@@ -4105,9 +4212,9 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
               </div>
 
               {/* Live Music */}
-              <div 
+              <div
                 className="flex items-start gap-4 p-4 border-2 rounded-lg"
-                style={{ 
+                style={{
                   borderColor: selectedAddOns.includes('music') ? "#1A9952" : "#E5E7EB",
                   backgroundColor: selectedAddOns.includes('music') ? "#F0F9F4" : "white"
                 }}
@@ -4123,8 +4230,8 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                 </div>
                 <button
                   onClick={() => {
-                    setSelectedAddOns(prev => 
-                      prev.includes('music') 
+                    setSelectedAddOns(prev =>
+                      prev.includes('music')
                         ? prev.filter(id => id !== 'music')
                         : [...prev, 'music']
                     );
@@ -4141,9 +4248,9 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
               </div>
 
               {/* Photography */}
-              <div 
+              <div
                 className="flex items-start gap-4 p-4 border-2 rounded-lg"
-                style={{ 
+                style={{
                   borderColor: selectedAddOns.includes('photography') ? "#1A9952" : "#E5E7EB",
                   backgroundColor: selectedAddOns.includes('photography') ? "#F0F9F4" : "white"
                 }}
@@ -4159,8 +4266,8 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                 </div>
                 <button
                   onClick={() => {
-                    setSelectedAddOns(prev => 
-                      prev.includes('photography') 
+                    setSelectedAddOns(prev =>
+                      prev.includes('photography')
                         ? prev.filter(id => id !== 'photography')
                         : [...prev, 'photography']
                     );
@@ -4181,7 +4288,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
             <Button
               onClick={() => setCurrentStep(7)}
               className="w-full py-6 text-lg font-semibold border-0"
-              style={{ 
+              style={{
                 fontFamily: "Sweet Sans Pro",
                 backgroundColor: "#1A9952",
                 color: "white",
@@ -4296,10 +4403,10 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                     </option>
                   ))}
                 </select>
-                
+
                 {/* Show selected address details */}
                 {selectedAddress && (
-                  <div 
+                  <div
                     className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg"
                     data-testid="selected-address-display"
                   >
@@ -4418,7 +4525,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
               onClick={async () => {
                 try {
                   setIsCreatingOrder(true);
-                  
+
                   // Calculate totals
                   const vegCount = parseInt(vegBoxes) || 0;
                   const eggCount = parseInt(eggBoxes) || 0;
@@ -4431,12 +4538,12 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                   const platformFee = 499;
                   const packagingFee = 399;
                   const total = subtotal + gst + platformFee + packagingFee;
-                  
+
                   // Get form values
                   const deliveryDate = (document.querySelector('[data-testid="input-event-date"]') as HTMLInputElement)?.value || null;
                   const deliveryTime = (document.querySelector('[data-testid="input-event-time"]') as HTMLInputElement)?.value || null;
                   const selectedAddressId = (document.querySelector('[data-testid="select-saved-address"]') as HTMLSelectElement)?.value || "";
-                  
+
                   // Validate addressId - only use if it's a valid UUID (not empty string or invalid value)
                   let validAddressId: string | undefined = undefined;
                   if (selectedAddressId && selectedAddressId.trim() !== "" && selectedAddressId !== "home" && selectedAddressId !== "office") {
@@ -4446,7 +4553,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                       validAddressId = selectedAddressId;
                     }
                   }
-                  
+
                   // Create order
                   await mealboxOrderService.create({
                     portions: `${selectedPortions}-portions`,
@@ -4467,15 +4574,15 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                     deliveryTime: deliveryTime || undefined,
                     addressId: validAddressId,
                   });
-                  
-                // Clear mealbox progress when order is placed
-                clearMealBoxProgress();
-                  
+
+                  // Clear mealbox progress when order is placed
+                  clearMealBoxProgress();
+
                   toast({
                     title: "Order Created!",
                     description: "Your MealBox order has been placed successfully.",
                   });
-                  
+
                   navigate("/mealbox-thank-you");
                 } catch (error: any) {
                   console.error("Error creating order:", error);
@@ -4490,7 +4597,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
               }}
               disabled={isCreatingOrder}
               className="w-full py-6 text-lg font-semibold border-0 flex items-center justify-between"
-              style={{ 
+              style={{
                 fontFamily: "Sweet Sans Pro",
                 backgroundColor: "#1A9952",
                 color: "white",
