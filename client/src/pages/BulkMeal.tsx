@@ -925,15 +925,19 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
       />
       {/* Sentinel element for sticky detection - placed at top for reliable intersection detection */}
       <div ref={sentinelRef} className="absolute top-0 left-0 right-0" style={{ height: "1px" }} />
-      {/* Back Button Header - scrolls with content, not sticky */}
+      {/* Back Button Header - Sticky at top */}
       <div
-        className="relative z-10 transition-all duration-200"
+        className="sticky top-0 z-50 transition-all duration-200"
+        style={{
+          backgroundColor: isStuck ? 'white' : 'transparent',
+          boxShadow: isStuck ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+        }}
       >
-        <div className="px-4 pt-12 pb-3">
+        <div className="px-4 pt-4 pb-2">
           <Button
             variant="ghost"
             size="sm"
-            className="text-white hover:text-white hover:bg-white/20"
+            className={isStuck ? "text-[#06352A] hover:text-[#06352A] hover:bg-gray-100" : "text-white hover:text-white hover:bg-white/20"}
             onClick={() => navigate("/")}
             data-testid="button-back"
           >
@@ -1053,11 +1057,11 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
           )}
         </div>
       </div>
-      {/* Sticky Search Bar and Meal Category Container - Outside header for proper sticky behavior */}
+      {/* Sticky Search Bar and Meal Category Container - Stacks below back button */}
       <div
-        className="sticky z-50 px-4 pb-2 pt-4 transition-all duration-200"
+        className="sticky z-40 px-4 pb-2 pt-3 transition-all duration-200"
         style={{
-          top: '0px',
+          top: '48px',
           backgroundColor: "white",
           boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
         }}
@@ -1259,7 +1263,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
           {/* CategoryPage-style Layout */}
           <div className="flex gap-0 flex-1 w-full max-w-full">
             {/* Left Sidebar - Category Filters (Starters, Sides, Mains, etc.) - Sticky with internal scroll */}
-            <aside className="w-20 md:w-24 border-r bg-card/50 backdrop-blur-sm flex-shrink-0 sticky self-start" style={{ top: '180px', maxHeight: 'calc(100vh - 180px)', overflowY: 'auto' }}>
+            <aside className="w-20 md:w-24 border-r bg-card/50 backdrop-blur-sm flex-shrink-0 sticky self-start" style={{ top: '250px', maxHeight: 'calc(100vh - 250px)', overflowY: 'auto' }}>
               <div className="flex flex-col py-3">
                 {/* Always show "All" option */}
                 <button
