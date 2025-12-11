@@ -1,7 +1,11 @@
 import { useEffect, useRef } from "react";
 import splashVideo from "@assets/The_background_which_202512111311_m25iy (1).mp4";
 
-export default function SplashScreen() {
+interface SplashScreenProps {
+  onVideoEnd?: () => void;
+}
+
+export default function SplashScreen({ onVideoEnd }: SplashScreenProps) {
   const isDev = import.meta.env.DEV;
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -47,19 +51,18 @@ export default function SplashScreen() {
     const video = videoRef.current;
     if (!video) return;
 
-    const handleTimeUpdate = () => {
-      if (video.currentTime >= 120) {
-        video.pause();
-        video.currentTime = 120;
+    const handleEnded = () => {
+      if (onVideoEnd) {
+        onVideoEnd();
       }
     };
 
-    video.addEventListener("timeupdate", handleTimeUpdate);
+    video.addEventListener("ended", handleEnded);
 
     return () => {
-      video.removeEventListener("timeupdate", handleTimeUpdate);
+      video.removeEventListener("ended", handleEnded);
     };
-  }, []);
+  }, [onVideoEnd]);
 
   return (
     <div

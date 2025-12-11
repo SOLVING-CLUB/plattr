@@ -300,37 +300,27 @@ function App() {
     localStorage.setItem('theme', 'light');
   }, []);
 
-  // Handle splash screen
-  useEffect(() => {
+  // Handle splash screen video end
+  const handleVideoEnd = () => {
     if (splashCompleted.current) return;
-
-    // Wait for auth to initialize
-    if (!initialized || loading) return;
-
-    // Start fade out after 2 minutes (120 seconds) to let video play fully
-    const timer = setTimeout(() => {
-      if (splashCompleted.current) return;
+    
+    setFadeOut(true);
+    
+    // After fade animation, hide splash and navigate
+    setTimeout(() => {
+      splashCompleted.current = true;
+      setShowSplash(false);
       
-      setFadeOut(true);
-      
-      // After fade animation, hide splash and navigate
-      setTimeout(() => {
-        splashCompleted.current = true;
-        setShowSplash(false);
-        
-        // Simple navigation logic:
-        // - If authenticated → go to home
-        // - If not authenticated → go to phone screen (WhatsApp login)
-        if (isAuthenticated) {
-          setLocation('/', { replace: true });
-        } else {
-          setLocation('/phone', { replace: true });
-        }
-      }, 500);
-      }, 120000);
-
-      return () => clearTimeout(timer);
-  }, [initialized, loading, isAuthenticated, setLocation]);
+      // Simple navigation logic:
+      // - If authenticated → go to home
+      // - If not authenticated → go to phone screen (WhatsApp login)
+      if (isAuthenticated) {
+        setLocation('/', { replace: true });
+      } else {
+        setLocation('/phone', { replace: true });
+      }
+    }, 500);
+  };
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -344,7 +334,7 @@ function App() {
               }`}
               style={{ zIndex: 10000 }}
             >
-              <SplashScreen />
+              <SplashScreen onVideoEnd={handleVideoEnd} />
             </div>
           )}
           <Router />
