@@ -1,5 +1,4 @@
 import { createContext, useContext, useState, useCallback, ReactNode } from "react";
-import splashVideo from "@assets/The_background_which_202512111311_m25iy (1).mp4";
 
 interface PageLoaderContextType {
   isLoading: boolean;
@@ -37,30 +36,16 @@ export function PageLoaderProvider({ children }: PageLoaderProviderProps) {
 
 function PageLoaderOverlay() {
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black">
-      <video
-        src={splashVideo}
-        autoPlay
-        muted
-        playsInline
-        loop
-        className="w-full h-full object-cover"
-      />
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-white/80 backdrop-blur-sm">
+      <div className="w-10 h-10 border-4 border-gray-200 border-t-[#FFE318] rounded-full animate-spin" />
     </div>
   );
 }
 
 export function PageLoader() {
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black">
-      <video
-        src={splashVideo}
-        autoPlay
-        muted
-        playsInline
-        loop
-        className="w-full h-full object-cover"
-      />
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-white/80 backdrop-blur-sm">
+      <div className="w-10 h-10 border-4 border-gray-200 border-t-[#FFE318] rounded-full animate-spin" />
     </div>
   );
 }
