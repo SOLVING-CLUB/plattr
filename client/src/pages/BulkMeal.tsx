@@ -925,15 +925,16 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
       />
       {/* Sentinel element for sticky detection - placed at top for reliable intersection detection */}
       <div ref={sentinelRef} className="absolute top-0 left-0 right-0" style={{ height: "1px" }} />
-      {/* Back Button Header - Sticky at top */}
+      {/* Back Button Header - Sticky at top with safe area padding */}
       <div
         className="sticky top-0 z-50 transition-all duration-200"
         style={{
           backgroundColor: isStuck ? 'white' : 'transparent',
           boxShadow: isStuck ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+          paddingTop: 'max(12px, env(safe-area-inset-top))',
         }}
       >
-        <div className="px-4 pt-4 pb-2">
+        <div className="px-4 pb-2">
           <Button
             variant="ghost"
             size="sm"
@@ -1061,7 +1062,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
       <div
         className="sticky z-40 px-4 pb-2 pt-3 transition-all duration-200"
         style={{
-          top: '48px',
+          top: '52px',
           backgroundColor: "white",
           boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
         }}
@@ -1263,7 +1264,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
           {/* CategoryPage-style Layout */}
           <div className="flex gap-0 flex-1 w-full max-w-full">
             {/* Left Sidebar - Category Filters (Starters, Sides, Mains, etc.) - Sticky with internal scroll */}
-            <aside className="w-20 md:w-24 border-r bg-card/50 backdrop-blur-sm flex-shrink-0 sticky self-start" style={{ top: '250px', maxHeight: 'calc(100vh - 250px)', overflowY: 'auto' }}>
+            <aside className="w-20 md:w-24 border-r bg-card/50 backdrop-blur-sm flex-shrink-0 sticky self-start" style={{ top: '260px', maxHeight: 'calc(100vh - 260px)', overflowY: 'auto' }}>
               <div className="flex flex-col py-3">
                 {/* Always show "All" option */}
                 <button
