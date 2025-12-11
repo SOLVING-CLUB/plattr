@@ -1392,37 +1392,20 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                             <span className="text-primary font-bold text-lg" data-testid={`text-dish-price-${dish.id}`}>
                               ₹{parseFloat(dish.price as string).toFixed(0)}
                             </span>
-                            <Select
-                              value={String(quantities[dishId] !== undefined ? quantities[dishId] : 5)}
-                              onValueChange={(value) => {
+                            <Input
+                              type="number"
+                              min="5"
+                              value={quantities[dishId] !== undefined ? quantities[dishId] : 5}
+                              onChange={(e) => {
                                 handleInteraction();
-                                setQuantities(prev => ({ ...prev, [dishId]: parseInt(value) }));
+                                const val = parseInt(e.target.value) || 5;
+                                setQuantities(prev => ({ ...prev, [dishId]: Math.max(5, val) }));
                               }}
-                            >
-                              <SelectTrigger
-                                className="w-[60px] sm:w-[70px] h-7 text-[10px] sm:text-xs border-gray-300 px-2"
-                                style={{ fontFamily: "Sweet Sans Pro" }}
-                                data-testid={`input-quantity-${dishId}`}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleInteraction();
-                                }}
-                              >
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent
-                                position="popper"
-                                side="bottom"
-                                align="end"
-                                className="min-w-[60px]"
-                              >
-                                {[5, 10, 15, 20, 25, 30, 35, 40, 45, 50].map((qty) => (
-                                  <SelectItem key={qty} value={String(qty)}>
-                                    {qty}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                              onClick={(e) => e.stopPropagation()}
+                              className="w-[60px] h-7 text-center text-xs border-gray-300 px-2"
+                              style={{ fontFamily: "Sweet Sans Pro" }}
+                              data-testid={`input-quantity-${dishId}`}
+                            />
                           </div>
                           <Button
                             size="sm"
