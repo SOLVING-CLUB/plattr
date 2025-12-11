@@ -1385,27 +1385,9 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                           )}
                         </div>
                         <div className="p-3 md:p-4">
-                          <h3 className="font-bold text-sm md:text-base mb-1 line-clamp-1" data-testid={`text-dish-name-${dish.id}`}>
+                          <h3 className="font-bold text-sm md:text-base mb-3" data-testid={`text-dish-name-${dish.id}`}>
                             {dish.name}
                           </h3>
-                          <div className="mb-3">
-                            <p className="text-xs text-muted-foreground line-clamp-2" data-testid={`text-dish-description-${dish.id}`}>
-                              {dish.description}
-                            </p>
-                            {dish.description && dish.description.length > 80 && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleInteraction();
-                                  openDishDetail(dish);
-                                }}
-                                className="text-xs text-primary hover:underline font-semibold mt-1"
-                                data-testid={`button-toggle-description-${dish.id}`}
-                              >
-                                ...more
-                              </button>
-                            )}
-                          </div>
                           <div className="flex items-center justify-between gap-2 mb-2">
                             <span className="text-primary font-bold text-lg" data-testid={`text-dish-price-${dish.id}`}>
                               ₹{parseFloat(dish.price as string).toFixed(0)}
