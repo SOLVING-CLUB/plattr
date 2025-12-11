@@ -5,7 +5,7 @@ export default function SplashScreen() {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    const style = document.createElement('style');
+    const style = document.createElement("style");
     style.textContent = `
       html, body {
         overflow: hidden !important;
@@ -28,7 +28,10 @@ export default function SplashScreen() {
     `;
     document.head.appendChild(style);
 
-    if ((window as any).Android && typeof (window as any).Android.hideStatusBar === 'function') {
+    if (
+      (window as any).Android &&
+      typeof (window as any).Android.hideStatusBar === "function"
+    ) {
       (window as any).Android.hideStatusBar();
     }
 
@@ -44,16 +47,16 @@ export default function SplashScreen() {
     if (!video) return;
 
     const handleTimeUpdate = () => {
-      if (video.currentTime >= 30) {
+      if (video.currentTime >= 60) {
         video.pause();
-        video.currentTime = 30;
+        video.currentTime = 60;
       }
     };
 
-    video.addEventListener('timeupdate', handleTimeUpdate);
+    video.addEventListener("timeupdate", handleTimeUpdate);
 
     return () => {
-      video.removeEventListener('timeupdate', handleTimeUpdate);
+      video.removeEventListener("timeupdate", handleTimeUpdate);
     };
   }, []);
 
@@ -91,7 +94,10 @@ export default function SplashScreen() {
         }}
         data-testid="video-splash-background"
       >
-        <source src="/attached_assets/The_background_which_202512111311_m25iy (1).mp4" type="video/mp4" />
+        <source
+          src="/attached_assets/The_background_which_202512111311_m25iy (1).mp4"
+          type="video/mp4"
+        />
       </video>
 
       {isDev && (
