@@ -2289,7 +2289,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
   };
 
   return (
-    <div className="min-h-screen pb-24 relative bg-gray-50 overflow-x-hidden">
+    <div className="min-h-screen pb-24 relative bg-gray-50" style={{ overflowX: 'clip' }}>
       {/* Green Geometric Background Header */}
       <div
         className="absolute top-0 left-0 right-0 z-0"
