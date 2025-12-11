@@ -7,15 +7,14 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { addressService } from "@/lib/supabase-service";
 import { useQueryClient } from "@tanstack/react-query";
-import { supabaseAuth } from "@/lib/supabase-auth";
 
 const LOCATION_STORAGE_KEY = "activeLocation";
 const RECENT_LOCATIONS_KEY = "recentLocations";
 
-function MapEventHandler({
+function MapEventHandler({ 
   onPositionChange,
   initialCenter
-}: {
+}: { 
   onPositionChange: (pos: [number, number]) => void;
   initialCenter: [number, number];
 }) {
@@ -29,24 +28,24 @@ function MapEventHandler({
   useEffect(() => {
     map.setView(initialCenter, 17);
   }, []);
-
+  
   return null;
 }
 
-function MapRecenter({ center, shouldRecenter, onRecenterComplete }: {
-  center: [number, number];
+function MapRecenter({ center, shouldRecenter, onRecenterComplete }: { 
+  center: [number, number]; 
   shouldRecenter: boolean;
   onRecenterComplete: () => void;
 }) {
   const map = useMapEvents({});
-
+  
   useEffect(() => {
     if (shouldRecenter) {
       map.setView(center, 17);
       onRecenterComplete();
     }
   }, [shouldRecenter, center, map, onRecenterComplete]);
-
+  
   return null;
 }
 
@@ -72,12 +71,12 @@ export default function MapConfirmationPage() {
   const [showTooltip, setShowTooltip] = useState(true);
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [shouldRecenter, setShouldRecenter] = useState(false);
-
+  
   const [showLabelModal, setShowLabelModal] = useState(false);
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [customLabel, setCustomLabel] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-
+  
   // Search functionality
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Array<{
@@ -103,19 +102,9 @@ export default function MapConfirmationPage() {
         (error) => {
           console.error("Geolocation error:", error);
           setIsLoading(false);
-
-          let errorMessage = "Could not get your location. Using default location.";
-          if (error.code === 1) {
-            errorMessage = "Location permission denied. Please enable location access in your browser settings.";
-          } else if (error.code === 2) {
-            errorMessage = "Location unavailable. Please check your device settings.";
-          } else if (error.code === 3) {
-            errorMessage = "Location request timed out. Please try again.";
-          }
-
           toast({
             title: "Location Error",
-            description: errorMessage,
+            description: "Could not get your location. Using default location.",
             variant: "destructive",
           });
           reverseGeocode(position[0], position[1]);
@@ -124,11 +113,6 @@ export default function MapConfirmationPage() {
       );
     } else {
       setIsLoading(false);
-      toast({
-        title: "Location Not Supported",
-        description: "Your browser doesn't support geolocation.",
-        variant: "destructive",
-      });
       reverseGeocode(position[0], position[1]);
     }
   }, []);
@@ -140,22 +124,22 @@ export default function MapConfirmationPage() {
         `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`
       );
       const data = await response.json();
-
+      
       const addr = data.address || {};
-      const area = addr.suburb ||
-        addr.neighbourhood ||
-        addr.village ||
-        addr.hamlet ||
-        addr.town ||
-        addr.city_district ||
-        addr.city ||
-        addr.municipality ||
-        addr.county ||
-        addr.road ||
-        addr.state ||
-        (data.display_name ? data.display_name.split(',')[0].trim() : null) ||
-        "Selected Location";
-
+      const area = addr.suburb || 
+                   addr.neighbourhood || 
+                   addr.village ||
+                   addr.hamlet ||
+                   addr.town ||
+                   addr.city_district ||
+                   addr.city ||
+                   addr.municipality ||
+                   addr.county ||
+                   addr.road ||
+                   addr.state ||
+                   (data.display_name ? data.display_name.split(',')[0].trim() : null) ||
+                   "Selected Location";
+      
       setAreaName(area);
       setAddress(data.display_name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`);
     } catch (error) {
@@ -197,11 +181,11 @@ export default function MapConfirmationPage() {
   // Debounced search
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
-
+    
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }
-
+    
     if (value.length >= 3) {
       searchTimeoutRef.current = setTimeout(() => {
         searchLocations(value);
@@ -234,31 +218,13 @@ export default function MapConfirmationPage() {
           reverseGeocode(newPos[0], newPos[1]);
         },
         (error) => {
-          console.error("Geolocation error:", error);
-
-          let errorMessage = "Could not get your current location.";
-          if (error.code === 1) {
-            errorMessage = "Location permission denied. Please enable location access in your browser settings.";
-          } else if (error.code === 2) {
-            errorMessage = "Location unavailable. Please check your device settings.";
-          } else if (error.code === 3) {
-            errorMessage = "Location request timed out. Please try again.";
-          }
-
           toast({
             title: "Location Error",
-            description: errorMessage,
+            description: "Could not get your current location.",
             variant: "destructive",
           });
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        }
       );
-    } else {
-      toast({
-        title: "Location Not Supported",
-        description: "Your browser doesn't support geolocation.",
-        variant: "destructive",
-      });
     }
   };
 
@@ -268,36 +234,8 @@ export default function MapConfirmationPage() {
 
   const handleSaveWithLabel = async (label: string) => {
     setIsSaving(true);
-
+    
     try {
-      // Check if user is authenticated - refresh session to get latest state
-      const { data: { session }, error: sessionError } = await supabaseAuth.auth.refreshSession();
-
-      // If refresh fails, try getting current session
-      if (sessionError || !session) {
-        const { data: { session: currentSession } } = await supabaseAuth.auth.getSession();
-        const { data: { user } } = await supabaseAuth.auth.getUser();
-
-        console.log('Auth check - Session:', !!currentSession, 'User:', !!user, 'User ID:', user?.id);
-
-        if (!currentSession || !user) {
-          setIsSaving(false);
-          setShowLabelModal(false);
-          toast({
-            title: "Login Required",
-            description: "Please log in to save addresses",
-            variant: "destructive",
-          });
-          // Redirect to auth page
-          setLocation("/auth");
-          return;
-        }
-      } else {
-        console.log('Auth check - Refreshed session:', !!session, 'User ID:', session.user?.id);
-        // Small delay to ensure Supabase client updates its internal state
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-
       await addressService.create({
         label: label,
         address: address,
@@ -314,7 +252,7 @@ export default function MapConfirmationPage() {
       };
 
       localStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify(locationData));
-
+      
       // Dispatch custom event for same-tab location updates
       window.dispatchEvent(new CustomEvent('locationchange', { detail: locationData }));
 
@@ -349,7 +287,7 @@ export default function MapConfirmationPage() {
         variant: "destructive",
       });
     }
-
+    
     setIsSaving(false);
   };
 
@@ -407,7 +345,7 @@ export default function MapConfirmationPage() {
             ) : (
               <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             )}
-
+            
             {/* Search Results Dropdown */}
             {showSearchResults && searchResults.length > 0 && (
               <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-lg overflow-hidden max-h-64 overflow-y-auto">
@@ -419,7 +357,7 @@ export default function MapConfirmationPage() {
                     data-testid={`search-result-${result.place_id}`}
                   >
                     <MapPin className="w-5 h-5 text-[#1A9952] mt-0.5 flex-shrink-0" />
-                    <span
+                    <span 
                       className="text-sm text-[#1C1C1C] line-clamp-2"
                       style={{ fontFamily: "'Sweet Sans Pro', sans-serif" }}
                     >
@@ -432,11 +370,11 @@ export default function MapConfirmationPage() {
           </div>
         </div>
       </div>
-
+      
       {/* Backdrop to close search results */}
       {showSearchResults && (
-        <div
-          className="absolute inset-0 z-[999]"
+        <div 
+          className="absolute inset-0 z-[999]" 
           onClick={() => setShowSearchResults(false)}
         />
       )}
@@ -453,25 +391,25 @@ export default function MapConfirmationPage() {
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          <MapEventHandler
-            onPositionChange={handlePositionChange}
+          <MapEventHandler 
+            onPositionChange={handlePositionChange} 
             initialCenter={initialCenter}
           />
-          <MapRecenter
-            center={position}
+          <MapRecenter 
+            center={position} 
             shouldRecenter={shouldRecenter}
             onRecenterComplete={() => setShouldRecenter(false)}
           />
         </MapContainer>
-
+        
         {/* Fixed Center Pin */}
-        <div
+        <div 
           className="absolute left-1/2 top-1/2 z-[500] pointer-events-none"
           style={{ transform: 'translate(-50%, -100%)' }}
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 36" width="36" height="48">
-            <path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24C24 5.4 18.6 0 12 0z" fill="#1A9952" />
-            <circle cx="12" cy="12" r="5" fill="white" />
+            <path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24C24 5.4 18.6 0 12 0z" fill="#1A9952"/>
+            <circle cx="12" cy="12" r="5" fill="white"/>
           </svg>
         </div>
 
@@ -501,7 +439,7 @@ export default function MapConfirmationPage() {
 
       {/* Bottom Sheet */}
       <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl px-5 py-6 pb-8 z-[1000]">
-        <p
+        <p 
           className="text-gray-500 text-sm mb-3"
           style={{ fontFamily: "'Sweet Sans Pro', sans-serif" }}
         >
@@ -511,7 +449,7 @@ export default function MapConfirmationPage() {
         <div className="flex items-start gap-3 mb-5">
           <MapPin className="w-6 h-6 text-[#1A9952] mt-0.5 flex-shrink-0" />
           <div className="flex-1 min-w-0">
-            <h3
+            <h3 
               className="font-bold text-[#1C1C1C] text-lg"
               style={{ fontFamily: "'Sweet Sans Pro', sans-serif" }}
             >
@@ -538,7 +476,7 @@ export default function MapConfirmationPage() {
       {showLabelModal && (
         <div className="fixed inset-0 z-[2000] flex items-end justify-center">
           {/* Backdrop */}
-          <div
+          <div 
             className="absolute inset-0 bg-black/50"
             onClick={() => {
               if (!isSaving) {
@@ -548,11 +486,11 @@ export default function MapConfirmationPage() {
               }
             }}
           />
-
+          
           {/* Modal Content */}
           <div className="relative bg-white w-full rounded-t-3xl p-6 pb-10 animate-in slide-in-from-bottom duration-300">
             <div className="flex items-center justify-between mb-6">
-              <h2
+              <h2 
                 className="text-xl font-bold text-[#1C1C1C]"
                 style={{ fontFamily: "'Sweet Sans Pro', sans-serif" }}
               >
@@ -595,7 +533,7 @@ export default function MapConfirmationPage() {
                   <div className="w-12 h-12 rounded-full flex items-center justify-center bg-gray-100">
                     <Home className="w-6 h-6 text-gray-600" />
                   </div>
-                  <span
+                  <span 
                     className="font-medium text-sm text-gray-700"
                     style={{ fontFamily: "'Sweet Sans Pro', sans-serif" }}
                   >
@@ -612,7 +550,7 @@ export default function MapConfirmationPage() {
                   <div className="w-12 h-12 rounded-full flex items-center justify-center bg-gray-100">
                     <Briefcase className="w-6 h-6 text-gray-600" />
                   </div>
-                  <span
+                  <span 
                     className="font-medium text-sm text-gray-700"
                     style={{ fontFamily: "'Sweet Sans Pro', sans-serif" }}
                   >
@@ -629,7 +567,7 @@ export default function MapConfirmationPage() {
                   <div className="w-12 h-12 rounded-full flex items-center justify-center bg-gray-100">
                     <MoreHorizontal className="w-6 h-6 text-gray-600" />
                   </div>
-                  <span
+                  <span 
                     className="font-medium text-sm text-gray-700"
                     style={{ fontFamily: "'Sweet Sans Pro', sans-serif" }}
                   >
@@ -640,7 +578,7 @@ export default function MapConfirmationPage() {
             ) : (
               /* Custom Label Input */
               <div className="mb-6">
-                <label
+                <label 
                   className="block text-sm font-medium text-gray-700 mb-2"
                   style={{ fontFamily: "'Sweet Sans Pro', sans-serif" }}
                 >
