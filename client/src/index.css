@@ -250,9 +250,15 @@
   * {
     @apply border-border;
   }
+  html {
+    overflow-x: hidden;
+  }
   body {
     font-family: 'Sweet Sans Pro', -apple-system, system-ui, sans-serif;
     @apply antialiased bg-background text-foreground;
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100vw;
   }
 }
 
