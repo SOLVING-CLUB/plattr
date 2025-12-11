@@ -288,10 +288,13 @@ function Router() {
 }
 
 function App() {
-  const [showSplash, setShowSplash] = useState(true);
+  const [showSplash, setShowSplash] = useState(() => {
+    // Check if splash was already shown this session
+    return sessionStorage.getItem('splashSeen') !== 'true';
+  });
   const [fadeOut, setFadeOut] = useState(false);
   const [, setLocation] = useLocation();
-  const splashCompleted = useRef(false);
+  const splashCompleted = useRef(sessionStorage.getItem('splashSeen') === 'true');
   const { isAuthenticated, loading, initialized } = useAuth();
 
   // Force light theme only - ensure dark mode is never enabled
@@ -309,6 +312,7 @@ function App() {
     // After fade animation, hide splash and navigate
     setTimeout(() => {
       splashCompleted.current = true;
+      sessionStorage.setItem('splashSeen', 'true');
       setShowSplash(false);
       
       // Simple navigation logic:

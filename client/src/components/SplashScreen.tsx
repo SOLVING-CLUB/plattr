@@ -106,7 +106,6 @@ export default function SplashScreen({ onVideoEnd }: SplashScreenProps) {
           className="absolute top-4 left-4 bg-black/50 text-white text-xs px-3 py-1 rounded-full backdrop-blur-sm"
           style={{ zIndex: 1000 }}
         >
-          Dev Mode - Click or press ESC to dismiss
         </div>
       )}
     </div>
