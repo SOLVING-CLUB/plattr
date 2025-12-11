@@ -1315,10 +1315,10 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
             </aside>
 
             {/* Right Content - Dishes Grid */}
-            <div className="flex-1 px-3 md:px-4 py-4 md:py-6 min-w-0 overflow-y-auto overflow-x-hidden pb-20 md:pb-6">
-              {/* Horizontal Dish Type Tabs - Sticky (65's, Chilli, Fry, etc.) - Only show when there are dish types */}
+            <div className="flex-1 flex flex-col min-h-0 min-w-0 px-3 md:px-4 py-2 md:py-3">
+              {/* Horizontal Dish Type Tabs (65's, Chilli, Fry, etc.) - Outside scroll container */}
               {dishTypes.length > 0 && (
-                <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm pb-3 mb-2 -mx-3 md:-mx-4 px-3 md:px-4" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+                <div className="bg-background/95 backdrop-blur-sm pb-3 mb-2 -mx-3 md:-mx-4 px-3 md:px-4 flex-shrink-0">
                   <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide px-1 pt-2">
                     {/* Dish type options (65's, Chilli, Fry, etc.) - Compact pill design */}
                     {dishTypes.map((dishType) => {
@@ -1358,14 +1358,16 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                 </div>
               )}
 
-              <div className="mb-4">
+              <div className="mb-4 flex-shrink-0">
                 <h2 className="text-xl font-bold font-serif" data-testid="text-section-title">
                   {categories.find(c => c.id === selectedCategory)?.name || 'All Categories'}
                 </h2>
               </div>
 
+              {/* Dish Grid - optimized with lazy images */}
+              <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 w-full">
               {isLoadingDishes ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 pb-20 w-full">
                   {[1, 2, 3, 4, 5, 6].map((i) => (
                     <div key={i} className="overflow-hidden rounded-xl bg-white shadow-sm animate-pulse">
                       <div className="h-40 md:h-48 bg-gray-200" />
@@ -1386,7 +1388,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                   <p className="text-muted-foreground">No dishes match the selected filters</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 pb-20 w-full">
                   {filteredAndSortedDishes.map((dish) => {
                     const dishId = parseInt(dish.id.replace('D-', '')) || 0;
                     const dishItem = {
@@ -1510,6 +1512,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                   })}
                 </div>
               )}
+              </div>
             </div>
           </div>
         </div>
