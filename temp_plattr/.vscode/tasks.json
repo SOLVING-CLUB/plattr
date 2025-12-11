@@ -1,0 +1,105 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Android: Run on Emulator",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "android:run"],
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "new",
+        "focus": true
+      },
+      "problemMatcher": [],
+      "options": {
+        "env": {
+          "JAVA_HOME": "/Applications/Android Studio.app/Contents/jbr/Contents/Home",
+          "ANDROID_HOME": "${env:HOME}/Library/Android/sdk"
+        }
+      }
+    },
+    {
+      "label": "Android: Sync",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "android:sync"],
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": [],
+      "options": {
+        "env": {
+          "JAVA_HOME": "/Applications/Android Studio.app/Contents/jbr/Contents/Home",
+          "ANDROID_HOME": "${env:HOME}/Library/Android/sdk"
+        }
+      }
+    },
+    {
+      "label": "Android: Open in Android Studio",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "android:open"],
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Android: Build Only",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "build"],
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Dev Server: Start",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "dev"],
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new",
+        "focus": true
+      },
+      "problemMatcher": [],
+      "isBackground": true,
+      "runOptions": {
+        "runOn": "folderOpen"
+      }
+    },
+    {
+      "label": "Android: Dev Mode",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "android:dev"],
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": [],
+      "options": {
+        "env": {
+          "JAVA_HOME": "/Applications/Android Studio.app/Contents/jbr/Contents/Home",
+          "ANDROID_HOME": "${env:HOME}/Library/Android/sdk"
+        }
+      }
+    }
+  ]
+}
+
