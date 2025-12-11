@@ -288,26 +288,20 @@ function Router() {
 }
 
 function App() {
-  // Check sessionStorage directly on every mount to ensure splash only shows once per session
-  const splashSeenInSession = sessionStorage.getItem('splashSeen') === 'true';
-  
-  const [showSplash, setShowSplash] = useState(!splashSeenInSession);
   const [fadeOut, setFadeOut] = useState(false);
   const [, setLocation] = useLocation();
   const { isAuthenticated, loading, initialized } = useAuth();
-  const splashMarkedRef = useRef(false);
-
-  // Mark splash as seen IMMEDIATELY on first mount (before video ends)
-  // This prevents the splash from re-appearing during navigation
-  useEffect(() => {
-    if (sessionStorage.getItem('splashSeen') === 'true') {
-      setShowSplash(false);
-    } else if (!splashMarkedRef.current && showSplash) {
-      // Set the flag immediately when splash is first shown
-      splashMarkedRef.current = true;
+  
+  // Check sessionStorage ONCE on mount - if splash was seen, never show it
+  const [showSplash, setShowSplash] = useState(() => {
+    const alreadySeen = sessionStorage.getItem('splashSeen') === 'true';
+    if (!alreadySeen) {
+      // Mark as seen IMMEDIATELY to prevent any race conditions
       sessionStorage.setItem('splashSeen', 'true');
+      return true;
     }
-  }, [showSplash]);
+    return false;
+  });
 
   // Force light theme only - ensure dark mode is never enabled
   useEffect(() => {
