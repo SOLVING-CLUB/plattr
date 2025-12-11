@@ -1012,20 +1012,25 @@ export default function CateringOrder() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [slideCount, setSlideCount] = useState(0);
   
-  const [formData, setFormData] = useState({
-    eventType: "",
-    numberOfPeople: "",
-    veg: "",
-    nonVeg: "",
-    egg: "",
-    cuisinePreferences: [] as string[],
-    budgetMin: "",
-    budgetMax: "",
-    mealTimes: [] as string[],
-    eventDate: "",
-    eventTime: "",
-    phone: "",
-    email: "",
+  const [formData, setFormData] = useState(() => {
+    // Prefill phone and email from localStorage (logged in user)
+    const savedPhone = localStorage.getItem('phone');
+    const savedEmail = localStorage.getItem('email');
+    return {
+      eventType: "",
+      numberOfPeople: "",
+      veg: "",
+      nonVeg: "",
+      egg: "",
+      cuisinePreferences: [] as string[],
+      budgetMin: "",
+      budgetMax: "",
+      mealTimes: [] as string[],
+      eventDate: "",
+      eventTime: "",
+      phone: savedPhone ? `+91 ${savedPhone}` : "",
+      email: savedEmail || "",
+    };
   });
 
   const [cuisineDropdownOpen, setCuisineDropdownOpen] = useState(false);

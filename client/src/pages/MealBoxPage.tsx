@@ -1449,6 +1449,72 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
   const [city, setCity] = useState("");
   const [addressState, setAddressState] = useState("");
   const [pincode, setPincode] = useState("");
+  
+  // Contact info - prefilled from localStorage (logged in user)
+  const [phone, setPhone] = useState(() => {
+    const savedPhone = localStorage.getItem('phone');
+    return savedPhone ? `+91 ${savedPhone}` : "";
+  });
+  const [email, setEmail] = useState(() => localStorage.getItem('email') || "");
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
+
+  // Function to get current location and reverse geocode
+  const getCurrentLocation = async () => {
+    if (!navigator.geolocation) {
+      toast({ title: "Error", description: "Geolocation is not supported by your browser", variant: "destructive" });
+      return;
+    }
+
+    setIsGettingLocation(true);
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        });
+      });
+
+      const { latitude, longitude } = position.coords;
+      
+      // Reverse geocode using Nominatim
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`
+      );
+      const data = await response.json();
+
+      if (data && data.address) {
+        const addr = data.address;
+        const newAddressLine1 = data.display_name?.split(',').slice(0, 2).join(', ') || "";
+        const newAddressLine2 = addr.suburb || addr.neighbourhood || addr.road || addr.residential || "";
+        const newCity = addr.city || addr.town || addr.village || addr.county || addr.state_district || "";
+        const newState = addr.state || addr.region || "";
+        const newPincode = addr.postcode || "";
+        
+        // Only update fields that have valid data, keep previous values otherwise
+        if (newAddressLine1) setAddressLine1(newAddressLine1);
+        if (newAddressLine2) setAddressLine2(newAddressLine2);
+        if (newCity) setCity(newCity);
+        if (newState) setAddressState(newState);
+        if (newPincode) setPincode(newPincode);
+        
+        // Clear saved address selection to enable manual editing
+        setSelectedAddressId("");
+        toast({ title: "Location Found", description: "Address filled from your current location" });
+      } else {
+        toast({ title: "Location Error", description: "Could not get address details", variant: "destructive" });
+      }
+    } catch (error: any) {
+      console.error('Location error:', error);
+      toast({ 
+        title: "Location Error", 
+        description: error.code === 1 ? "Please allow location access" : "Could not get your location", 
+        variant: "destructive" 
+      });
+    } finally {
+      setIsGettingLocation(false);
+    }
+  };
 
   // Fetch saved addresses
   const { data: savedAddresses = [] } = useQuery({
@@ -4358,6 +4424,8 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   style={{ fontFamily: "Sweet Sans Pro" }}
                   data-testid="input-phone"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
                 />
               </div>
 
@@ -4372,6 +4440,8 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   style={{ fontFamily: "Sweet Sans Pro" }}
                   data-testid="input-email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
 
@@ -4411,6 +4481,21 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                   </div>
                 )}
               </div>
+
+              {/* Use Current Location Button */}
+              <button
+                type="button"
+                onClick={getCurrentLocation}
+                disabled={isGettingLocation}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-50 border-2 border-dashed border-green-500 rounded-lg hover:bg-green-100 transition-colors disabled:opacity-50"
+                style={{ fontFamily: "Sweet Sans Pro" }}
+                data-testid="button-use-location"
+              >
+                <MapPin className="w-5 h-5 text-green-600" />
+                <span className="text-green-700 font-medium">
+                  {isGettingLocation ? "Getting Location..." : "Use Current Location"}
+                </span>
+              </button>
 
               {/* Manual Address Entry - Only show when no saved address selected */}
               {!isAddressFieldsDisabled && (
