@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useLocation } from "wouter";
+import { PageWithLoader } from "@/components/PageWithLoader";
 import Fuse from "fuse.js";
 import { ArrowLeft, MapPin, ShoppingCart, Search, Mic, ArrowUpDown, SlidersHorizontal, Star, Utensils, ChevronRight, UtensilsCrossed, Package, Truck, Building2, LayoutGrid, Leaf, Drumstick, Egg, Sparkles } from "lucide-react";
 import FloatingNav from "@/pages/FloatingNav";
@@ -640,6 +641,7 @@ export default function Menu() {
   };
 
   return (
+    <PageWithLoader>
     <div className="min-h-screen pb-24 relative bg-[#FDF8F3]">
       {/* Sticky Back Button Header */}
       <div 
@@ -1268,5 +1270,6 @@ export default function Menu() {
 
       <FloatingNav activeTab={activeTab} onTabChange={handleTabChange} />
     </div>
+    </PageWithLoader>
   );
 }

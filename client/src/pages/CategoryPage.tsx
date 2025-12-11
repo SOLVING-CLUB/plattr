@@ -1,4 +1,5 @@
 import { useRoute, useLocation } from "wouter";
+import { PageWithLoader } from "@/components/PageWithLoader";
 import { ChevronDown, Plus, Minus, Leaf, Drumstick, SlidersHorizontal, ArrowUpDown, X, Sparkles, ArrowLeft, LayoutGrid, Circle, Egg } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -758,6 +759,7 @@ export default function CategoryPage() {
   };
 
   return (
+    <PageWithLoader>
     <div className="h-screen bg-background flex flex-col overflow-hidden">
       <AppHeader 
         onBackClick={() => setLocation('/')}
@@ -1750,6 +1752,7 @@ export default function CategoryPage() {
         </DrawerContent>
       </Drawer>
     </div>
+    </PageWithLoader>
   );
 }
 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useLocation } from "wouter";
+import { PageWithLoader } from "@/components/PageWithLoader";
 import Fuse from "fuse.js";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -909,6 +910,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
   }
 
   return (
+    <PageWithLoader>
     <div className="min-h-screen pb-24 relative">
       {/* Blue Geometric Background Header */}
       <div
@@ -1785,5 +1787,6 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
 
       <FloatingNav activeTab={activeTab} onTabChange={handleTabChange} />
     </div>
+    </PageWithLoader>
   );
 }

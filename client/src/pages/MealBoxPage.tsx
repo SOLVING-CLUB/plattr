@@ -991,6 +991,7 @@
 // }
 
 import { useState, useMemo, useEffect, useRef } from "react";
+import { PageWithLoader } from "@/components/PageWithLoader";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -2356,6 +2357,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
   };
 
   return (
+    <PageWithLoader>
     <div className="min-h-screen pb-24 relative bg-gray-50" style={{ overflowX: 'clip' }}>
       {/* Green Geometric Background Header */}
       <div
@@ -4728,6 +4730,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
       {/* Floating Bottom Navigation */}
       <FloatingNav activeTab={activeTab} onTabChange={handleTabChange} />
     </div>
+    </PageWithLoader>
   );
 }
 

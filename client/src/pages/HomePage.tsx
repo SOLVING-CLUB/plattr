@@ -503,7 +503,7 @@
 
 
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useLocation } from "wouter";
 import AppHeader from "@/pages/AppHeader";
 import HeroSection from "@/pages/HeroSection";
@@ -513,57 +513,13 @@ import SmartMenuConciergeSection from "@/pages/SmartMenuSection";
 import FloatingNav from "@/pages/FloatingNav";
 import ContinueOrderBanner from "@/pages/ContinueOrderBanner";
 import { useToast } from "@/hooks/use-toast";
-import { PageLoader } from "@/components/PageLoader";
-import headerBg from "@assets/Hero_1763854193361.png";
-import heroBanner from "@assets/Banner - 60 mins_1763877285748.png";
-
-function useImagePreloader(imageSources: string[]) {
-  const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    let isMounted = true;
-    const images = imageSources.map((src) => {
-      const img = new Image();
-      img.src = src;
-      return img;
-    });
-
-    Promise.all(
-      images.map(
-        (img) =>
-          new Promise((resolve) => {
-            if (img.complete) {
-              resolve(true);
-            } else {
-              img.onload = () => resolve(true);
-              img.onerror = () => resolve(true);
-            }
-          })
-      )
-    ).then(() => {
-      if (isMounted) setLoaded(true);
-    });
-
-    const timeout = setTimeout(() => {
-      if (isMounted) setLoaded(true);
-    }, 3000);
-
-    return () => {
-      isMounted = false;
-      clearTimeout(timeout);
-    };
-  }, [imageSources]);
-
-  return loaded;
-}
+import { PageWithLoader } from "@/components/PageWithLoader";
 
 export default function Home() {
   const [, setLocation] = useLocation();
   const [cartCount, setCartCount] = useState(0);
   const [activeTab, setActiveTab] = useState<"home" | "menu" | "profile">("home");
   const { toast } = useToast();
-  
-  const imagesLoaded = useImagePreloader([headerBg, heroBanner]);
 
   const handleLocationClick = () => {
     console.log("Location selector clicked");
@@ -620,30 +576,28 @@ export default function Home() {
     setLocation("/concierge");
   };
 
-  if (!imagesLoaded) {
-    return <PageLoader />;
-  }
-
   return (
-    <div className="min-h-screen pb-44">
-      <AppHeader 
-        onLocationClick={handleLocationClick}
-      />
-      
-      <HeroSection onExploreMenu={handleExploreMenu} />
-      <ServicesWeOfferSection onServiceClick={handleServiceClick} />
-      
-      <div className="mt-4">
-        <SpotlightFeaturesSection />
-      </div>
+    <PageWithLoader>
+      <div className="min-h-screen pb-44">
+        <AppHeader 
+          onLocationClick={handleLocationClick}
+        />
+        
+        <HeroSection onExploreMenu={handleExploreMenu} />
+        <ServicesWeOfferSection onServiceClick={handleServiceClick} />
+        
+        <div className="mt-4">
+          <SpotlightFeaturesSection />
+        </div>
 
-      <div className="mt-6 mb-4">
-        <SmartMenuConciergeSection onTryNow={handleTryMenuConcierge} />
+        <div className="mt-6 mb-4">
+          <SmartMenuConciergeSection onTryNow={handleTryMenuConcierge} />
+        </div>
+      
+        {/* Continue Order Banner */}
+        <ContinueOrderBanner />
+        <FloatingNav activeTab={activeTab} onTabChange={handleTabChange} />
       </div>
-    
-      {/* Continue Order Banner */}
-      <ContinueOrderBanner />
-      <FloatingNav activeTab={activeTab} onTabChange={handleTabChange} />
-    </div>
+    </PageWithLoader>
   );
 }
