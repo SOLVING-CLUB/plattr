@@ -304,11 +304,16 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
   const [platterPlannerOpen, setPlatterPlannerOpen] = useState(false);
   const [dishDetailOpen, setDishDetailOpen] = useState(false);
   const [detailDish, setDetailDish] = useState<Dish | null>(null);
-  const [isStuck, setIsStuck] = useState(false);
+  const [scrollY, setScrollY] = useState(0);
   const [quantities, setQuantities] = useState<Record<number, number>>({});
   const hasInteractedRef = useRef(false);
 
-  const sentinelRef = useRef<HTMLDivElement>(null);
+  // Track scroll position for sticky header styling (matches CateringPage)
+  useEffect(() => {
+    const handleScroll = () => setScrollY(window.scrollY);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const openDishDetail = (dish: Dish) => {
     setDetailDish(dish);
@@ -349,29 +354,6 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
     removeFromCart(itemId);
   };
 
-  // Detect when sticky element becomes stuck
-  // Using rootMargin to trigger slightly before the sentinel leaves viewport for reliable detection
-  useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        // When sentinel is not visible, sticky element is stuck
-        setIsStuck(!entry.isIntersecting);
-      },
-      {
-        threshold: 0,
-        rootMargin: '-1px 0px 0px 0px'
-      }
-    );
-
-    observer.observe(sentinel);
-
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
 
   // Debounce search query for better performance (300ms delay)
   useEffect(() => {
@@ -923,22 +905,20 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
           height: "350px",
         }}
       />
-      {/* Sentinel element for sticky detection - placed at top for reliable intersection detection */}
-      <div ref={sentinelRef} className="absolute top-0 left-0 right-0" style={{ height: "1px" }} />
-      {/* Back Button Header - Sticky at top with safe area padding */}
-      <div
+      {/* Sticky Back Button Header - Matches CateringPage exactly */}
+      <div 
         className="sticky top-0 z-50 transition-all duration-200"
         style={{
-          backgroundColor: isStuck ? 'white' : 'transparent',
-          boxShadow: isStuck ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-          paddingTop: 'max(12px, env(safe-area-inset-top))',
+          backgroundColor: scrollY > 50 ? 'rgba(255, 255, 255, 0.95)' : 'transparent',
+          backdropFilter: scrollY > 50 ? 'blur(8px)' : 'none',
+          boxShadow: scrollY > 50 ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
         }}
       >
-        <div className="px-4 pb-2">
+        <div className="px-4 pt-12 pb-3">
           <Button
             variant="ghost"
             size="sm"
-            className={isStuck ? "text-[#06352A] hover:text-[#06352A] hover:bg-gray-100" : "text-white hover:text-white hover:bg-white/20"}
+            className={scrollY > 50 ? "text-[#06352A] hover:text-[#06352A] hover:bg-gray-100" : "text-white hover:text-white hover:bg-white/20"}
             onClick={() => navigate("/")}
             data-testid="button-back"
           >
@@ -1062,7 +1042,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
       <div
         className="sticky z-40 px-4 pb-2 pt-3 transition-all duration-200"
         style={{
-          top: '52px',
+          top: '72px',
           backgroundColor: "white",
           boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
         }}
@@ -1264,7 +1244,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
           {/* CategoryPage-style Layout */}
           <div className="flex gap-0 flex-1 w-full max-w-full">
             {/* Left Sidebar - Category Filters (Starters, Sides, Mains, etc.) - Sticky with internal scroll */}
-            <aside className="w-20 md:w-24 border-r bg-card/50 backdrop-blur-sm flex-shrink-0 sticky self-start" style={{ top: '260px', maxHeight: 'calc(100vh - 260px)', overflowY: 'auto' }}>
+            <aside className="w-20 md:w-24 border-r bg-card/50 backdrop-blur-sm flex-shrink-0 sticky self-start" style={{ top: '280px', maxHeight: 'calc(100vh - 280px)', overflowY: 'auto' }}>
               <div className="flex flex-col py-3">
                 {/* Always show "All" option */}
                 <button
