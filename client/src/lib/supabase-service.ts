@@ -570,10 +570,9 @@ export const mealboxOrderService = {
     const user = await getAuthenticatedUser();
     if (!user) throw new Error('Not authenticated');
 
-    // Generate unique order number using timestamp
-    const timestamp = Date.now();
-    const randomSuffix = Math.floor(Math.random() * 1000);
-    const nextOrderNumber = parseInt(`2${timestamp.toString().slice(-8)}${randomSuffix.toString().padStart(3, '0')}`)
+    // Generate unique order number (max 2147483647 for integer)
+    const timePart = Date.now() % 100000000; // Last 8 digits of timestamp
+    const nextOrderNumber = Math.floor(timePart / 100) + Math.floor(Math.random() * 1000)
 
     const { data, error } = await supabase
       .from('mealbox_orders')
