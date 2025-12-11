@@ -909,7 +909,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
   }
 
   return (
-    <div className="min-h-screen pb-24 relative overflow-x-hidden">
+    <div className="min-h-screen pb-24 relative">
       {/* Blue Geometric Background Header */}
       <div
         className="absolute top-0 left-0 right-0 z-0"
@@ -921,8 +921,6 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
           height: "350px",
         }}
       />
-      {/* Sentinel element for sticky detection - placed at top for reliable intersection detection */}
-      <div ref={sentinelRef} className="absolute top-0 left-0 right-0" style={{ height: "1px" }} />
       {/* Sticky Back Button Header - uses isStuck from IntersectionObserver for performance */}
       <div
         className="sticky top-0 z-50 transition-all duration-200"
@@ -1055,6 +1053,10 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
           )}
         </div>
       </div>
+
+      {/* Sentinel element for sticky search bar detection */}
+      <div ref={sentinelRef} style={{ height: "1px" }} />
+
       {/* Sticky Search Bar and Meal Category Container - Outside header for proper sticky behavior */}
       <div
         className="sticky z-40 px-4 pb-2 pt-4 transition-all duration-200"
