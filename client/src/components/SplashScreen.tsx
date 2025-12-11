@@ -47,9 +47,9 @@ export default function SplashScreen() {
     if (!video) return;
 
     const handleTimeUpdate = () => {
-      if (video.currentTime >= 60) {
+      if (video.currentTime >= 120) {
         video.pause();
-        video.currentTime = 60;
+        video.currentTime = 120;
       }
     };
 
