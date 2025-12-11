@@ -84,11 +84,24 @@ export default function VerificationScreen() {
         console.log('🔐 Verifying OTP...');
         const data = await edgeFunctions.verifyOTP(phoneNumber, otpCode);
 
-        console.log('✅ OTP verified successfully');
+        console.log('✅ OTP verified successfully', data);
 
-        // Note: The Edge Function creates/authenticates the user in Supabase Auth
-        // The session is automatically managed by Supabase Auth
-        // We still store some data in localStorage for backward compatibility
+        // If Edge Function returns session tokens, set them on the Supabase client
+        // This creates a proper authenticated session for RLS to work
+        if (data.session?.access_token && data.session?.refresh_token) {
+          console.log('🔑 Setting Supabase session from OTP response...');
+          const { error: sessionError } = await supabaseAuth.auth.setSession({
+            access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token,
+          });
+          if (sessionError) {
+            console.error('Failed to set session:', sessionError);
+          } else {
+            console.log('✅ Supabase session set successfully');
+          }
+        }
+
+        // Store user data in localStorage for backward compatibility
         if (data.user) {
           localStorage.setItem("userId", data.user.id);
           localStorage.setItem("phone", phoneNumber); // Always store the phone we used
