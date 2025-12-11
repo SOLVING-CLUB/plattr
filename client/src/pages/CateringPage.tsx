@@ -1128,6 +1128,20 @@ export default function CateringOrder() {
       return;
     }
 
+    // Check 12-hour minimum advance booking
+    const selectedDateTime = new Date(`${formData.eventDate}T${formData.eventTime || '12:00'}`);
+    const now = new Date();
+    const hoursDiff = (selectedDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+    
+    if (hoursDiff < 12) {
+      toast({
+        title: "Invalid Date/Time",
+        description: "Please select a date and time at least 12 hours from now.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       // Create catering order
       await cateringOrderService.create({

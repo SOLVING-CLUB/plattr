@@ -137,6 +137,23 @@ export default function BulkMealsDelivery() {
       const deliveryTime = (document.querySelector('[data-testid="input-event-time"]') as HTMLInputElement)?.value || null;
       const selectedAddressId = (document.querySelector('[data-testid="select-saved-address"]') as HTMLSelectElement)?.value || "";
       
+      // Check 12-hour minimum advance booking
+      if (deliveryDate) {
+        const selectedDateTime = new Date(`${deliveryDate}T${deliveryTime || '12:00'}`);
+        const now = new Date();
+        const hoursDiff = (selectedDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+        
+        if (hoursDiff < 12) {
+          toast({
+            title: "Invalid Date/Time",
+            description: "Please select a date and time at least 12 hours from now.",
+            variant: "destructive",
+          });
+          setIsCreatingOrder(false);
+          return;
+        }
+      }
+      
       // Validate addressId - only use if it's a valid UUID (not empty string or invalid value)
       let validAddressId: string | undefined = undefined;
       if (selectedAddressId && selectedAddressId.trim() !== "" && selectedAddressId !== "home" && selectedAddressId !== "office") {
