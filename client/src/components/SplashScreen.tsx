@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import splashVideo from "@assets/The_background_which_202512111311_m25iy (1).mp4";
 
 export default function SplashScreen() {
   const isDev = import.meta.env.DEV;
@@ -94,10 +95,7 @@ export default function SplashScreen() {
         }}
         data-testid="video-splash-background"
       >
-        <source
-          src="/attached_assets/The_background_which_202512111311_m25iy (1).mp4"
-          type="video/mp4"
-        />
+        <source src={splashVideo} type="video/mp4" />
       </video>
 
       {isDev && (
