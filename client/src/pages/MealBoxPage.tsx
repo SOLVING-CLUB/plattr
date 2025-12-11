@@ -1449,6 +1449,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
   const [city, setCity] = useState("");
   const [addressState, setAddressState] = useState("");
   const [pincode, setPincode] = useState("");
+  const [saveAddressForFuture, setSaveAddressForFuture] = useState(false);
   
   // Contact info - prefilled from localStorage (logged in user)
   const [phone, setPhone] = useState(() => {
@@ -4584,6 +4585,8 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
+                      checked={saveAddressForFuture}
+                      onChange={(e) => setSaveAddressForFuture(e.target.checked)}
                       className="w-5 h-5 rounded border-2 border-gray-300"
                       style={{ accentColor: "#1A9952" }}
                       data-testid="checkbox-save-address"
@@ -4627,6 +4630,25 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
                     if (uuidRegex.test(selectedAddressId)) {
                       validAddressId = selectedAddressId;
+                    }
+                  }
+
+                  // Save address if checkbox is checked and manual address was entered
+                  if (saveAddressForFuture && !validAddressId && addressLine1) {
+                    try {
+                      const fullAddress = [addressLine1, addressLine2, city, addressState, pincode].filter(Boolean).join(', ');
+                      await addressService.create({
+                        label: "Saved Address",
+                        address: fullAddress,
+                        landmark: addressLine2 || undefined,
+                        isDefault: false,
+                      });
+                      toast({
+                        title: "Address Saved",
+                        description: "Your address has been saved for future use.",
+                      });
+                    } catch (err) {
+                      console.error("Failed to save address:", err);
                     }
                   }
 
