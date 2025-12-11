@@ -1318,14 +1318,12 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                   <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide px-1 pt-2">
                     {/* Dish type options (65's, Chilli, Fry, etc.) - Compact pill design */}
                     {dishTypes.map((dishType) => {
-                      const dishTypeImage = getSubcategoryImage(dishType);
-
                       return (
                         <button
                           key={dishType}
                           onClick={() => { handleInteraction(); setSelectedDishType(dishType); }}
                           className={cn(
-                            "flex items-center gap-2 px-3 py-1.5 border transition-all flex-shrink-0",
+                            "flex items-center px-3 py-1.5 border transition-all flex-shrink-0",
                             selectedDishType === dishType
                               ? "border-[#1A9952] bg-white shadow-sm"
                               : "border-gray-200 bg-white hover:border-gray-300"
@@ -1333,14 +1331,6 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                           style={{ borderRadius: '10px' }}
                           data-testid={`tab-dishtype-${dishType.toLowerCase()}`}
                         >
-                          <div className="relative w-7 h-7 overflow-hidden flex-shrink-0" style={{ borderRadius: '6px' }}>
-                            <img
-                              src={dishTypeImage}
-                              alt={dishType}
-                              loading="lazy"
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
                           <span className={cn(
                             "text-xs md:text-sm font-semibold whitespace-nowrap",
                             selectedDishType === dishType ? "text-primary" : "text-foreground"
