@@ -28,18 +28,6 @@ import thaliImage from '@assets/stock_images/indian_thali_meal_3a645a6d.jpg';
 import samosaImage from '@assets/stock_images/samosa_snacks_indian_0946aa28.jpg';
 import platterImage from '@assets/stock_images/indian_food_platter__b34d03e7.jpg';
 
-// User-provided images - South Indian
-import masalaDosaImage from '@assets/image_1760599491069.png';
-import pongalImage from '@assets/image_1760599583321.png';
-import uttapamImage from '@assets/image_1760599632589.png';
-import ravaDosaImage from '@assets/image_1760599659726.png';
-
-// User-provided images - North Indian
-import alooParathaImage from '@assets/image_1760599701468.png';
-import choleBhatureImage from '@assets/image_1760599722844.png';
-import pohaImage from '@assets/image_1760599744216.png';
-import upmaImage from '@assets/image_1760599771826.png';
-import breadToastImage from '@assets/image_1760599797811.png';
 
 const getDishImage = (dishName: string, dishImageUrl?: string): string => {
   if (dishImageUrl && !dishImageUrl.startsWith('/images/')) {
@@ -49,20 +37,20 @@ const getDishImage = (dishName: string, dishImageUrl?: string): string => {
   const name = dishName.toLowerCase();
   
   // South Indian Tiffins
-  if (name.includes('masala dosa')) return masalaDosaImage;
-  if (name.includes('rava dosa')) return ravaDosaImage;
-  if (name.includes('dosa')) return masalaDosaImage;
+  if (name.includes('masala dosa')) return thaliImage;
+  if (name.includes('rava dosa')) return thaliImage;
+  if (name.includes('dosa')) return thaliImage;
   if (name.includes('idli')) return idliImage1;
   if (name.includes('vada') || name.includes('medu')) return vadaImage1;
-  if (name.includes('uttapam')) return uttapamImage;
-  if (name.includes('pongal')) return pongalImage;
+  if (name.includes('uttapam')) return idliImage1;
+  if (name.includes('pongal')) return thaliImage;
   
   // North Indian Tiffins
-  if (name.includes('aloo paratha') || name.includes('paratha')) return alooParathaImage;
-  if (name.includes('chole bhature') || name.includes('bhature')) return choleBhatureImage;
-  if (name.includes('poha')) return pohaImage;
-  if (name.includes('upma')) return upmaImage;
-  if (name.includes('bread toast') || name.includes('toast')) return breadToastImage;
+  if (name.includes('aloo paratha') || name.includes('paratha')) return thaliImage;
+  if (name.includes('chole bhature') || name.includes('bhature')) return thaliImage;
+  if (name.includes('poha')) return thaliImage;
+  if (name.includes('upma')) return thaliImage;
+  if (name.includes('bread toast') || name.includes('toast')) return thaliImage;
   
   // Snacks
   if (name.includes('samosa')) return samosaImage;

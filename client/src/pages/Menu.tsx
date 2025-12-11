@@ -32,21 +32,6 @@ import thaliImage from '@assets/stock_images/indian_thali_meal_3a645a6d.jpg';
 import samosaImage from '@assets/stock_images/samosa_snacks_indian_0946aa28.jpg';
 import platterImage from '@assets/stock_images/indian_food_platter__b34d03e7.jpg';
 
-// User-provided images - South Indian
-import masalaDosaImage from '@assets/image_1760599491069.png';
-import pongalImage from '@assets/image_1760599583321.png';
-import uttapamImage from '@assets/image_1760599632589.png';
-import ravaDosaImage from '@assets/image_1760599659726.png';
-
-// User-provided images - North Indian
-import alooParathaImage from '@assets/image_1760599701468.png';
-import choleBhatureImage from '@assets/image_1760599722844.png';
-import pohaImage from '@assets/image_1760599744216.png';
-import upmaImage from '@assets/image_1760599771826.png';
-import breadToastImage from '@assets/image_1760599797811.png';
-
-// Category images
-import southIndianPlatterImage from '@assets/image_1760599912464.png';
 
 import lunchDinnerIcon from "@assets/game-icons_hot-meal_1763923901438.png";
 import tiffinsIcon from "@assets/fi_8174371_1763923901431.png";
@@ -93,14 +78,14 @@ const filterCategoriesByMealType = (categories: any[], mealTypeFilter: string): 
 // Fallback images for categories
 const CATEGORY_IMAGES: Record<string, string> = {
   'all': idliImage1,
-  'south-indian-tiffins': southIndianPlatterImage,
-  'north-indian-tiffins': masalaDosaImage,
+  'south-indian-tiffins': thaliImage,
+  'north-indian-tiffins': thaliImage,
   'quick-bites': vadaImage1,
   'fried-snacks': vadaImage1,
   'baked-snacks': idliImage1,
   'chaats': vadaImage1,
   'rice-items': biryaniImage1,
-  'breads-curries': masalaDosaImage,
+  'breads-curries': thaliImage,
   'biryani': biryaniImage1,
   'sides-and-accompaniments': idliImage1,
   'bakery': idliImage1,
@@ -128,15 +113,15 @@ const DISH_TYPE_IMAGES: Record<string, string> = {
   'Smoothie': idliImage1,
   
   // Breakfast items
-  'Bread': breadToastImage,
+  'Bread': thaliImage,
   'EggPlate': idliImage1,
-  'GrainBowl': pongalImage,
-  'Handheld': masalaDosaImage,
+  'GrainBowl': thaliImage,
+  'Handheld': thaliImage,
   'HotFry': vadaImage1,
-  'PanFry': uttapamImage,
+  'PanFry': idliImage1,
   'SavoryBakery': samosaImage,
   'Steamed': idliImage1,
-  'SweetGriddle': uttapamImage,
+  'SweetGriddle': idliImage1,
   
   // Snacks
   'Chips': samosaImage,
@@ -153,10 +138,10 @@ const DISH_TYPE_IMAGES: Record<string, string> = {
   // Desserts & Sweets
   'Cake': samosaImage,
   'Pastry': samosaImage,
-  'BreadMithai': masalaDosaImage,
-  'ColostrumMithai': masalaDosaImage,
+  'BreadMithai': thaliImage,
+  'ColostrumMithai': thaliImage,
   'FriedMithai': vadaImage1,
-  'GrainMithai': pongalImage,
+  'GrainMithai': thaliImage,
   
   // Salads
   'FruitSalad': platterImage,
@@ -587,16 +572,16 @@ export default function Menu() {
     if (name.includes('tikka')) return platterImage;
     
     // General patterns - be more specific to avoid false matches
-    if (name.includes('dosa') && !name.includes('paneer')) return masalaDosaImage;
+    if (name.includes('dosa') && !name.includes('paneer')) return thaliImage;
     if ((name.includes('idli') || name.includes('idly')) && !name.includes('paneer') && !name.includes('tikka')) return idliImage1;
     if (name.includes('vada') || name.includes('medu')) return vadaImage1;
     
     // North Indian Tiffins
-    if (name.includes('aloo paratha') || name.includes('paratha')) return alooParathaImage;
-    if (name.includes('chole bhature') || name.includes('bhature')) return choleBhatureImage;
-    if (name.includes('poha')) return pohaImage;
-    if (name.includes('upma')) return upmaImage;
-    if (name.includes('bread toast') || name.includes('toast')) return breadToastImage;
+    if (name.includes('aloo paratha') || name.includes('paratha')) return thaliImage;
+    if (name.includes('chole bhature') || name.includes('bhature')) return thaliImage;
+    if (name.includes('poha')) return thaliImage;
+    if (name.includes('upma')) return thaliImage;
+    if (name.includes('bread toast') || name.includes('toast')) return thaliImage;
     
     // Snacks
     if (name.includes('samosa')) return samosaImage;

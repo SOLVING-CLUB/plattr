@@ -36,47 +36,18 @@ import breakfastTiffinImage from '@assets/stock_images/indian_breakfast_tif_6123
 import snacksVarietiesImage from '@assets/stock_images/indian_snacks_samosa_7d45cad7.jpg';
 import lunchDinnerImage from '@assets/stock_images/indian_lunch_dinner__c3e92f73.jpg';
 
-// User-provided images - South Indian
-import masalaDosaImage from '@assets/image_1760599491069.png';
-import pongalImage from '@assets/image_1760599583321.png';
-import uttapamImage from '@assets/image_1760599632589.png';
-import ravaDosaImage from '@assets/image_1760599659726.png';
-
-// User-provided images - North Indian
-import alooParathaImage from '@assets/image_1760599701468.png';
-import choleBhatureImage from '@assets/image_1760599722844.png';
-import pohaImage from '@assets/image_1760599744216.png';
-import upmaImage from '@assets/image_1760599771826.png';
-import breadToastImage from '@assets/image_1760599797811.png';
-
-// Category images
-import southIndianPlatterImage from '@assets/image_1760599912464.png';
-
-// Non-veg South Indian Tiffins images
-import eggDosaImage from '@assets/image_1760605456545.png';
-import eggAppamImage from '@assets/image_1760605582314.png';
-import idlyWithChickenImage from '@assets/image_1760605623134.png';
-import vadaWithChickenImage from '@assets/image_1760605650137.png';
-import dosaWithChickenImage from '@assets/image_1760605699650.png';
-import appamWithChickenImage from '@assets/image_1760605766767.png';
-import puriWithChickenImage from '@assets/image_1760605834972.png';
-import idlyWithNatukodiImage from '@assets/image_1760605964617.png';
-import dosaWithMuttonImage from '@assets/image_1760606063772.png';
-import vadaWithMuttonImage from '@assets/image_1760606109904.png';
-import idlyWithMuttonImage from '@assets/image_1760606146257.png';
-import puriWithMuttonImage from '@assets/image_1760606197813.png';
 
 // Fallback images for categories
 const CATEGORY_IMAGES: Record<string, string> = {
   'all': idliImage1,
-  'south-indian-tiffins': southIndianPlatterImage,
-  'north-indian-tiffins': masalaDosaImage,
+  'south-indian-tiffins': thaliImage,
+  'north-indian-tiffins': thaliImage,
   'quick-bites': vadaImage1,
   'fried-snacks': vadaImage1,
   'baked-snacks': idliImage1,
   'chaats': vadaImage1,
   'rice-items': biryaniImage1,
-  'breads-curries': masalaDosaImage,
+  'breads-curries': thaliImage,
   'biryani': biryaniImage1,
 };
 
@@ -92,15 +63,15 @@ const DISH_TYPE_IMAGES: Record<string, string> = {
   'Smoothie': breakfastTiffinImage,
   
   // Breakfast items
-  'Bread': breadToastImage,
-  'EggPlate': eggDosaImage,
-  'GrainBowl': pongalImage,
-  'Handheld': masalaDosaImage,
+  'Bread': thaliImage,
+  'EggPlate': idliImage1,
+  'GrainBowl': thaliImage,
+  'Handheld': thaliImage,
   'HotFry': vadaImage1,
-  'PanFry': uttapamImage,
+  'PanFry': idliImage1,
   'SavoryBakery': samosaImage,
   'Steamed': idliImage1,
-  'SweetGriddle': uttapamImage,
+  'SweetGriddle': idliImage1,
   
   // Snacks
   'Chips': samosaImage,
@@ -117,10 +88,10 @@ const DISH_TYPE_IMAGES: Record<string, string> = {
   // Desserts & Sweets
   'Cake': samosaImage,
   'Pastry': samosaImage,
-  'BreadMithai': masalaDosaImage,
-  'ColostrumMithai': masalaDosaImage,
+  'BreadMithai': thaliImage,
+  'ColostrumMithai': thaliImage,
   'FriedMithai': vadaImage1,
-  'GrainMithai': pongalImage,
+  'GrainMithai': thaliImage,
   
   // Salads
   'FruitSalad': platterImage,
@@ -182,42 +153,42 @@ const getDishImage = (dishName: string, dishImageUrl?: string, dishData?: any): 
   if (name.includes('tikka')) return platterImage;
   
   // Non-veg South Indian Tiffins - exact matches first
-  if (name === 'egg dosa') return eggDosaImage;
-  if (name === 'egg appam') return eggAppamImage;
-  if (name === 'idly with chicken') return idlyWithChickenImage;
-  if (name === 'vada with chicken') return vadaWithChickenImage;
-  if (name === 'dosa with chicken') return dosaWithChickenImage;
-  if (name === 'appam with chicken') return appamWithChickenImage;
-  if (name === 'puri with chicken') return puriWithChickenImage;
-  if (name === 'vada with natukodi') return vadaWithChickenImage;
-  if (name === 'idly with natukodi') return idlyWithNatukodiImage;
-  if (name === 'dosa with mutton') return dosaWithMuttonImage;
-  if (name === 'vada with mutton') return vadaWithMuttonImage;
-  if (name === 'idly with mutton') return idlyWithMuttonImage;
-  if (name === 'puri with mutton') return puriWithMuttonImage;
+  if (name === 'egg dosa') return idliImage1;
+  if (name === 'egg appam') return idliImage1;
+  if (name === 'idly with chicken') return idliImage1;
+  if (name === 'vada with chicken') return vadaImage1;
+  if (name === 'dosa with chicken') return thaliImage;
+  if (name === 'appam with chicken') return thaliImage;
+  if (name === 'puri with chicken') return thaliImage;
+  if (name === 'vada with natukodi') return vadaImage1;
+  if (name === 'idly with natukodi') return idliImage1;
+  if (name === 'dosa with mutton') return thaliImage;
+  if (name === 'vada with mutton') return vadaImage1;
+  if (name === 'idly with mutton') return idliImage1;
+  if (name === 'puri with mutton') return thaliImage;
   
   // Veg South Indian Tiffins
-  if (name.includes('masala dosa')) return masalaDosaImage;
-  if (name.includes('rava dosa')) return ravaDosaImage;
-  if (name.includes('plain dosa')) return masalaDosaImage;
+  if (name.includes('masala dosa')) return thaliImage;
+  if (name.includes('rava dosa')) return thaliImage;
+  if (name.includes('plain dosa')) return thaliImage;
   if (name.includes('plain idly') || name.includes('plain idli')) return idliImage1;
   if (name.includes('plain vada')) return vadaImage1;
-  if (name.includes('plain appam')) return masalaDosaImage;
+  if (name.includes('plain appam')) return thaliImage;
   if (name.includes('plain puri')) return idliImage1;
-  if (name.includes('uttapam')) return uttapamImage;
-  if (name.includes('pongal')) return pongalImage;
+  if (name.includes('uttapam')) return idliImage1;
+  if (name.includes('pongal')) return thaliImage;
   
   // General patterns - be more specific to avoid false matches
-  if (name.includes('dosa') && !name.includes('paneer')) return masalaDosaImage;
+  if (name.includes('dosa') && !name.includes('paneer')) return thaliImage;
   if ((name.includes('idli') || name.includes('idly')) && !name.includes('paneer') && !name.includes('tikka')) return idliImage1;
   if (name.includes('vada') || name.includes('medu')) return vadaImage1;
   
   // North Indian Tiffins
-  if (name.includes('aloo paratha') || name.includes('paratha')) return alooParathaImage;
-  if (name.includes('chole bhature') || name.includes('bhature')) return choleBhatureImage;
-  if (name.includes('poha')) return pohaImage;
-  if (name.includes('upma')) return upmaImage;
-  if (name.includes('bread toast') || name.includes('toast')) return breadToastImage;
+  if (name.includes('aloo paratha') || name.includes('paratha')) return thaliImage;
+  if (name.includes('chole bhature') || name.includes('bhature')) return thaliImage;
+  if (name.includes('poha')) return thaliImage;
+  if (name.includes('upma')) return thaliImage;
+  if (name.includes('bread toast') || name.includes('toast')) return thaliImage;
   
   // Snacks
   if (name.includes('samosa')) return samosaImage;
@@ -1491,19 +1462,19 @@ export default function CategoryPage() {
                   <p className="text-xs text-muted-foreground">Steamed rice cakes</p>
                 </Card>
                 <Card className="p-3">
-                  <img src={masalaDosaImage} alt="Masala Dosa" className="w-full h-24 object-cover rounded-md mb-2" />
+                  <img src={thaliImage} alt="Masala Dosa" className="w-full h-24 object-cover rounded-md mb-2" />
                   <p className="text-sm font-medium">Masala Dosa</p>
                   <p className="text-xs text-muted-foreground">Crispy crepe with filling</p>
                 </Card>
                 <Card className="p-3">
-                  <img src={pongalImage} alt="Pongal" className="w-full h-24 object-cover rounded-md mb-2" />
+                  <img src={thaliImage} alt="Pongal" className="w-full h-24 object-cover rounded-md mb-2" />
                   <p className="text-sm font-medium">Pongal</p>
                   <p className="text-xs text-muted-foreground">Rice & lentil dish</p>
                 </Card>
                 {(selectedPlan === 'gold' || selectedPlan === 'platinum') && (
                   <>
                     <Card className="p-3">
-                      <img src={uttapamImage} alt="Uttapam" className="w-full h-24 object-cover rounded-md mb-2" />
+                      <img src={idliImage1} alt="Uttapam" className="w-full h-24 object-cover rounded-md mb-2" />
                       <p className="text-sm font-medium">Uttapam</p>
                       <p className="text-xs text-muted-foreground">Thick savory pancake</p>
                     </Card>
@@ -1517,12 +1488,12 @@ export default function CategoryPage() {
                 {selectedPlan === 'platinum' && (
                   <>
                     <Card className="p-3">
-                      <img src={upmaImage} alt="Upma" className="w-full h-24 object-cover rounded-md mb-2" />
+                      <img src={thaliImage} alt="Upma" className="w-full h-24 object-cover rounded-md mb-2" />
                       <p className="text-sm font-medium">Upma</p>
                       <p className="text-xs text-muted-foreground">Semolina breakfast</p>
                     </Card>
                     <Card className="p-3">
-                      <img src={pohaImage} alt="Poha" className="w-full h-24 object-cover rounded-md mb-2" />
+                      <img src={thaliImage} alt="Poha" className="w-full h-24 object-cover rounded-md mb-2" />
                       <p className="text-sm font-medium">Poha</p>
                       <p className="text-xs text-muted-foreground">Flattened rice dish</p>
                     </Card>
