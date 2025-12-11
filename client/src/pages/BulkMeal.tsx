@@ -1178,7 +1178,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
         </div>
       </div>
       {/* Content below green background */}
-      <div className="relative z-10 px-4" style={{ marginTop: "16px", paddingTop: "0px" }}>
+      <div className="z-10 px-4" style={{ marginTop: "16px", paddingTop: "0px" }}>
 
         {/* Dish Selection Section */}
         <div className="space-y-2">
