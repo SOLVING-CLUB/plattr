@@ -3610,16 +3610,9 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                             )}
                           </div>
                           <div className="p-3 md:p-4">
-                            <h3 className="font-bold text-sm md:text-base mb-1 line-clamp-1" data-testid={`text-dish-name-${item.id}`}>
+                            <h3 className="font-bold text-sm md:text-base mb-3" data-testid={`text-dish-name-${item.id}`}>
                               {item.name}
                             </h3>
-                            {dish?.description && (
-                              <div className="mb-3">
-                                <p className="text-xs text-muted-foreground line-clamp-2" data-testid={`text-dish-description-${item.id}`}>
-                                  {dish.description}
-                                </p>
-                              </div>
-                            )}
                             <div className="flex items-center justify-between gap-2 mb-2">
                               <span className="text-primary font-bold text-lg" data-testid={`text-dish-price-${item.id}`}>
                                 ₹{item.price.toFixed(0)}
