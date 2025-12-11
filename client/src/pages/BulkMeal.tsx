@@ -1145,94 +1145,94 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
             <span className="text-[10px] sm:text-[12px] leading-none">Hi-Tea</span>
           </button>
         </div>
+
+        {/* Filters & Sort - Single Row - Inside sticky container */}
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide pt-3 pb-2">
+          <button
+            onClick={() => { handleInteraction(); setDietaryMode('all'); }}
+            className={cn(
+              "flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium transition-all flex-shrink-0",
+              dietaryMode === 'all'
+                ? "bg-[#06352A] text-white"
+                : "bg-gray-100 text-gray-600"
+            )}
+            style={{ fontFamily: "Sweet Sans Pro" }}
+            data-testid="filter-dietary-all"
+          >
+            <Sparkles className="w-2.5 h-2.5" />
+            All
+          </button>
+          <button
+            onClick={() => { handleInteraction(); setDietaryMode('veg'); }}
+            className={cn(
+              "flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium transition-all flex-shrink-0",
+              dietaryMode === 'veg'
+                ? "bg-[#1A9952] text-white"
+                : "bg-gray-100 text-gray-600"
+            )}
+            style={{ fontFamily: "Sweet Sans Pro" }}
+            data-testid="filter-dietary-veg"
+          >
+            <Leaf className="w-2.5 h-2.5" />
+            Veg
+          </button>
+          <button
+            onClick={() => { handleInteraction(); setDietaryMode('egg'); }}
+            className={cn(
+              "flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium transition-all flex-shrink-0",
+              dietaryMode === 'egg'
+                ? "bg-[#F59E0B] text-white"
+                : "bg-gray-100 text-gray-600"
+            )}
+            style={{ fontFamily: "Sweet Sans Pro" }}
+            data-testid="filter-dietary-egg"
+          >
+            <Egg className="w-2.5 h-2.5" />
+            Egg
+          </button>
+          <button
+            onClick={() => { handleInteraction(); setDietaryMode('non-veg'); }}
+            className={cn(
+              "flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium transition-all flex-shrink-0",
+              dietaryMode === 'non-veg'
+                ? "bg-[#DC2626] text-white"
+                : "bg-gray-100 text-gray-600"
+            )}
+            style={{ fontFamily: "Sweet Sans Pro" }}
+            data-testid="filter-dietary-nonveg"
+          >
+            <Drumstick className="w-2.5 h-2.5" />
+            Non-Veg
+          </button>
+
+          {/* Sort Dropdown */}
+          <Select value={sortOption} onValueChange={(value) => setSortOption(value as typeof sortOption)}>
+            <SelectTrigger
+              className="w-auto h-6 px-2 text-[10px] bg-white border-gray-200 rounded-full gap-0.5 flex-shrink-0"
+              style={{ fontFamily: "Sweet Sans Pro" }}
+              data-testid="select-sort"
+            >
+              <ArrowUpDown className="w-2.5 h-2.5" />
+              <SelectValue placeholder="Sort" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="price-low">Price: Low → High</SelectItem>
+              <SelectItem value="price-high">Price: High → Low</SelectItem>
+              <SelectItem value="name-az">Name: A → Z</SelectItem>
+              <SelectItem value="name-za">Name: Z → A</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
-      {/* Content below green background */}
-      <div className="relative z-10 px-4" style={{ marginTop: "16px", paddingTop: "0px" }}>
+      {/* Content below sticky header */}
+      <div className="relative z-10 px-4" style={{ marginTop: "0px", paddingTop: "0px" }}>
 
         {/* Dish Selection Section */}
         <div className="space-y-2">
-          {/* Filters & Sort - Single Row */}
-          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide mb-4">
-            <button
-              onClick={() => { handleInteraction(); setDietaryMode('all'); }}
-              className={cn(
-                "flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium transition-all flex-shrink-0",
-                dietaryMode === 'all'
-                  ? "bg-[#06352A] text-white"
-                  : "bg-gray-100 text-gray-600"
-              )}
-              style={{ fontFamily: "Sweet Sans Pro" }}
-              data-testid="filter-dietary-all"
-            >
-              <Sparkles className="w-2.5 h-2.5" />
-              All
-            </button>
-            <button
-              onClick={() => { handleInteraction(); setDietaryMode('veg'); }}
-              className={cn(
-                "flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium transition-all flex-shrink-0",
-                dietaryMode === 'veg'
-                  ? "bg-[#1A9952] text-white"
-                  : "bg-gray-100 text-gray-600"
-              )}
-              style={{ fontFamily: "Sweet Sans Pro" }}
-              data-testid="filter-dietary-veg"
-            >
-              <Leaf className="w-2.5 h-2.5" />
-              Veg
-            </button>
-            <button
-              onClick={() => { handleInteraction(); setDietaryMode('egg'); }}
-              className={cn(
-                "flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium transition-all flex-shrink-0",
-                dietaryMode === 'egg'
-                  ? "bg-[#F59E0B] text-white"
-                  : "bg-gray-100 text-gray-600"
-              )}
-              style={{ fontFamily: "Sweet Sans Pro" }}
-              data-testid="filter-dietary-egg"
-            >
-              <Egg className="w-2.5 h-2.5" />
-              Egg
-            </button>
-            <button
-              onClick={() => { handleInteraction(); setDietaryMode('non-veg'); }}
-              className={cn(
-                "flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium transition-all flex-shrink-0",
-                dietaryMode === 'non-veg'
-                  ? "bg-[#DC2626] text-white"
-                  : "bg-gray-100 text-gray-600"
-              )}
-              style={{ fontFamily: "Sweet Sans Pro" }}
-              data-testid="filter-dietary-nonveg"
-            >
-              <Drumstick className="w-2.5 h-2.5" />
-              Non-Veg
-            </button>
-
-            {/* Sort Dropdown */}
-            <Select value={sortOption} onValueChange={(value) => setSortOption(value as typeof sortOption)}>
-              <SelectTrigger
-                className="w-auto h-6 px-2 text-[10px] bg-white border-gray-200 rounded-full gap-0.5 flex-shrink-0"
-                style={{ fontFamily: "Sweet Sans Pro" }}
-                data-testid="select-sort"
-              >
-                <ArrowUpDown className="w-2.5 h-2.5" />
-                <SelectValue placeholder="Sort" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="price-low">Price: Low → High</SelectItem>
-                <SelectItem value="price-high">Price: High → Low</SelectItem>
-                <SelectItem value="name-az">Name: A → Z</SelectItem>
-                <SelectItem value="name-za">Name: Z → A</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
           {/* CategoryPage-style Layout */}
           <div className="flex gap-0 flex-1 w-full max-w-full">
             {/* Left Sidebar - Category Filters (Starters, Sides, Mains, etc.) - Sticky with internal scroll */}
-            <aside className="w-20 md:w-24 border-r bg-card/50 backdrop-blur-sm flex-shrink-0 sticky self-start" style={{ top: '212px', maxHeight: 'calc(100vh - 212px)', overflowY: 'auto' }}>
+            <aside className="w-20 md:w-24 border-r bg-card/50 backdrop-blur-sm flex-shrink-0 sticky self-start" style={{ top: '180px', maxHeight: 'calc(100vh - 180px)', overflowY: 'auto' }}>
               <div className="flex flex-col py-3">
                 {/* Always show "All" option */}
                 <button
