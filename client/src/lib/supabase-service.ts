@@ -284,17 +284,9 @@ export const orderService = {
     const tax = Math.round(subtotal * 0.05);
     const total = subtotal + deliveryFee + tax;
 
-    // Get next order number
-    const { data: lastOrder } = await supabase
-      .from('orders')
-      .select('order_number')
-      .order('order_number', { ascending: false })
-      .limit(1)
-      .single();
-
-    const nextOrderNumber = lastOrder?.order_number 
-      ? lastOrder.order_number + 1 
-      : 10000001;
+    // Generate unique order number (max 2147483647 for integer)
+    const timePart = Date.now() % 100000000;
+    const nextOrderNumber = Math.floor(timePart / 100) + Math.floor(Math.random() * 1000)
 
     // Create order
     const { data: order, error: orderError } = await supabase
@@ -663,17 +655,9 @@ export const bulkMealOrderService = {
     const user = await getAuthenticatedUser();
     if (!user) throw new Error('Not authenticated');
 
-    // Get next order number
-    const { data: lastOrder } = await supabase
-      .from('bulk_meal_orders')
-      .select('order_number')
-      .order('order_number', { ascending: false })
-      .limit(1)
-      .single();
-
-    const nextOrderNumber = lastOrder?.order_number 
-      ? lastOrder.order_number + 1 
-      : 30000001; // Start from 30M
+    // Generate unique order number (max 2147483647 for integer)
+    const timePart = Date.now() % 100000000;
+    const nextOrderNumber = Math.floor(timePart / 100) + Math.floor(Math.random() * 1000)
 
     const { data, error } = await supabase
       .from('bulk_meal_orders')
@@ -768,17 +752,9 @@ export const cateringOrderService = {
     // Get user if authenticated (optional for catering orders)
     const { data: { user } } = await supabase.auth.getUser();
 
-    // Get next order number
-    const { data: lastOrder } = await supabase
-      .from('catering_orders')
-      .select('order_number')
-      .order('order_number', { ascending: false })
-      .limit(1)
-      .single();
-
-    const nextOrderNumber = lastOrder?.order_number 
-      ? lastOrder.order_number + 1 
-      : 40000001; // Start from 40M
+    // Generate unique order number (max 2147483647 for integer)
+    const timePart = Date.now() % 100000000;
+    const nextOrderNumber = Math.floor(timePart / 100) + Math.floor(Math.random() * 1000)
 
     const { data, error } = await supabase
       .from('catering_orders')
@@ -859,17 +835,9 @@ export const corporateOrderService = {
     // Get user if authenticated (optional for corporate orders)
     const { data: { user } } = await supabase.auth.getUser();
 
-    // Get next order number
-    const { data: lastOrder } = await supabase
-      .from('corporate_orders')
-      .select('order_number')
-      .order('order_number', { ascending: false })
-      .limit(1)
-      .single();
-
-    const nextOrderNumber = lastOrder?.order_number 
-      ? lastOrder.order_number + 1 
-      : 50000001; // Start from 50M
+    // Generate unique order number (max 2147483647 for integer)
+    const timePart = Date.now() % 100000000;
+    const nextOrderNumber = Math.floor(timePart / 100) + Math.floor(Math.random() * 1000)
 
     const { data, error } = await supabase
       .from('corporate_orders')
