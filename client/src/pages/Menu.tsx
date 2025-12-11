@@ -897,24 +897,16 @@ export default function Menu() {
                   </div>
                   <div className="text-center w-full px-1">
                     <span className={cn(
-                      "text-xs md:text-sm font-semibold block line-clamp-1 leading-tight mb-1",
+                      "text-xs md:text-sm font-semibold block line-clamp-1 leading-tight",
                       selectedCategory === 'all' ? "text-primary" : "text-foreground"
                     )}>
                       All
                     </span>
-                    <Badge 
-                      variant={selectedCategory === 'all' ? "default" : "secondary"}
-                      className="text-[10px] h-5 px-2 font-medium"
-                    >
-                      {allDishes.length}
-                    </Badge>
                   </div>
                 </button>
 
                 {/* Show category options (Starters, Sides, Mains, etc.) */}
                 {categories.map((cat) => {
-                  const totalInCategory = getDishCountForCategory(cat.id);
-                  
                   return (
                     <button
                       key={cat.id}
@@ -953,17 +945,11 @@ export default function Menu() {
                       </div>
                       <div className="text-center w-full px-1">
                         <span className={cn(
-                          "text-xs md:text-sm font-semibold block line-clamp-2 leading-tight mb-1",
+                          "text-xs md:text-sm font-semibold block line-clamp-2 leading-tight",
                           selectedCategory === cat.id ? "text-primary" : "text-foreground"
                         )}>
                           {cat.name}
                         </span>
-                        <Badge 
-                          variant={selectedCategory === cat.id ? "default" : "secondary"}
-                          className="text-[10px] h-5 px-2 font-medium"
-                        >
-                          {totalInCategory}
-                        </Badge>
                       </div>
                     </button>
                   );
