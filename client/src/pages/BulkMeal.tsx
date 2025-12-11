@@ -304,10 +304,12 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
   const [dishDetailOpen, setDishDetailOpen] = useState(false);
   const [detailDish, setDetailDish] = useState<Dish | null>(null);
   const [isStuck, setIsStuck] = useState(false);
+  const [headerScrolled, setHeaderScrolled] = useState(false);
   const [quantities, setQuantities] = useState<Record<number, number>>({});
   const hasInteractedRef = useRef(false);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const headerSentinelRef = useRef<HTMLDivElement>(null);
 
   const openDishDetail = (dish: Dish) => {
     setDetailDish(dish);
@@ -358,6 +360,28 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
       ([entry]) => {
         // When sentinel is not visible, sticky element is stuck
         setIsStuck(!entry.isIntersecting);
+      },
+      {
+        threshold: 0,
+        rootMargin: '-1px 0px 0px 0px'
+      }
+    );
+
+    observer.observe(sentinel);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  // Detect when header has scrolled (for header background transition)
+  useEffect(() => {
+    const sentinel = headerSentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setHeaderScrolled(!entry.isIntersecting);
       },
       {
         threshold: 0,
@@ -909,7 +933,10 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
   }
 
   return (
-    <div className="min-h-screen pb-24 relative">
+    <div className="min-h-screen pb-24 relative bg-[#FDF8F3]">
+      {/* Sentinel element for header scroll detection - placed at top for reliable intersection detection */}
+      <div ref={headerSentinelRef} className="absolute top-0 left-0 right-0" style={{ height: "1px" }} />
+      
       {/* Blue Geometric Background Header */}
       <div
         className="absolute top-0 left-0 right-0 z-0"
