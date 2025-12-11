@@ -1223,6 +1223,33 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
             </SelectContent>
           </Select>
         </div>
+
+        {/* Dish Type Categories (65's, Biryani, Breads, etc.) - Inside sticky container */}
+        {dishTypes.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide pt-2">
+            {dishTypes.map((dishType) => (
+              <button
+                key={dishType}
+                onClick={() => { handleInteraction(); setSelectedDishType(dishType); }}
+                className={cn(
+                  "flex items-center px-3 py-1.5 border transition-all flex-shrink-0",
+                  selectedDishType === dishType
+                    ? "border-[#1A9952] bg-white shadow-sm"
+                    : "border-gray-200 bg-white hover:border-gray-300"
+                )}
+                style={{ borderRadius: '10px' }}
+                data-testid={`tab-dishtype-${dishType.toLowerCase()}`}
+              >
+                <span className={cn(
+                  "text-xs font-semibold whitespace-nowrap",
+                  selectedDishType === dishType ? "text-primary" : "text-foreground"
+                )}>
+                  {dishType}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
       {/* Content below sticky header */}
       <div className="relative z-10 px-4" style={{ marginTop: "0px", paddingTop: "0px" }}>
@@ -1310,38 +1337,6 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
 
             {/* Right Content - Dishes Grid */}
             <div className="flex-1 px-3 md:px-4 py-4 md:py-6 min-w-0 overflow-y-auto overflow-x-hidden pb-20 md:pb-6">
-              {/* Horizontal Dish Type Tabs - Sticky (65's, Chilli, Fry, etc.) - Only show when there are dish types */}
-              {dishTypes.length > 0 && (
-                <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm pb-3 mb-2 -mx-3 md:-mx-4 px-3 md:px-4" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
-                  <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide px-1 pt-2">
-                    {/* Dish type options (65's, Chilli, Fry, etc.) - Compact pill design */}
-                    {dishTypes.map((dishType) => {
-                      return (
-                        <button
-                          key={dishType}
-                          onClick={() => { handleInteraction(); setSelectedDishType(dishType); }}
-                          className={cn(
-                            "flex items-center px-3 py-1.5 border transition-all flex-shrink-0",
-                            selectedDishType === dishType
-                              ? "border-[#1A9952] bg-white shadow-sm"
-                              : "border-gray-200 bg-white hover:border-gray-300"
-                          )}
-                          style={{ borderRadius: '10px' }}
-                          data-testid={`tab-dishtype-${dishType.toLowerCase()}`}
-                        >
-                          <span className={cn(
-                            "text-xs md:text-sm font-semibold whitespace-nowrap",
-                            selectedDishType === dishType ? "text-primary" : "text-foreground"
-                          )}>
-                            {dishType}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
               <div className="mb-4">
                 <h2 className="text-xl font-bold font-serif" data-testid="text-section-title">
                   {categories.find(c => c.id === selectedCategory)?.name || 'All Categories'}
