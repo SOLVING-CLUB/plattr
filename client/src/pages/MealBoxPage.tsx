@@ -1019,7 +1019,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { LazyImage } from "@/components/ui/lazy-image";
-import { ArrowLeft, Building2, MapPin, ShoppingCart, UtensilsCrossed, Package, Truck, Search, Check, ChevronRight, ChevronLeft, Star, ArrowUpDown, SlidersHorizontal, LayoutGrid, Leaf, Drumstick, Egg, Sparkles } from "lucide-react";
+import { ArrowLeft, Building2, MapPin, ShoppingCart, UtensilsCrossed, Package, Truck, Search, Check, ChevronRight, ChevronLeft, Star, ArrowUpDown, SlidersHorizontal, LayoutGrid, Leaf, Drumstick, Egg, Sparkles, Phone } from "lucide-react";
 
 // Define missing types locally to resolve import errors
 export interface Dish {
@@ -4728,6 +4728,15 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
       </div>
       {/* Continue Order Banner */}
       <ContinueOrderBanner />
+      {/* Floating Call Button */}
+      <a
+        href="tel:+919876543210"
+        className="fixed right-4 bottom-24 z-50 w-14 h-14 bg-[#1A9952] rounded-full flex items-center justify-center shadow-lg hover:bg-[#158043] transition-colors"
+        data-testid="button-call"
+        aria-label="Call us"
+      >
+        <Phone className="w-6 h-6 text-white" />
+      </a>
       {/* Floating Bottom Navigation */}
       <FloatingNav activeTab={activeTab} onTabChange={handleTabChange} />
     </div>

@@ -1731,6 +1731,15 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
         </div>
       )}
 
+      {/* Floating Call Button */}
+      <a
+        href="tel:+919876543210"
+        className="fixed right-4 bottom-24 z-50 w-14 h-14 bg-[#1A9952] rounded-full flex items-center justify-center shadow-lg hover:bg-[#158043] transition-colors"
+        data-testid="button-call"
+        aria-label="Call us"
+      >
+        <Phone className="w-6 h-6 text-white" />
+      </a>
       <FloatingNav activeTab={activeTab} onTabChange={handleTabChange} />
     </div>
     </PageWithLoader>
