@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, ReactNode } from "react";
+import splashVideo from "@assets/The_background_which_202512111311_m25iy (1).mp4";
 
 interface PageLoaderContextType {
   isLoading: boolean;
@@ -36,52 +37,30 @@ export function PageLoaderProvider({ children }: PageLoaderProviderProps) {
 
 function PageLoaderOverlay() {
   return (
-    <div 
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-white/80 backdrop-blur-sm"
-      style={{ fontFamily: "Sweet Sans Pro" }}
-    >
-      <div className="flex flex-col items-center gap-3">
-        <div 
-          className="w-10 h-10 border-3 border-t-transparent rounded-full animate-spin"
-          style={{ 
-            borderColor: "#1A9952",
-            borderTopColor: "transparent",
-            borderWidth: "3px"
-          }}
-        />
-        <span 
-          className="text-sm font-medium"
-          style={{ color: "#1A9952" }}
-        >
-          Loading...
-        </span>
-      </div>
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black">
+      <video
+        src={splashVideo}
+        autoPlay
+        muted
+        playsInline
+        loop
+        className="w-full h-full object-cover"
+      />
     </div>
   );
 }
 
 export function PageLoader() {
   return (
-    <div 
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-white/80 backdrop-blur-sm"
-      style={{ fontFamily: "Sweet Sans Pro" }}
-    >
-      <div className="flex flex-col items-center gap-3">
-        <div 
-          className="w-10 h-10 border-3 border-t-transparent rounded-full animate-spin"
-          style={{ 
-            borderColor: "#1A9952",
-            borderTopColor: "transparent",
-            borderWidth: "3px"
-          }}
-        />
-        <span 
-          className="text-sm font-medium"
-          style={{ color: "#1A9952" }}
-        >
-          Loading...
-        </span>
-      </div>
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black">
+      <video
+        src={splashVideo}
+        autoPlay
+        muted
+        playsInline
+        loop
+        className="w-full h-full object-cover"
+      />
     </div>
   );
 }
