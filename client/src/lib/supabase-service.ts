@@ -9,6 +9,37 @@ import { supabaseAuth } from './supabase-auth';
 const supabase = supabaseAuth;
 
 /**
+ * Ensure user exists in public.users table (auto-create if missing)
+ * This handles the case where Supabase Auth user exists but no corresponding DB record
+ */
+async function ensureUserExists(authUser: { id: string; phone?: string; email?: string }): Promise<void> {
+  // Check if user exists in database
+  const { data: existingUser } = await supabase
+    .from('users')
+    .select('id')
+    .eq('id', authUser.id)
+    .single();
+
+  if (!existingUser) {
+    // Create user record with Auth user ID
+    const phone = authUser.phone?.replace('+91', '') || authUser.email?.split('@')[0] || '';
+    const { error: insertError } = await supabase
+      .from('users')
+      .insert({
+        id: authUser.id,
+        username: `user_${Math.floor(1000 + Math.random() * 9000)}`,
+        phone: phone,
+        password: 'OTP_AUTH',
+        is_verified: true,
+      });
+
+    if (insertError && !insertError.message.includes('duplicate')) {
+      console.error('Error creating user record:', insertError);
+    }
+  }
+}
+
+/**
  * Get authenticated user - checks Supabase session first, then falls back to localStorage
  * This supports both Supabase Auth sessions and our custom OTP auth
  */
@@ -16,6 +47,8 @@ async function getAuthenticatedUser(): Promise<{ id: string; phone?: string; ema
   // First try Supabase auth
   const { data: { user } } = await supabase.auth.getUser();
   if (user) {
+    // Ensure user exists in database (auto-create if missing)
+    await ensureUserExists({ id: user.id, phone: user.phone || undefined, email: user.email || undefined });
     return { id: user.id, phone: user.phone || undefined, email: user.email || undefined };
   }
   
