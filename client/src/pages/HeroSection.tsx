@@ -2,7 +2,7 @@ import { ChevronRight } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { LazyImage } from "@/components/ui/lazy-image";
 import heroBanner from "@assets/Banner - 60 mins_1763877285748.png";
-import heroVideo from "@assets/Untitled_design_(4)_1765414167200.mp4";
+import heroVideo from "@assets/Untitled_design_(4)_1765414387896.mov";
 
 interface HeroSectionProps {
   onExploreMenu?: () => void;
