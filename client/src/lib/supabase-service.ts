@@ -9,6 +9,27 @@ import { supabaseAuth } from './supabase-auth';
 const supabase = supabaseAuth;
 
 /**
+ * Get authenticated user - checks Supabase session first, then falls back to localStorage
+ * This supports both Supabase Auth sessions and our custom OTP auth
+ */
+async function getAuthenticatedUser(): Promise<{ id: string; phone?: string; email?: string } | null> {
+  // First try Supabase auth
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    return { id: user.id, phone: user.phone || undefined, email: user.email || undefined };
+  }
+  
+  // Fall back to localStorage (OTP auth)
+  const userId = localStorage.getItem('userId');
+  const phone = localStorage.getItem('phone');
+  if (userId && phone) {
+    return { id: userId, phone, email: localStorage.getItem('email') || undefined };
+  }
+  
+  return null;
+}
+
+/**
  * User Profile Operations
  */
 export const userService = {
@@ -16,7 +37,7 @@ export const userService = {
    * Get current user profile
    */
   async getProfile() {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthenticatedUser();
     if (!user) throw new Error('Not authenticated');
 
     const { data, error } = await supabase
@@ -39,7 +60,7 @@ export const userService = {
    * Update user profile
    */
   async updateProfile(updates: { username?: string; email?: string; phone?: string }) {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthenticatedUser();
     if (!user) throw new Error('Not authenticated');
 
     // Check for duplicates
@@ -89,7 +110,7 @@ export const addressService = {
    * Get all addresses for current user
    */
   async getAll() {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthenticatedUser();
     if (!user) throw new Error('Not authenticated');
 
     const { data, error } = await supabase
@@ -113,7 +134,7 @@ export const addressService = {
    * Create new address
    */
   async create(address: { label: string; address: string; landmark?: string; isDefault?: boolean }) {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthenticatedUser();
     if (!user) throw new Error('Not authenticated');
 
     // If setting as default, unset other defaults
@@ -152,7 +173,7 @@ export const addressService = {
    * Update address
    */
   async update(id: string, updates: { label?: string; address?: string; landmark?: string; isDefault?: boolean }) {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthenticatedUser();
     if (!user) throw new Error('Not authenticated');
 
     // Verify ownership
@@ -203,7 +224,7 @@ export const addressService = {
    * Delete address
    */
   async delete(id: string) {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthenticatedUser();
     if (!user) throw new Error('Not authenticated');
 
     // Verify ownership
@@ -233,7 +254,7 @@ export const orderService = {
    * Create a new order
    */
   async create(addressId: string, deliveryDate: string, deliveryTime: string) {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthenticatedUser();
     if (!user) throw new Error('Not authenticated');
 
     // Fetch cart items
@@ -326,7 +347,7 @@ export const orderService = {
    * Get all orders for current user
    */
   async getAll() {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthenticatedUser();
     if (!user) throw new Error('Not authenticated');
 
     const { data: orders, error } = await supabase
@@ -392,7 +413,7 @@ export const orderService = {
    * Get order by ID
    */
   async getById(orderId: string) {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthenticatedUser();
     if (!user) throw new Error('Not authenticated');
 
     const { data: order, error } = await supabase
@@ -546,7 +567,7 @@ export const mealboxOrderService = {
     deliveryTime?: string;
     addressId?: string;
   }) {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthenticatedUser();
     if (!user) throw new Error('Not authenticated');
 
     // Get next order number
@@ -596,7 +617,7 @@ export const mealboxOrderService = {
    * Get all MealBox orders for current user
    */
   async getAll() {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthenticatedUser();
     if (!user) throw new Error('Not authenticated');
 
     const { data, error } = await supabase
@@ -613,7 +634,7 @@ export const mealboxOrderService = {
    * Get MealBox order by ID
    */
   async getById(orderId: string) {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthenticatedUser();
     if (!user) throw new Error('Not authenticated');
 
     const { data, error } = await supabase
@@ -647,7 +668,7 @@ export const bulkMealOrderService = {
     deliveryTime?: string;
     addressId?: string;
   }) {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthenticatedUser();
     if (!user) throw new Error('Not authenticated');
 
     // Get next order number
@@ -692,7 +713,7 @@ export const bulkMealOrderService = {
    * Get all Bulk Meal orders for current user
    */
   async getAll() {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthenticatedUser();
     if (!user) throw new Error('Not authenticated');
 
     const { data, error } = await supabase
@@ -709,7 +730,7 @@ export const bulkMealOrderService = {
    * Get Bulk Meal order by ID
    */
   async getById(orderId: string) {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthenticatedUser();
     if (!user) throw new Error('Not authenticated');
 
     const { data, error } = await supabase
@@ -804,7 +825,7 @@ export const cateringOrderService = {
    * Get all Catering orders for current user (if authenticated)
    */
   async getAll() {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthenticatedUser();
     if (!user) throw new Error('Not authenticated');
 
     const { data, error } = await supabase
@@ -892,7 +913,7 @@ export const corporateOrderService = {
    * Get all Corporate orders for current user (if authenticated)
    */
   async getAll() {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getAuthenticatedUser();
     if (!user) throw new Error('Not authenticated');
 
     const { data, error } = await supabase
