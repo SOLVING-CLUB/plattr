@@ -307,7 +307,7 @@ function App() {
     // Wait for auth to initialize
     if (!initialized || loading) return;
 
-    // Start fade out after 2 seconds
+    // Start fade out after 2 minutes (120 seconds) to let video play fully
     const timer = setTimeout(() => {
       if (splashCompleted.current) return;
       
@@ -327,7 +327,7 @@ function App() {
           setLocation('/phone', { replace: true });
         }
       }, 500);
-      }, 2000);
+      }, 120000);
 
       return () => clearTimeout(timer);
   }, [initialized, loading, isAuthenticated, setLocation]);
