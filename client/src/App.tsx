@@ -288,14 +288,20 @@ function Router() {
 }
 
 function App() {
-  const [showSplash, setShowSplash] = useState(() => {
-    // Check if splash was already shown this session
-    return sessionStorage.getItem('splashSeen') !== 'true';
-  });
+  // Check sessionStorage directly on every mount to ensure splash only shows once per session
+  const splashSeenInSession = sessionStorage.getItem('splashSeen') === 'true';
+  
+  const [showSplash, setShowSplash] = useState(!splashSeenInSession);
   const [fadeOut, setFadeOut] = useState(false);
   const [, setLocation] = useLocation();
-  const splashCompleted = useRef(sessionStorage.getItem('splashSeen') === 'true');
   const { isAuthenticated, loading, initialized } = useAuth();
+
+  // Sync splash state with sessionStorage on mount (handles HMR and edge cases)
+  useEffect(() => {
+    if (sessionStorage.getItem('splashSeen') === 'true') {
+      setShowSplash(false);
+    }
+  }, []);
 
   // Force light theme only - ensure dark mode is never enabled
   useEffect(() => {
@@ -305,13 +311,13 @@ function App() {
 
   // Handle splash screen video end
   const handleVideoEnd = () => {
-    if (splashCompleted.current) return;
+    // Double-check sessionStorage to prevent any race conditions
+    if (sessionStorage.getItem('splashSeen') === 'true') return;
     
     setFadeOut(true);
     
     // After fade animation, hide splash and navigate
     setTimeout(() => {
-      splashCompleted.current = true;
       sessionStorage.setItem('splashSeen', 'true');
       setShowSplash(false);
       
@@ -331,7 +337,7 @@ function App() {
       <CartProvider>
         <PageLoaderProvider>
           <Toaster />
-          {showSplash && (
+          {showSplash && !splashSeenInSession && (
             <div
               className={`fixed inset-0 transition-opacity duration-500 ${
                 fadeOut ? "opacity-0 pointer-events-none" : "opacity-100"
