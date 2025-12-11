@@ -295,13 +295,19 @@ function App() {
   const [fadeOut, setFadeOut] = useState(false);
   const [, setLocation] = useLocation();
   const { isAuthenticated, loading, initialized } = useAuth();
+  const splashMarkedRef = useRef(false);
 
-  // Sync splash state with sessionStorage on mount (handles HMR and edge cases)
+  // Mark splash as seen IMMEDIATELY on first mount (before video ends)
+  // This prevents the splash from re-appearing during navigation
   useEffect(() => {
     if (sessionStorage.getItem('splashSeen') === 'true') {
       setShowSplash(false);
+    } else if (!splashMarkedRef.current && showSplash) {
+      // Set the flag immediately when splash is first shown
+      splashMarkedRef.current = true;
+      sessionStorage.setItem('splashSeen', 'true');
     }
-  }, []);
+  }, [showSplash]);
 
   // Force light theme only - ensure dark mode is never enabled
   useEffect(() => {
@@ -311,14 +317,12 @@ function App() {
 
   // Handle splash screen video end
   const handleVideoEnd = () => {
-    // Double-check sessionStorage to prevent any race conditions
-    if (sessionStorage.getItem('splashSeen') === 'true') return;
+    if (!showSplash) return;
     
     setFadeOut(true);
     
     // After fade animation, hide splash and navigate
     setTimeout(() => {
-      sessionStorage.setItem('splashSeen', 'true');
       setShowSplash(false);
       
       // Simple navigation logic:
@@ -337,7 +341,7 @@ function App() {
       <CartProvider>
         <PageLoaderProvider>
           <Toaster />
-          {showSplash && !splashSeenInSession && (
+          {showSplash && (
             <div
               className={`fixed inset-0 transition-opacity duration-500 ${
                 fadeOut ? "opacity-0 pointer-events-none" : "opacity-100"
