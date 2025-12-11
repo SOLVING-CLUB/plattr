@@ -304,12 +304,10 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
   const [dishDetailOpen, setDishDetailOpen] = useState(false);
   const [detailDish, setDetailDish] = useState<Dish | null>(null);
   const [isStuck, setIsStuck] = useState(false);
-  const [headerScrolled, setHeaderScrolled] = useState(false);
   const [quantities, setQuantities] = useState<Record<number, number>>({});
   const hasInteractedRef = useRef(false);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const headerSentinelRef = useRef<HTMLDivElement>(null);
 
   const openDishDetail = (dish: Dish) => {
     setDetailDish(dish);
@@ -360,28 +358,6 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
       ([entry]) => {
         // When sentinel is not visible, sticky element is stuck
         setIsStuck(!entry.isIntersecting);
-      },
-      {
-        threshold: 0,
-        rootMargin: '-1px 0px 0px 0px'
-      }
-    );
-
-    observer.observe(sentinel);
-
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
-
-  // Detect when header has scrolled (for header background transition)
-  useEffect(() => {
-    const sentinel = headerSentinelRef.current;
-    if (!sentinel) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        setHeaderScrolled(!entry.isIntersecting);
       },
       {
         threshold: 0,
@@ -853,7 +829,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
   // Show loading skeleton while initial data loads
   if (isInitialLoading) {
     return (
-      <div className="min-h-screen pb-24 relative overflow-x-hidden">
+      <div className="min-h-screen pb-24 relative">
         {/* Blue Geometric Background Header */}
         <div
           className="absolute top-0 left-0 right-0 z-0"
@@ -933,10 +909,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
   }
 
   return (
-    <div className="min-h-screen pb-24 relative bg-[#FDF8F3]">
-      {/* Sentinel element for header scroll detection - placed at top for reliable intersection detection */}
-      <div ref={headerSentinelRef} className="absolute top-0 left-0 right-0" style={{ height: "1px" }} />
-      
+    <div className="min-h-screen pb-24 relative">
       {/* Blue Geometric Background Header */}
       <div
         className="absolute top-0 left-0 right-0 z-0"
@@ -948,6 +921,8 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
           height: "350px",
         }}
       />
+      {/* Sentinel element for sticky detection - placed at top for reliable intersection detection */}
+      <div ref={sentinelRef} className="absolute top-0 left-0 right-0" style={{ height: "1px" }} />
       {/* Sticky Back Button Header - uses isStuck from IntersectionObserver for performance */}
       <div
         className="sticky top-0 z-50 transition-all duration-200"
@@ -1080,10 +1055,6 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
           )}
         </div>
       </div>
-
-      {/* Sentinel element for sticky search bar detection */}
-      <div ref={sentinelRef} style={{ height: "1px" }} />
-
       {/* Sticky Search Bar and Meal Category Container - Outside header for proper sticky behavior */}
       <div
         className="sticky z-40 px-4 pb-2 pt-4 transition-all duration-200"
@@ -1178,7 +1149,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
         </div>
       </div>
       {/* Content below green background */}
-      <div className="z-10 px-4" style={{ marginTop: "16px", paddingTop: "0px" }}>
+      <div className="relative z-10 px-4" style={{ marginTop: "16px", paddingTop: "0px" }}>
 
         {/* Dish Selection Section */}
         <div className="space-y-2">
@@ -1321,10 +1292,6 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                         alt={cat.name}
                         loading="lazy"
                         className="w-full h-full object-cover"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.src = CATEGORY_IMAGES[cat.id] || idliImage1;
-                        }}
                       />
                       {selectedCategory === cat.id && (
                         <div className="absolute inset-0 bg-gradient-to-t from-primary/30 to-transparent pointer-events-none" />
@@ -1344,10 +1311,10 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
             </aside>
 
             {/* Right Content - Dishes Grid */}
-            <div className="flex-1 flex flex-col min-h-0 min-w-0 px-3 md:px-4 py-2 md:py-3">
-              {/* Horizontal Dish Type Tabs (65's, Chilli, Fry, etc.) - Outside scroll container */}
+            <div className="flex-1 px-3 md:px-4 py-4 md:py-6 min-w-0 overflow-y-auto overflow-x-hidden pb-20 md:pb-6">
+              {/* Horizontal Dish Type Tabs - Sticky (65's, Chilli, Fry, etc.) - Only show when there are dish types */}
               {dishTypes.length > 0 && (
-                <div className="bg-background/95 backdrop-blur-sm pb-3 mb-2 -mx-3 md:-mx-4 px-3 md:px-4 flex-shrink-0">
+                <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm pb-3 mb-2 -mx-3 md:-mx-4 px-3 md:px-4" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
                   <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide px-1 pt-2">
                     {/* Dish type options (65's, Chilli, Fry, etc.) - Compact pill design */}
                     {dishTypes.map((dishType) => {
@@ -1387,16 +1354,14 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                 </div>
               )}
 
-              <div className="mb-4 flex-shrink-0">
+              <div className="mb-4">
                 <h2 className="text-xl font-bold font-serif" data-testid="text-section-title">
                   {categories.find(c => c.id === selectedCategory)?.name || 'All Categories'}
                 </h2>
               </div>
 
-              {/* Dish Grid - optimized with lazy images */}
-              <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 w-full">
               {isLoadingDishes ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 pb-20 w-full">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {[1, 2, 3, 4, 5, 6].map((i) => (
                     <div key={i} className="overflow-hidden rounded-xl bg-white shadow-sm animate-pulse">
                       <div className="h-40 md:h-48 bg-gray-200" />
@@ -1417,7 +1382,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                   <p className="text-muted-foreground">No dishes match the selected filters</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 pb-20 w-full">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {filteredAndSortedDishes.map((dish) => {
                     const dishId = parseInt(dish.id.replace('D-', '')) || 0;
                     const dishItem = {
@@ -1541,7 +1506,6 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                   })}
                 </div>
               )}
-              </div>
             </div>
           </div>
         </div>
