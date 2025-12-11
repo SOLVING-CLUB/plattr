@@ -925,19 +925,15 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
       />
       {/* Sentinel element for sticky detection - placed at top for reliable intersection detection */}
       <div ref={sentinelRef} className="absolute top-0 left-0 right-0" style={{ height: "1px" }} />
-      {/* Sticky Back Button Header - uses isStuck from IntersectionObserver for performance */}
+      {/* Back Button Header - scrolls with content, not sticky */}
       <div
-        className="sticky top-0 z-50 transition-all duration-200"
-        style={{
-          backgroundColor: isStuck ? 'white' : 'transparent',
-          boxShadow: isStuck ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-        }}
+        className="relative z-10 transition-all duration-200"
       >
         <div className="px-4 pt-12 pb-3">
           <Button
             variant="ghost"
             size="sm"
-            className={isStuck ? "text-[#06352A] hover:text-[#06352A] hover:bg-gray-100" : "text-white hover:text-white hover:bg-white/20"}
+            className="text-white hover:text-white hover:bg-white/20"
             onClick={() => navigate("/")}
             data-testid="button-back"
           >
@@ -1059,11 +1055,11 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
       </div>
       {/* Sticky Search Bar and Meal Category Container - Outside header for proper sticky behavior */}
       <div
-        className="sticky z-40 px-4 pb-2 pt-4 transition-all duration-200"
+        className="sticky z-50 px-4 pb-2 pt-4 transition-all duration-200"
         style={{
-          top: '92px',
+          top: '0px',
           backgroundColor: "white",
-          boxShadow: isStuck ? "0 2px 4px rgba(0,0,0,0.1)" : "none"
+          boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
         }}
       >
         {/* Search Bar */}
