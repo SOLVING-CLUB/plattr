@@ -1,7 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 export default function SplashScreen() {
   const isDev = import.meta.env.DEV;
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     const style = document.createElement('style');
@@ -38,6 +39,24 @@ export default function SplashScreen() {
     };
   }, []);
 
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const handleTimeUpdate = () => {
+      if (video.currentTime >= 30) {
+        video.pause();
+        video.currentTime = 30;
+      }
+    };
+
+    video.addEventListener('timeupdate', handleTimeUpdate);
+
+    return () => {
+      video.removeEventListener('timeupdate', handleTimeUpdate);
+    };
+  }, []);
+
   return (
     <div
       className="fixed inset-0 overflow-hidden"
@@ -57,8 +76,8 @@ export default function SplashScreen() {
       data-testid="splash-screen"
     >
       <video
+        ref={videoRef}
         autoPlay
-        loop
         muted
         playsInline
         style={{
