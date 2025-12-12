@@ -13,6 +13,7 @@ export default function VerificationScreen() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [otpError, setOtpError] = useState('');
 
 
   // Get phone number from sessionStorage
@@ -42,6 +43,9 @@ export default function VerificationScreen() {
     const newCode = [...code];
     newCode[index] = value;
     setCode(newCode);
+    
+    // Clear error when user starts typing
+    if (otpError) setOtpError('');
 
     // Auto-focus next input
     if (value && index < 5) {
@@ -145,10 +149,12 @@ export default function VerificationScreen() {
       }
     },
     onError: (error: any) => {
+      const errorMessage = error.message || "Invalid OTP. Please try again.";
+      setOtpError(errorMessage);
       toast({
         variant: "destructive",
         title: "Verification Failed",
-        description: error.message || "Invalid OTP. Please try again.",
+        description: errorMessage,
       });
       setCode(['', '', '', '', '', '']);
       inputRefs.current[0]?.focus();
@@ -213,7 +219,7 @@ export default function VerificationScreen() {
         </div>
 
         {/* Code Inputs */}
-        <div className="flex gap-2 sm:gap-3 mb-6 sm:mb-8 justify-center">
+        <div className="flex gap-2 sm:gap-3 mb-3 justify-center">
           {code.map((digit, index) => (
             <input
               key={index}
@@ -225,7 +231,9 @@ export default function VerificationScreen() {
               onChange={(e) => handleChange(index, e.target.value)}
               onKeyDown={(e) => handleKeyDown(index, e)}
               onPaste={handlePaste}
-              className="w-[57px] h-[57px] sm:w-[60px] sm:h-[60px] border border-[#D9D9D9] rounded-lg text-center text-2xl sm:text-3xl font-medium focus:outline-none focus:border-[#1A9952] bg-white transition-colors flex-shrink-0"
+              className={`w-[57px] h-[57px] sm:w-[60px] sm:h-[60px] border rounded-lg text-center text-2xl sm:text-3xl font-medium focus:outline-none bg-white transition-colors flex-shrink-0 ${
+                otpError ? 'border-red-500' : 'border-[#D9D9D9] focus:border-[#1A9952]'
+              }`}
               style={{
                 opacity: digit ? 1 : 0.5,
                 fontFamily: "Sweet Sans Pro, -apple-system, sans-serif"
@@ -233,6 +241,21 @@ export default function VerificationScreen() {
             />
           ))}
         </div>
+
+        {/* Error Message */}
+        {otpError && (
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <circle cx="8" cy="8" r="7" stroke="#EF4444" strokeWidth="1.5"/>
+              <path d="M8 5V8.5M8 10.5V11" stroke="#EF4444" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+            <p className="text-sm text-red-500 font-medium" style={{ fontFamily: "Sweet Sans Pro, -apple-system, sans-serif" }}>
+              {otpError}
+            </p>
+          </div>
+        )}
+
+        {!otpError && <div className="mb-4 sm:mb-6" />}
 
         {/* Continue Button */}
         <button
