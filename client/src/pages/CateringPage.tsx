@@ -10,7 +10,7 @@
 // import BottomNav from '@/components/BottomNav';
 // import { apiRequest } from '@/lib/queryClient';
 // import { getApiUrl } from '@/config/api';
-// import { 
+// import {
 //   MapPin,
 //   ArrowLeft,
 //   Calendar,
@@ -29,7 +29,6 @@
 // import breakfastImage from '@assets/Image (2).png';
 // import lunchImage from '@assets/Rectangle 34625261.png';
 // import dinnerImage from '@assets/9.png';
-
 
 // export default function CateringPage(): JSX.Element {
 //   const [, setLocation] = useLocation();
@@ -57,7 +56,6 @@
 //     message: ''
 //   });
 
-
 //   const handleTabChange = (tab: string) => {
 //     setActiveTab(tab);
 //     if (tab === 'home') {
@@ -69,10 +67,9 @@
 //     }
 //   };
 
-
 //   const handleSubmit = async (e: React.FormEvent) => {
 //     e.preventDefault();
-    
+
 //     // Validation
 //     if (!formData.eventType) {
 //       toast({
@@ -82,7 +79,7 @@
 //       });
 //       return;
 //     }
-    
+
 //     if (!formData.numberOfPeople) {
 //       toast({
 //         title: "Missing Information",
@@ -91,7 +88,7 @@
 //       });
 //       return;
 //     }
-    
+
 //     if (!formData.cuisine) {
 //       toast({
 //         title: "Missing Information",
@@ -100,7 +97,7 @@
 //       });
 //       return;
 //     }
-    
+
 //     if (!formData.budgetMin || !formData.budgetMax) {
 //       toast({
 //         title: "Missing Information",
@@ -109,20 +106,20 @@
 //       });
 //       return;
 //     }
-    
+
 //     try {
 //       // Calculate individual counts (allow empty/0 values)
 //       const vegCount = parseInt(formData.vegCount) || 0;
 //       const nonVegCount = parseInt(formData.nonVegCount) || 0;
 //       const eggCount = parseInt(formData.eggCount) || 0;
-      
+
 //       // Use numberOfPeople or totalPeople, whichever is provided
 //       let guestCount = parseInt(formData.numberOfPeople) || parseInt(formData.totalPeople) || 0;
 //       if (guestCount === 0) {
 //         // If neither is provided, calculate from individual counts
 //         guestCount = vegCount + nonVegCount + eggCount;
 //       }
-      
+
 //       // If still 0, set a minimum of 1 (required field in DB)
 //       if (guestCount === 0) {
 //         guestCount = 1;
@@ -152,7 +149,7 @@
 //         name: 'Catering Inquiry', // Default name
 //         email: formData.email || '', // Use provided email
 //         phone: formData.phone || '', // Use provided phone
-//         message: formData.message 
+//         message: formData.message
 //           ? `Budget: ${formData.budgetMin}-${formData.budgetMax} INR per person. ${formData.message}`
 //           : `Budget: ${formData.budgetMin}-${formData.budgetMax} INR per person${formData.eventTime ? `. Time: ${formData.eventTime}` : ''}`, // Include budget and additional requests
 //         status: 'pending'
@@ -168,7 +165,7 @@
 //         throw new Error(errorData.error || 'Failed to submit catering order');
 //       }
 //       const result = await response.json();
-      
+
 //       // Navigate to thank you page
 //       setLocation('/catering-thank-you');
 //     } catch (error) {
@@ -198,7 +195,7 @@
 //           height: "500px",
 //         }}
 //       />
-      
+
 //       {/* White background for form section */}
 //       <div
 //         className="absolute -z-10"
@@ -214,9 +211,9 @@
 //       {/* Top Section with Location */}
 //       <div className="relative z-10 pt-4 px-4">
 //         {/* Back Button */}
-//         <Button 
-//           variant="ghost" 
-//           size="sm" 
+//         <Button
+//           variant="ghost"
+//           size="sm"
 //           className="mb-4 text-white hover:text-white hover:bg-white/20"
 //           onClick={() => setLocation('/')}
 //           data-testid="button-back"
@@ -310,7 +307,7 @@
 //               }}
 //             />
 //             <span className="text-xs font-semibold text-center leading-tight" style={{ fontFamily: "Sweet Sans Pro, -apple-system, sans-serif", color: "#1a4d2e" }}>
-            
+
 //             </span>
 //           </div>
 
@@ -333,25 +330,25 @@
 //               alt="Catering"
 //               style={{
 //                 width: "100px",
-//                 height: "100px", 
+//                 height: "100px",
 //                 objectFit: "contain",
 //                 marginBottom: "6px"
 //               }}
-//             />  
+//             />
 //             <span className="text-xs font-semibold text-center leading-tight" style={{ fontFamily: "Sweet Sans Pro, -apple-system, sans-serif", color: "#1a4d2e" }}>
-              
+
 //             </span>
 //           </div>
 
 //           {/* Corporate Card */}
 //           <div
-//             className="cursor-pointer flex-shrink-0"            
+//             className="cursor-pointer flex-shrink-0"
 //             onClick={() => setLocation('/corporate')}
 //             style={{
 //               width: "calc((100% - 24px) / 4)",
 //               maxWidth: "100px",
 //               height: "100px",
-//               display: "flex",  
+//               display: "flex",
 //               flexDirection: "column",
 //               alignItems: "center",
 //               justifyContent: "center",
@@ -368,7 +365,7 @@
 //               }}
 //             />
 //             <span className="text-xs font-semibold text-white text-center leading-tight" style={{ fontFamily: "Sweet Sans Pro, -apple-system, sans-serif" }}>
-               
+
 //             </span>
 //           </div>
 //             </div>
@@ -421,7 +418,7 @@
 //               {/* Number of People & Dietary Preferences */}
 //               <div className="space-y-4">
 //                 <Label className="text-base font-semibold">Number of People & Dietary Preferences</Label>
-                
+
 //                 {/* VEG Row */}
 //                 <div className="flex items-center gap-3">
 //                   <Input
@@ -647,7 +644,7 @@
 //                     />
 //                     <div
 //                       className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-gray-50"
-//                       style={{ 
+//                       style={{
 //                         borderColor: "#e5e7eb",
 //                         width: "94.47px",
 //                         height: "36.42px"
@@ -688,7 +685,7 @@
 //                     />
 //                     <div
 //                       className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-gray-50"
-//                       style={{ 
+//                       style={{
 //                         borderColor: "#e5e7eb",
 //                         width: "94.47px",
 //                         height: "36.42px"
@@ -729,7 +726,7 @@
 //                     />
 //                     <div
 //                       className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-gray-50"
-//                       style={{ 
+//                       style={{
 //                         borderColor: "#e5e7eb",
 //                         width: "94.47px",
 //                         height: "36.42px"
@@ -770,7 +767,7 @@
 //                     />
 //                     <div
 //                       className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-gray-50"
-//                       style={{ 
+//                       style={{
 //                         borderColor: "#e5e7eb",
 //                         width: "94.47px",
 //                         height: "36.42px"
@@ -879,9 +876,9 @@
 //                 />
 //               </div>
 
-//               <Button 
-//                 type="submit" 
-//                 size="lg" 
+//               <Button
+//                 type="submit"
+//                 size="lg"
 //                 className="w-full"
 //                 data-testid="button-submit-quote"
 //                 style={{
@@ -895,7 +892,7 @@
 //         </div>
 //       </div>
 
-//       <BottomNav 
+//       <BottomNav
 //         activeTab={activeTab}
 //         onTabChange={handleTabChange}
 //         cartItemCount={0}
@@ -921,7 +918,22 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { cateringOrderService } from "@/lib/supabase-service";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Building2, Users, Calendar, Mail, Phone, MapPin, ShoppingCart, UtensilsCrossed, Package, Truck, Clock, X, ChevronDown } from "lucide-react";
+import {
+  ArrowLeft,
+  Building2,
+  Users,
+  Calendar,
+  Mail,
+  Phone,
+  MapPin,
+  ShoppingCart,
+  UtensilsCrossed,
+  Package,
+  Truck,
+  Clock,
+  X,
+  ChevronDown,
+} from "lucide-react";
 import FloatingNav from "@/pages/FloatingNav";
 import ContinueOrderBanner from "@/pages/ContinueOrderBanner";
 import {
@@ -930,7 +942,7 @@ import {
   CarouselItem,
   type CarouselApi,
 } from "@/components/ui/carousel";
-import cateringHeroPattern from "@assets/Hero (5).png";
+import cateringHeroPattern from "@assets/Hero_Catering.png";
 import customizedMenuImg from "@assets/stock_images/Menu (1).png";
 import photographyImg from "@assets/stock_images/Photography.png";
 import eventDecorImg from "@assets/stock_images/Event Decor.png";
@@ -949,16 +961,19 @@ const LOCATION_STORAGE_KEY = "activeLocation";
 export default function CateringOrder() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<"home" | "menu" | "profile">("home");
-  const [selectedService, setSelectedService] = useState<ServiceType>("catering");
+  const [activeTab, setActiveTab] = useState<"home" | "menu" | "profile">(
+    "home",
+  );
+  const [selectedService, setSelectedService] =
+    useState<ServiceType>("catering");
   const [scrollY, setScrollY] = useState(0);
   const [locationLabel, setLocationLabel] = useState("Select Address");
 
   // Track scroll position for sticky header
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY);
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   // Location sync from localStorage
@@ -1011,11 +1026,11 @@ export default function CateringOrder() {
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [slideCount, setSlideCount] = useState(0);
-  
+
   const [formData, setFormData] = useState(() => {
     // Prefill phone and email from localStorage (logged in user)
-    const savedPhone = localStorage.getItem('phone');
-    const savedEmail = localStorage.getItem('email');
+    const savedPhone = localStorage.getItem("phone");
+    const savedEmail = localStorage.getItem("email");
     return {
       eventType: "",
       numberOfPeople: "",
@@ -1037,7 +1052,10 @@ export default function CateringOrder() {
   const cuisineDropdownRef = useRef<HTMLDivElement>(null);
 
   // Calculate total people from dietary preferences
-  const totalPeople = (parseInt(formData.veg) || 0) + (parseInt(formData.nonVeg) || 0) + (parseInt(formData.egg) || 0);
+  const totalPeople =
+    (parseInt(formData.veg) || 0) +
+    (parseInt(formData.nonVeg) || 0) +
+    (parseInt(formData.egg) || 0);
 
   useEffect(() => {
     if (!carouselApi) {
@@ -1055,7 +1073,10 @@ export default function CateringOrder() {
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (cuisineDropdownRef.current && !cuisineDropdownRef.current.contains(event.target as Node)) {
+      if (
+        cuisineDropdownRef.current &&
+        !cuisineDropdownRef.current.contains(event.target as Node)
+      ) {
         setCuisineDropdownOpen(false);
       }
     };
@@ -1081,28 +1102,28 @@ export default function CateringOrder() {
   };
 
   const handleMealTimeToggle = (mealTime: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       mealTimes: prev.mealTimes.includes(mealTime)
-        ? prev.mealTimes.filter(m => m !== mealTime)
-        : [...prev.mealTimes, mealTime]
+        ? prev.mealTimes.filter((m) => m !== mealTime)
+        : [...prev.mealTimes, mealTime],
     }));
   };
 
   const handleCuisineToggle = (cuisine: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       cuisinePreferences: prev.cuisinePreferences.includes(cuisine)
-        ? prev.cuisinePreferences.filter(c => c !== cuisine)
-        : [...prev.cuisinePreferences, cuisine]
+        ? prev.cuisinePreferences.filter((c) => c !== cuisine)
+        : [...prev.cuisinePreferences, cuisine],
     }));
   };
 
   const removeCuisine = (cuisine: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      cuisinePreferences: prev.cuisinePreferences.filter(c => c !== cuisine)
+      cuisinePreferences: prev.cuisinePreferences.filter((c) => c !== cuisine),
     }));
   };
 
@@ -1113,12 +1134,12 @@ export default function CateringOrder() {
     { value: "continental", label: "Continental" },
     { value: "italian", label: "Italian" },
     { value: "mexican", label: "Mexican" },
-    { value: "multi-cuisine", label: "Multi-Cuisine" }
+    { value: "multi-cuisine", label: "Multi-Cuisine" },
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.eventType || !formData.phone || !formData.eventDate) {
       toast({
         title: "Missing Information",
@@ -1129,14 +1150,18 @@ export default function CateringOrder() {
     }
 
     // Check 12-hour minimum advance booking
-    const selectedDateTime = new Date(`${formData.eventDate}T${formData.eventTime || '12:00'}`);
+    const selectedDateTime = new Date(
+      `${formData.eventDate}T${formData.eventTime || "12:00"}`,
+    );
     const now = new Date();
-    const hoursDiff = (selectedDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-    
+    const hoursDiff =
+      (selectedDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+
     if (hoursDiff < 12) {
       toast({
         title: "Invalid Date/Time",
-        description: "Please select a date and time at least 12 hours from now.",
+        description:
+          "Please select a date and time at least 12 hours from now.",
         variant: "destructive",
       });
       return;
@@ -1152,12 +1177,20 @@ export default function CateringOrder() {
         eggCount: parseInt(formData.egg) || 0,
         eventDate: formData.eventDate,
         eventTime: formData.eventTime || undefined,
-        mealTimes: formData.mealTimes.length > 0 ? formData.mealTimes : undefined,
+        mealTimes:
+          formData.mealTimes.length > 0 ? formData.mealTimes : undefined,
         dietaryTypes: undefined, // Not in form
         cuisines: undefined, // Not in form
-        cuisinePreferences: formData.cuisinePreferences.length > 0 ? formData.cuisinePreferences : undefined,
-        budgetMin: formData.budgetMin ? parseFloat(formData.budgetMin) : undefined,
-        budgetMax: formData.budgetMax ? parseFloat(formData.budgetMax) : undefined,
+        cuisinePreferences:
+          formData.cuisinePreferences.length > 0
+            ? formData.cuisinePreferences
+            : undefined,
+        budgetMin: formData.budgetMin
+          ? parseFloat(formData.budgetMin)
+          : undefined,
+        budgetMax: formData.budgetMax
+          ? parseFloat(formData.budgetMax)
+          : undefined,
         addOnIds: undefined, // Not in form
         name: "Guest", // Default name
         email: formData.email || undefined,
@@ -1165,25 +1198,29 @@ export default function CateringOrder() {
         message: undefined, // Not in form
         addressId: undefined, // Not in form
       });
-      
+
       toast({
         title: "Order Created!",
         description: "Your catering inquiry has been submitted successfully.",
       });
-      
-    setLocation("/catering-thank-you");
+
+      setLocation("/catering-thank-you");
     } catch (error: any) {
       console.error("Error creating catering order:", error);
       toast({
         variant: "destructive",
         title: "Order Failed",
-        description: error.message || "Failed to submit catering order. Please try again.",
+        description:
+          error.message || "Failed to submit catering order. Please try again.",
       });
     }
   };
 
   return (
-    <div className="min-h-screen pb-24 relative" style={{ fontFamily: "Sweet Sans Pro, -apple-system, sans-serif" }}>
+    <div
+      className="min-h-screen pb-24 relative"
+      style={{ fontFamily: "Sweet Sans Pro, -apple-system, sans-serif" }}
+    >
       {/* Purple Geometric Background Header */}
       <div
         className="absolute top-0 left-0 right-0 z-0"
@@ -1196,7 +1233,7 @@ export default function CateringOrder() {
           width: "100%",
         }}
       />
-      
+
       {/* White background for form section */}
       <div
         className="absolute z-0"
@@ -1210,19 +1247,24 @@ export default function CateringOrder() {
       />
 
       {/* Sticky Back Button Header */}
-      <div 
+      <div
         className="sticky top-0 z-50 transition-all duration-200"
         style={{
-          backgroundColor: scrollY > 50 ? 'rgba(255, 255, 255, 0.95)' : 'transparent',
-          backdropFilter: scrollY > 50 ? 'blur(8px)' : 'none',
-          boxShadow: scrollY > 50 ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+          backgroundColor:
+            scrollY > 50 ? "rgba(255, 255, 255, 0.95)" : "transparent",
+          backdropFilter: scrollY > 50 ? "blur(8px)" : "none",
+          boxShadow: scrollY > 50 ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
         }}
       >
         <div className="px-4 pt-12 pb-3">
           <Button
             variant="ghost"
             size="sm"
-            className={scrollY > 50 ? "text-[#06352A] hover:text-[#06352A] hover:bg-gray-100" : "text-white hover:text-white hover:bg-white/20"}
+            className={
+              scrollY > 50
+                ? "text-[#06352A] hover:text-[#06352A] hover:bg-gray-100"
+                : "text-white hover:text-white hover:bg-white/20"
+            }
             onClick={() => setLocation("/")}
             data-testid="button-back"
           >
@@ -1236,9 +1278,15 @@ export default function CateringOrder() {
       <div className="relative z-10 px-4 pt-4 pb-6">
         {/* Location and Cart */}
         <div className="flex items-center justify-between mb-6">
-          <button className="flex items-center gap-2" onClick={() => setLocation("/location")}>
+          <button
+            className="flex items-center gap-2"
+            onClick={() => setLocation("/location")}
+          >
             <MapPin className="w-5 h-5 text-white" />
-            <span className="text-white font-semibold text-[18px]" style={{ fontFamily: "Sweet Sans Pro" }}>
+            <span
+              className="text-white font-semibold text-[18px]"
+              style={{ fontFamily: "Sweet Sans Pro" }}
+            >
               {locationLabel}
             </span>
           </button>
@@ -1267,12 +1315,13 @@ export default function CateringOrder() {
             className="flex flex-col items-center justify-center p-3 transition-all hover-elevate active-elevate-2 aspect-square"
             style={{
               borderRadius: "10px",
-              backgroundColor: selectedService === "bulk-meals" ? "#06352A" : "#FFFFFF",
+              backgroundColor:
+                selectedService === "bulk-meals" ? "#06352A" : "#FFFFFF",
               color: selectedService === "bulk-meals" ? "#F5E9DB" : "#06352A",
             }}
           >
             <UtensilsCrossed className="w-6 h-6 mb-1" />
-            <span 
+            <span
               className="text-[10px] font-semibold text-center leading-tight"
               style={{ fontFamily: "Sweet Sans Pro" }}
             >
@@ -1286,12 +1335,13 @@ export default function CateringOrder() {
             className="flex flex-col items-center justify-center p-3 transition-all hover-elevate active-elevate-2 aspect-square"
             style={{
               borderRadius: "10px",
-              backgroundColor: selectedService === "mealbox" ? "#06352A" : "#FFFFFF",
+              backgroundColor:
+                selectedService === "mealbox" ? "#06352A" : "#FFFFFF",
               color: selectedService === "mealbox" ? "#F5E9DB" : "#06352A",
             }}
           >
             <Package className="w-6 h-6 mb-1" />
-            <span 
+            <span
               className="text-[10px] font-semibold text-center leading-tight"
               style={{ fontFamily: "Sweet Sans Pro" }}
             >
@@ -1305,12 +1355,13 @@ export default function CateringOrder() {
             className="flex flex-col items-center justify-center p-3 transition-all hover-elevate active-elevate-2 aspect-square"
             style={{
               borderRadius: "10px",
-              backgroundColor: selectedService === "catering" ? "#06352A" : "#FFFFFF",
+              backgroundColor:
+                selectedService === "catering" ? "#06352A" : "#FFFFFF",
               color: selectedService === "catering" ? "#F5E9DB" : "#06352A",
             }}
           >
             <Truck className="w-6 h-6 mb-1" />
-            <span 
+            <span
               className="text-[10px] font-semibold text-center leading-tight"
               style={{ fontFamily: "Sweet Sans Pro" }}
             >
@@ -1324,12 +1375,13 @@ export default function CateringOrder() {
             className="flex flex-col items-center justify-center p-3 transition-all hover-elevate active-elevate-2 aspect-square"
             style={{
               borderRadius: "10px",
-              backgroundColor: selectedService === "corporate" ? "#06352A" : "#FFFFFF",
+              backgroundColor:
+                selectedService === "corporate" ? "#06352A" : "#FFFFFF",
               color: selectedService === "corporate" ? "#F5E9DB" : "#06352A",
             }}
           >
             <Building2 className="w-6 h-6 mb-1" />
-            <span 
+            <span
               className="text-[10px] font-semibold text-center leading-tight"
               style={{ fontFamily: "Sweet Sans Pro" }}
             >
@@ -1340,8 +1392,10 @@ export default function CateringOrder() {
       </div>
 
       {/* Content below blue background */}
-      <div className="relative z-10 px-4" style={{ marginTop: "80px", paddingTop: "16px" }}>
-
+      <div
+        className="relative z-10 px-4"
+        style={{ marginTop: "80px", paddingTop: "16px" }}
+      >
         {/* Services Carousel */}
         <div className="mb-8">
           <Carousel
@@ -1397,7 +1451,7 @@ export default function CateringOrder() {
               </CarouselItem>
             </CarouselContent>
           </Carousel>
-          
+
           {/* Carousel Dots */}
           <div className="flex justify-center gap-2 mt-4">
             {Array.from({ length: slideCount }).map((_, index) => (
@@ -1462,10 +1516,12 @@ export default function CateringOrder() {
 
               {/* Dietary Preferences */}
               <div className="space-y-3">
-                <Label style={{ fontFamily: "Sweet Sans Pro", fontWeight: 600 }}>
+                <Label
+                  style={{ fontFamily: "Sweet Sans Pro", fontWeight: 600 }}
+                >
                   Number of People & Dietary Preferences
                 </Label>
-                
+
                 <div className="flex items-center gap-3">
                   <Input
                     id="veg"
@@ -1484,7 +1540,15 @@ export default function CateringOrder() {
                     <div className="w-5 h-5 rounded-full border-2 border-[#1A9952] flex items-center justify-center">
                       <div className="w-2.5 h-2.5 rounded-full bg-[#1A9952]" />
                     </div>
-                    <span style={{ fontFamily: "Sweet Sans Pro", fontSize: "14px", fontWeight: 500 }}>VEG</span>
+                    <span
+                      style={{
+                        fontFamily: "Sweet Sans Pro",
+                        fontSize: "14px",
+                        fontWeight: 500,
+                      }}
+                    >
+                      VEG
+                    </span>
                   </div>
                 </div>
 
@@ -1506,7 +1570,15 @@ export default function CateringOrder() {
                     <div className="w-5 h-5 rounded-full border-2 border-[#DC2626] flex items-center justify-center">
                       <div className="w-2.5 h-2.5 rounded-full bg-[#DC2626]" />
                     </div>
-                    <span style={{ fontFamily: "Sweet Sans Pro", fontSize: "14px", fontWeight: 500 }}>NON-VEG</span>
+                    <span
+                      style={{
+                        fontFamily: "Sweet Sans Pro",
+                        fontSize: "14px",
+                        fontWeight: 500,
+                      }}
+                    >
+                      NON-VEG
+                    </span>
                   </div>
                 </div>
 
@@ -1528,19 +1600,33 @@ export default function CateringOrder() {
                     <div className="w-5 h-5 rounded-full border-2 border-[#92400E] flex items-center justify-center">
                       <div className="w-2.5 h-2.5 rounded-full bg-[#92400E]" />
                     </div>
-                    <span style={{ fontFamily: "Sweet Sans Pro", fontSize: "14px", fontWeight: 500 }}>EGG</span>
+                    <span
+                      style={{
+                        fontFamily: "Sweet Sans Pro",
+                        fontSize: "14px",
+                        fontWeight: 500,
+                      }}
+                    >
+                      EGG
+                    </span>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3 pt-2">
-                  <div 
+                  <div
                     className="w-20 h-10 flex items-center justify-center bg-gray-100 rounded-md text-center font-semibold border border-gray-300"
                     style={{ fontFamily: "Sweet Sans Pro" }}
                     data-testid="text-total-people"
                   >
                     {totalPeople || "00"}
                   </div>
-                  <span style={{ fontFamily: "Sweet Sans Pro", fontSize: "14px", fontWeight: 600 }}>
+                  <span
+                    style={{
+                      fontFamily: "Sweet Sans Pro",
+                      fontSize: "14px",
+                      fontWeight: 600,
+                    }}
+                  >
                     Total People
                   </span>
                 </div>
@@ -1558,13 +1644,13 @@ export default function CateringOrder() {
                     data-testid="select-cuisine"
                   >
                     <span className="text-gray-500">
-                      {formData.cuisinePreferences.length > 0 
+                      {formData.cuisinePreferences.length > 0
                         ? `${formData.cuisinePreferences.length} selected`
                         : "Select Preferred Cuisines"}
                     </span>
                     <ChevronDown className="w-4 h-4 text-gray-500" />
                   </button>
-                  
+
                   {cuisineDropdownOpen && (
                     <div className="absolute z-10 w-full mt-1 bg-white border-2 border-[#1A9952] rounded-md shadow-lg max-h-60 overflow-auto">
                       {cuisineOptions.map((cuisine) => (
@@ -1574,20 +1660,39 @@ export default function CateringOrder() {
                           className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 cursor-pointer"
                           data-testid={`cuisine-option-${cuisine.value}`}
                         >
-                          <div 
+                          <div
                             className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
-                              formData.cuisinePreferences.includes(cuisine.value)
-                                ? 'bg-[#1A9952] border-[#1A9952]'
-                                : 'border-gray-400'
+                              formData.cuisinePreferences.includes(
+                                cuisine.value,
+                              )
+                                ? "bg-[#1A9952] border-[#1A9952]"
+                                : "border-gray-400"
                             }`}
                           >
-                            {formData.cuisinePreferences.includes(cuisine.value) && (
-                              <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
-                                <path d="M2 6L5 9L10 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            {formData.cuisinePreferences.includes(
+                              cuisine.value,
+                            ) && (
+                              <svg
+                                className="w-3 h-3 text-white"
+                                viewBox="0 0 12 12"
+                                fill="none"
+                              >
+                                <path
+                                  d="M2 6L5 9L10 3"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
                               </svg>
                             )}
                           </div>
-                          <span style={{ fontFamily: "Sweet Sans Pro", fontSize: "14px" }}>
+                          <span
+                            style={{
+                              fontFamily: "Sweet Sans Pro",
+                              fontSize: "14px",
+                            }}
+                          >
                             {cuisine.label}
                           </span>
                         </div>
@@ -1600,7 +1705,9 @@ export default function CateringOrder() {
                 {formData.cuisinePreferences.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-2">
                     {formData.cuisinePreferences.map((cuisineValue) => {
-                      const cuisine = cuisineOptions.find(c => c.value === cuisineValue);
+                      const cuisine = cuisineOptions.find(
+                        (c) => c.value === cuisineValue,
+                      );
                       return (
                         <Badge
                           key={cuisineValue}
@@ -1627,7 +1734,9 @@ export default function CateringOrder() {
 
               {/* Budget */}
               <div className="space-y-2">
-                <Label style={{ fontFamily: "Sweet Sans Pro", fontWeight: 600 }}>
+                <Label
+                  style={{ fontFamily: "Sweet Sans Pro", fontWeight: 600 }}
+                >
                   Budget per person (INR)
                 </Label>
                 <div className="grid grid-cols-2 gap-3">
@@ -1663,10 +1772,12 @@ export default function CateringOrder() {
               {/* Meal Times */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <Label style={{ fontFamily: "Sweet Sans Pro", fontWeight: 600 }}>
+                  <Label
+                    style={{ fontFamily: "Sweet Sans Pro", fontWeight: 600 }}
+                  >
                     Select your meal time
                   </Label>
-                  <span 
+                  <span
                     className="text-xs text-[#1A9952]"
                     style={{ fontFamily: "Sweet Sans Pro", fontWeight: 500 }}
                   >
@@ -1683,21 +1794,41 @@ export default function CateringOrder() {
                     }`}
                     data-testid="checkbox-hi-tea"
                   >
-                    <div 
+                    <div
                       className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${
                         formData.mealTimes.includes("hi-tea")
-                          ? 'bg-[#1A9952] border-[#1A9952]'
-                          : 'border-gray-400'
+                          ? "bg-[#1A9952] border-[#1A9952]"
+                          : "border-gray-400"
                       }`}
                     >
                       {formData.mealTimes.includes("hi-tea") && (
-                        <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
-                          <path d="M2 6L5 9L10 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        <svg
+                          className="w-3 h-3 text-white"
+                          viewBox="0 0 12 12"
+                          fill="none"
+                        >
+                          <path
+                            d="M2 6L5 9L10 3"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
                         </svg>
                       )}
                     </div>
-                    <img src={hiTeaIcon} alt="Hi-Tea" className="w-6 h-6 object-contain" />
-                    <span style={{ fontFamily: "Sweet Sans Pro", fontSize: "14px", fontWeight: 500 }}>
+                    <img
+                      src={hiTeaIcon}
+                      alt="Hi-Tea"
+                      className="w-6 h-6 object-contain"
+                    />
+                    <span
+                      style={{
+                        fontFamily: "Sweet Sans Pro",
+                        fontSize: "14px",
+                        fontWeight: 500,
+                      }}
+                    >
                       Hi-Tea
                     </span>
                   </div>
@@ -1710,21 +1841,41 @@ export default function CateringOrder() {
                     }`}
                     data-testid="checkbox-breakfast"
                   >
-                    <div 
+                    <div
                       className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${
                         formData.mealTimes.includes("breakfast")
-                          ? 'bg-[#1A9952] border-[#1A9952]'
-                          : 'border-gray-400'
+                          ? "bg-[#1A9952] border-[#1A9952]"
+                          : "border-gray-400"
                       }`}
                     >
                       {formData.mealTimes.includes("breakfast") && (
-                        <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
-                          <path d="M2 6L5 9L10 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        <svg
+                          className="w-3 h-3 text-white"
+                          viewBox="0 0 12 12"
+                          fill="none"
+                        >
+                          <path
+                            d="M2 6L5 9L10 3"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
                         </svg>
                       )}
                     </div>
-                    <img src={breakfastIcon} alt="Breakfast" className="w-6 h-6 object-contain" />
-                    <span style={{ fontFamily: "Sweet Sans Pro", fontSize: "14px", fontWeight: 500 }}>
+                    <img
+                      src={breakfastIcon}
+                      alt="Breakfast"
+                      className="w-6 h-6 object-contain"
+                    />
+                    <span
+                      style={{
+                        fontFamily: "Sweet Sans Pro",
+                        fontSize: "14px",
+                        fontWeight: 500,
+                      }}
+                    >
                       Breakfast
                     </span>
                   </div>
@@ -1737,21 +1888,41 @@ export default function CateringOrder() {
                     }`}
                     data-testid="checkbox-lunch"
                   >
-                    <div 
+                    <div
                       className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${
                         formData.mealTimes.includes("lunch")
-                          ? 'bg-[#1A9952] border-[#1A9952]'
-                          : 'border-gray-400'
+                          ? "bg-[#1A9952] border-[#1A9952]"
+                          : "border-gray-400"
                       }`}
                     >
                       {formData.mealTimes.includes("lunch") && (
-                        <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
-                          <path d="M2 6L5 9L10 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        <svg
+                          className="w-3 h-3 text-white"
+                          viewBox="0 0 12 12"
+                          fill="none"
+                        >
+                          <path
+                            d="M2 6L5 9L10 3"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
                         </svg>
                       )}
                     </div>
-                    <img src={lunchIcon} alt="Lunch" className="w-6 h-6 object-contain" />
-                    <span style={{ fontFamily: "Sweet Sans Pro", fontSize: "14px", fontWeight: 500 }}>
+                    <img
+                      src={lunchIcon}
+                      alt="Lunch"
+                      className="w-6 h-6 object-contain"
+                    />
+                    <span
+                      style={{
+                        fontFamily: "Sweet Sans Pro",
+                        fontSize: "14px",
+                        fontWeight: 500,
+                      }}
+                    >
                       Lunch
                     </span>
                   </div>
@@ -1764,21 +1935,41 @@ export default function CateringOrder() {
                     }`}
                     data-testid="checkbox-dinner"
                   >
-                    <div 
+                    <div
                       className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${
                         formData.mealTimes.includes("dinner")
-                          ? 'bg-[#1A9952] border-[#1A9952]'
-                          : 'border-gray-400'
+                          ? "bg-[#1A9952] border-[#1A9952]"
+                          : "border-gray-400"
                       }`}
                     >
                       {formData.mealTimes.includes("dinner") && (
-                        <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
-                          <path d="M2 6L5 9L10 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        <svg
+                          className="w-3 h-3 text-white"
+                          viewBox="0 0 12 12"
+                          fill="none"
+                        >
+                          <path
+                            d="M2 6L5 9L10 3"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
                         </svg>
                       )}
                     </div>
-                    <img src={dinnerIcon} alt="Dinner" className="w-6 h-6 object-contain" />
-                    <span style={{ fontFamily: "Sweet Sans Pro", fontSize: "14px", fontWeight: 500 }}>
+                    <img
+                      src={dinnerIcon}
+                      alt="Dinner"
+                      className="w-6 h-6 object-contain"
+                    />
+                    <span
+                      style={{
+                        fontFamily: "Sweet Sans Pro",
+                        fontSize: "14px",
+                        fontWeight: 500,
+                      }}
+                    >
                       Dinner
                     </span>
                   </div>
@@ -1787,7 +1978,9 @@ export default function CateringOrder() {
 
               {/* Date & Time */}
               <div className="space-y-2">
-                <Label style={{ fontFamily: "Sweet Sans Pro", fontWeight: 600 }}>
+                <Label
+                  style={{ fontFamily: "Sweet Sans Pro", fontWeight: 600 }}
+                >
                   Select Event Date & Time
                 </Label>
                 <div className="grid grid-cols-2 gap-3">

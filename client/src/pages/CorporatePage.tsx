@@ -1109,7 +1109,7 @@ import {
   CarouselItem,
   type CarouselApi,
 } from "@/components/ui/carousel";
-import corporateHeroPattern from "@assets/CorporateBackground.png";
+import corporateHeroPattern from "@assets/Hero_Corporate.png";
 import corporateManImage from "@assets/image 1661 (1).png";
 import customizedMenuImg from "@assets/Menu (2).png"; 
 import photographyImg from "@assets/Photography (2).png";
