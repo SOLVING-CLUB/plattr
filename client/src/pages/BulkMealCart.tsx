@@ -35,7 +35,7 @@ export default function BulkMealCart() {
   const handleQuantityChange = (itemId: number, change: number) => {
     const item = cart.find(i => i.id === itemId);
     if (item) {
-      const newQuantity = Math.max(1, item.quantity + change);
+      const newQuantity = Math.max(5, item.quantity + change);
       updateQuantity(itemId, newQuantity);
     }
   };
@@ -95,7 +95,12 @@ export default function BulkMealCart() {
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => handleQuantityChange(item.id, -1)}
-                    className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center hover:border-green-500"
+                    disabled={item.quantity <= 5}
+                    className={`w-8 h-8 rounded-full border-2 flex items-center justify-center ${
+                      item.quantity <= 5 
+                        ? 'border-gray-200 text-gray-300 cursor-not-allowed' 
+                        : 'border-gray-300 hover:border-green-500'
+                    }`}
                     data-testid={`button-decrease-${item.id}`}
                   >
                     <Minus className="w-4 h-4" />
