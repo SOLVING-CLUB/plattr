@@ -149,7 +149,11 @@ export default function VerificationScreen() {
       }
     },
     onError: (error: any) => {
-      const errorMessage = error.message || "Invalid OTP. Please try again.";
+      // Convert technical errors to user-friendly messages
+      let errorMessage = error.message || "Invalid OTP. Please try again.";
+      if (errorMessage.includes('non-2xx') || errorMessage.includes('status code') || errorMessage.includes('Edge Function') || errorMessage.includes('Failed')) {
+        errorMessage = "Invalid OTP. Please try again.";
+      }
       setOtpError(errorMessage);
       toast({
         variant: "destructive",

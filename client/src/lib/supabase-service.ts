@@ -560,7 +560,12 @@ export const edgeFunctions = {
     });
 
     if (error) {
-      throw new Error(error.message || 'Failed to verify OTP');
+      // Convert technical errors to user-friendly messages
+      const errorMsg = error.message || '';
+      if (errorMsg.includes('non-2xx') || errorMsg.includes('status code') || errorMsg.includes('Edge Function')) {
+        throw new Error('Invalid OTP. Please try again.');
+      }
+      throw new Error(error.message || 'Invalid OTP. Please try again.');
     }
     return data;
   },
