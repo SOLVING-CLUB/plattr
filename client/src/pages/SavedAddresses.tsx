@@ -163,11 +163,47 @@ export default function SavedAddresses() {
     setModalState("add");
   };
 
+  // Validate if address is within Bangalore
+  const isAddressInBangalore = (address: string) => {
+    const addressLower = address.toLowerCase();
+    return addressLower.includes("bangalore") || 
+           addressLower.includes("bengaluru") || 
+           addressLower.includes("karnataka") ||
+           // Common Bangalore area codes
+           addressLower.includes("560") ||
+           // Common Bangalore areas
+           addressLower.includes("koramangala") ||
+           addressLower.includes("indiranagar") ||
+           addressLower.includes("whitefield") ||
+           addressLower.includes("electronic city") ||
+           addressLower.includes("hsr layout") ||
+           addressLower.includes("jp nagar") ||
+           addressLower.includes("jayanagar") ||
+           addressLower.includes("btm layout") ||
+           addressLower.includes("marathahalli") ||
+           addressLower.includes("hebbal") ||
+           addressLower.includes("yelahanka") ||
+           addressLower.includes("malleshwaram") ||
+           addressLower.includes("rajajinagar") ||
+           addressLower.includes("banashankari") ||
+           addressLower.includes("basavanagudi");
+  };
+
   const handleSaveAddress = () => {
     if (!formData.label.trim() || !formData.address.trim()) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate Bangalore address
+    if (!isAddressInBangalore(formData.address)) {
+      toast({
+        title: "Service Area Limited",
+        description: "We currently serve only Bangalore. Please enter a Bangalore address.",
         variant: "destructive",
       });
       return;
@@ -240,11 +276,12 @@ export default function SavedAddresses() {
             <Input
               value={formData.address}
               onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              placeholder="Door No. 32, Jaya Prakash Nagar, Near Metro Station, Bengaluru, Karnataka 450003"
+              placeholder="Door No. 32, Jaya Prakash Nagar, Near Metro Station, Bengaluru, Karnataka 560078"
               className="w-full border-[#1A9952] rounded-lg py-3 px-4"
               data-testid="input-address"
             />
             <p className="text-xs text-gray-500 mt-1">Include street, area, city, state, and pincode</p>
+            <p className="text-xs text-orange-600 mt-1">⚠️ We currently serve only Bangalore</p>
           </div>
 
           <div>
