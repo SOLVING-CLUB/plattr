@@ -1019,7 +1019,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { LazyImage } from "@/components/ui/lazy-image";
-import { ArrowLeft, Building2, MapPin, ShoppingCart, UtensilsCrossed, Package, Truck, Search, Check, ChevronRight, ChevronLeft, Star, ArrowUpDown, SlidersHorizontal, LayoutGrid, Leaf, Drumstick, Egg, Sparkles, Phone } from "lucide-react";
+import { ArrowLeft, Building2, MapPin, ShoppingCart, UtensilsCrossed, Package, Truck, Search, Check, ChevronRight, ChevronLeft, Star, ArrowUpDown, SlidersHorizontal, LayoutGrid, Leaf, Drumstick, Egg, Sparkles, Phone, X } from "lucide-react";
 
 // Define missing types locally to resolve import errors
 export interface Dish {
@@ -1060,6 +1060,7 @@ export interface Category {
 export type CategoryType = Category;
 import FloatingNav from "@/pages/FloatingNav";
 import ContinueOrderBanner from "@/pages/ContinueOrderBanner";
+import { SearchOverlay } from "@/components/SearchOverlay";
 import mealBoxHeroPattern from "@assets/Hero_MealBox.png";
 import mealBoxImage from "@assets/mockup8_1763889604975.png";
 import hiTeaIcon from "@assets/Image2322_1763882700309.png";
@@ -1433,6 +1434,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
 
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchOverlayOpen, setSearchOverlayOpen] = useState(false);
 
   // Address form state
   const [selectedAddressId, setSelectedAddressId] = useState("");
@@ -3208,17 +3210,27 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
 
             {/* Sticky Search Bar Section - below proceed card (top: 180px) */}
             <div className="sticky bg-white pb-3 pt-3 -mx-4 px-4" style={{ top: "180px", zIndex: 60 }}>
-              <div className="flex items-center gap-2 bg-white px-4 py-3 border border-gray-200" style={{ borderRadius: "10px" }}>
+              <div 
+                className="flex items-center gap-2 bg-white px-4 py-3 border border-gray-200 cursor-pointer"
+                style={{ borderRadius: "10px" }}
+                onClick={() => { handleInteraction(); setSearchOverlayOpen(true); }}
+                data-testid="button-open-search-step4"
+              >
                 <Search className="w-6 h-6 text-gray-500" />
-                <input
-                  type="text"
-                  placeholder="Search"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="flex-1 outline-none text-base bg-transparent"
+                <span
+                  className={`flex-1 text-base ${searchQuery ? 'text-gray-800' : 'text-gray-400'}`}
                   style={{ fontFamily: "Sweet Sans Pro" }}
-                  data-testid="input-search-step4"
-                />
+                >
+                  {searchQuery || "Search"}
+                </span>
+                {searchQuery && (
+                  <button 
+                    className="p-1 hover:bg-gray-100 rounded-full"
+                    onClick={(e) => { e.stopPropagation(); setSearchQuery(""); }}
+                  >
+                    <X className="w-4 h-4 text-gray-500" />
+                  </button>
+                )}
               </div>
             </div>
 
@@ -4780,6 +4792,19 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
       </a>
       {/* Floating Bottom Navigation */}
       <FloatingNav activeTab={activeTab} onTabChange={handleTabChange} />
+      
+      {/* Search Overlay */}
+      <SearchOverlay
+        isOpen={searchOverlayOpen}
+        onClose={() => setSearchOverlayOpen(false)}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        onSearch={(query) => {
+          setSearchQuery(query);
+          setSearchOverlayOpen(false);
+        }}
+        placeholder="Search for dishes..."
+      />
     </div>
     </PageWithLoader>
   );

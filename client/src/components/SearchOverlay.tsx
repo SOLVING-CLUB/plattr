@@ -10,8 +10,9 @@ interface SearchOverlayProps {
   onClose: () => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
-  onSearch: (query: string) => void;
+  onSearch?: (query: string) => void;
   placeholder?: string;
+  liveSearch?: boolean; // When true, updates filter in real-time while typing
 }
 
 export function SearchOverlay({
@@ -21,6 +22,7 @@ export function SearchOverlay({
   onSearchChange,
   onSearch,
   placeholder = "Search for dishes...",
+  liveSearch = true,
 }: SearchOverlayProps) {
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -67,16 +69,21 @@ export function SearchOverlay({
     e?.preventDefault();
     if (searchQuery.trim()) {
       saveToHistory(searchQuery);
-      onSearch(searchQuery);
-      onClose();
+      onSearch?.(searchQuery);
     }
+    onClose();
   };
 
   const handleHistoryClick = (query: string) => {
     onSearchChange(query);
     saveToHistory(query);
-    onSearch(query);
+    onSearch?.(query);
     onClose();
+  };
+  
+  const handleInputChange = (value: string) => {
+    onSearchChange(value);
+    // In live search mode, don't need explicit submit - filtering happens in real-time
   };
 
   const clearHistory = () => {
@@ -128,7 +135,7 @@ export function SearchOverlay({
                   type="text"
                   placeholder={placeholder}
                   value={searchQuery}
-                  onChange={(e) => onSearchChange(e.target.value)}
+                  onChange={(e) => handleInputChange(e.target.value)}
                   className="w-full pl-10 pr-10 py-3 bg-gray-100 rounded-xl text-base outline-none focus:ring-2 focus:ring-primary/30"
                   style={{ fontFamily: "Sweet Sans Pro" }}
                   data-testid="input-search-overlay"
