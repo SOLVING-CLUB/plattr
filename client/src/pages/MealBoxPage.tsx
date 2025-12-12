@@ -1866,7 +1866,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
   });
 
   // Custom sidebar category order for Lunch/Dinner
-  const SIDEBAR_CATEGORY_ORDER = [
+  const LUNCH_DINNER_CATEGORY_ORDER = [
     'soup',
     'starters',
     'salads',
@@ -1881,14 +1881,35 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
     'after-meal',
   ];
 
+  // Custom sidebar category order for Breakfast/Tiffins
+  const BREAKFAST_CATEGORY_ORDER = [
+    'breakfast',
+    'salads',
+    'sides-and-accompaniments',
+    'beverages',
+    'snacks',
+    'bakery',
+    'sweets',
+    'desserts',
+  ];
+
+  // Get the appropriate category order based on meal type
+  const getCategoryOrder = (mealTypeFilter: string): string[] => {
+    if (mealTypeFilter === 'tiffins') {
+      return BREAKFAST_CATEGORY_ORDER;
+    }
+    return LUNCH_DINNER_CATEGORY_ORDER;
+  };
+
   // Filter categories dynamically from database meal_type column
-  // Categories are sorted by the custom SIDEBAR_CATEGORY_ORDER
+  // Categories are sorted by the custom category order based on meal type
   const categories = useMemo(() => {
     if (!mealType || allCategoriesFromDb.length === 0) return [];
     const filtered = filterCategoriesByMealType(allCategoriesFromDb, mealType);
+    const categoryOrder = getCategoryOrder(mealType);
     return filtered.sort((a, b) => {
-      const aIndex = SIDEBAR_CATEGORY_ORDER.indexOf(a.id);
-      const bIndex = SIDEBAR_CATEGORY_ORDER.indexOf(b.id);
+      const aIndex = categoryOrder.indexOf(a.id);
+      const bIndex = categoryOrder.indexOf(b.id);
       // If both are in the custom order, sort by that order
       if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
       // If only one is in the custom order, it comes first
