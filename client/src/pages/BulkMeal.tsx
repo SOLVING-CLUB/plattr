@@ -78,7 +78,7 @@ import {
   CarouselItem,
   type CarouselApi,
 } from "@/components/ui/carousel";
-import bulkMealsHeroPattern from "@assets/Hero Pattern - Bulk Meals_1763923537679.png";
+import bulkMealsHeroPattern from "@assets/Hero (6).png";
 import customizedMenuImg from "@assets/Menu_1763877123353.png";
 import photographyImg from "@assets/Photography_1763877123366.png";
 import eventDecorImg from "@assets/Event Decor_1763877123367.png";
