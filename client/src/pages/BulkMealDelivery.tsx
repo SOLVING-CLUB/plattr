@@ -225,7 +225,7 @@ export default function BulkMealsDelivery() {
   return (
     <div className="min-h-screen bg-white pb-32">
       {/* Header */}
-      <div className="bg-white px-4 pt-12 pb-4 border-b border-gray-100 sticky top-0 z-50">
+      <div className="bg-white px-4 pt-16 pb-4 border-b border-gray-100 sticky top-0 z-50">
         <button 
           onClick={() => setLocation("/bulk-meals-addons")}
           className="flex items-center gap-2 text-gray-700"
