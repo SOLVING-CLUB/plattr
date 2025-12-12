@@ -171,7 +171,22 @@ export default function MapConfirmationPage() {
     reverseGeocode(newPos[0], newPos[1]);
   };
 
-  // Search for locations using Nominatim API
+  // Bangalore bounding box for location validation
+  const BANGALORE_BOUNDS = {
+    minLat: 12.7,
+    maxLat: 13.2,
+    minLng: 77.35,
+    maxLng: 77.85
+  };
+
+  const isWithinBangalore = (lat: number, lng: number) => {
+    return lat >= BANGALORE_BOUNDS.minLat && 
+           lat <= BANGALORE_BOUNDS.maxLat && 
+           lng >= BANGALORE_BOUNDS.minLng && 
+           lng <= BANGALORE_BOUNDS.maxLng;
+  };
+
+  // Search for locations using Nominatim API - restricted to Bangalore
   const searchLocations = async (query: string) => {
     if (query.length < 3) {
       setSearchResults([]);
@@ -181,12 +196,19 @@ export default function MapConfirmationPage() {
 
     setIsSearching(true);
     try {
+      // Search within Bangalore bounding box
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=in&limit=5`
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ", Bangalore, Karnataka")}&countrycodes=in&limit=10&viewbox=${BANGALORE_BOUNDS.minLng},${BANGALORE_BOUNDS.maxLat},${BANGALORE_BOUNDS.maxLng},${BANGALORE_BOUNDS.minLat}&bounded=1`
       );
       const data = await response.json();
-      setSearchResults(data);
-      setShowSearchResults(data.length > 0);
+      // Filter results to ensure they're within Bangalore bounds
+      const filteredResults = data.filter((result: any) => {
+        const lat = parseFloat(result.lat);
+        const lng = parseFloat(result.lon);
+        return isWithinBangalore(lat, lng);
+      });
+      setSearchResults(filteredResults.slice(0, 5));
+      setShowSearchResults(filteredResults.length > 0);
     } catch (error) {
       console.error("Search error:", error);
       setSearchResults([]);
