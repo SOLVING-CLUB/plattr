@@ -820,17 +820,24 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
       <div className="min-h-screen pb-24 relative">
         {/* Blue Geometric Background Header */}
         <div
-          className="absolute top-0 left-0 right-0 z-0"
+          className="absolute top-0 left-0 right-0 z-0 overflow-hidden"
           style={{
-            backgroundImage: `url(${bulkMealsHeroPattern})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center top",
-            backgroundRepeat: "no-repeat",
             height: "350px",
             borderBottomLeftRadius: "40px",
             borderBottomRightRadius: "40px",
           }}
-        />
+        >
+          <div
+            style={{
+              backgroundImage: `url(${bulkMealsHeroPattern})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center top",
+              backgroundRepeat: "no-repeat",
+              width: "100%",
+              height: "100%",
+            }}
+          />
+        </div>
         {/* Header with Back Button */}
         <div className="sticky top-0 z-50">
           <div className="px-4 pt-12 pb-3">
@@ -903,17 +910,24 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
     <div className="min-h-screen pb-24 relative">
       {/* Blue Geometric Background Header */}
       <div
-        className="absolute top-0 left-0 right-0 z-0"
+        className="absolute top-0 left-0 right-0 z-0 overflow-hidden"
         style={{
-          backgroundImage: `url(${bulkMealsHeroPattern})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center top",
-          backgroundRepeat: "no-repeat",
           height: "350px",
           borderBottomLeftRadius: "40px",
           borderBottomRightRadius: "40px",
         }}
-      />
+      >
+        <div
+          style={{
+            backgroundImage: `url(${bulkMealsHeroPattern})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center top",
+            backgroundRepeat: "no-repeat",
+            width: "100%",
+            height: "100%",
+          }}
+        />
+      </div>
       {/* Sticky Back Button Header - Matches CateringPage exactly */}
       <div 
         className="sticky top-0 z-50 transition-all duration-200"
