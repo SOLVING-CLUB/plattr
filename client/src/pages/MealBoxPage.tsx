@@ -1865,19 +1865,19 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
     queryKey: ['/api/categories', 'all'],
   });
 
-  // Custom sidebar category order
+  // Custom sidebar category order for Lunch/Dinner
   const SIDEBAR_CATEGORY_ORDER = [
     'soup',
     'starters',
-    'beverages',
     'salads',
+    'main-course',
+    'beverages',
     'snacks',
     'bakery',
     'chaats',
-    'sides-and-accompaniments',
     'sweets',
     'desserts',
-    'main-course',
+    'sides-and-accompaniments',
     'after-meal',
   ];
 

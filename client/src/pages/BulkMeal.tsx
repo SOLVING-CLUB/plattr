@@ -387,19 +387,19 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
 
   const priorityCategoryId = getPriorityCategoryId(mealType);
 
-  // Custom sidebar category order
+  // Custom sidebar category order for Lunch/Dinner
   const SIDEBAR_CATEGORY_ORDER = [
     'soup',
     'starters',
-    'beverages',
     'salads',
+    'main-course',
+    'beverages',
     'snacks',
     'bakery',
     'chaats',
-    'sides-and-accompaniments',
     'sweets',
     'desserts',
-    'main-course',
+    'sides-and-accompaniments',
     'after-meal',
   ];
 
