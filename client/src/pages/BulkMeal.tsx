@@ -1474,8 +1474,8 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                             </div>
                           )}
                         </div>
-                        <div className="p-3 md:p-4 flex flex-col h-[140px]">
-                          <h3 className="font-bold text-sm md:text-base line-clamp-2 h-10 mb-2" data-testid={`text-dish-name-${dish.id}`}>
+                        <div className="p-3 md:p-4 flex flex-col h-[160px]">
+                          <h3 className="font-bold text-sm md:text-base line-clamp-2 min-h-[40px] mb-2" data-testid={`text-dish-name-${dish.id}`}>
                             {dish.name}
                           </h3>
                           <div className="flex flex-col gap-1 mb-2">

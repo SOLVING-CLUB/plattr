@@ -3662,8 +3662,8 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                               </div>
                             )}
                           </div>
-                          <div className="p-3 md:p-4 flex flex-col h-[120px]">
-                            <h3 className="font-bold text-sm md:text-base line-clamp-2 h-10 mb-2" data-testid={`text-dish-name-${item.id}`}>
+                          <div className="p-3 md:p-4 flex flex-col h-[140px]">
+                            <h3 className="font-bold text-sm md:text-base line-clamp-2 min-h-[40px] mb-2" data-testid={`text-dish-name-${item.id}`}>
                               {item.name}
                             </h3>
                             <div className="flex items-center justify-between gap-2 mb-2">
