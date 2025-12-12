@@ -1131,21 +1131,17 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
           >
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
             <div
-              className={`w-full pl-12 pr-12 py-3 bg-white text-base border border-gray-200 ${searchQuery ? 'text-gray-800' : 'text-gray-400'}`}
+              className={`w-full pl-12 pr-10 py-3 bg-white text-base border border-gray-200 ${searchQuery ? 'text-gray-800' : 'text-gray-400'}`}
               style={{ fontFamily: "Sweet Sans Pro", borderRadius: "10px" }}
             >
-              {searchQuery || "Search"}
+              {searchQuery || "Search for dishes..."}
             </div>
-            {searchQuery ? (
+            {searchQuery && (
               <button 
                 className="absolute right-4 top-1/2 transform -translate-y-1/2 p-1 hover:bg-gray-100 rounded-full"
                 onClick={(e) => { e.stopPropagation(); setSearchQuery(""); }}
               >
                 <X className="w-4 h-4 text-gray-500" />
-              </button>
-            ) : (
-              <button className="absolute right-4 top-1/2 transform -translate-y-1/2">
-                <Mic className="w-5 h-5 text-gray-400" />
               </button>
             )}
           </div>

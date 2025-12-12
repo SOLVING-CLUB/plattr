@@ -3221,7 +3221,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                   className={`flex-1 text-base ${searchQuery ? 'text-gray-800' : 'text-gray-400'}`}
                   style={{ fontFamily: "Sweet Sans Pro" }}
                 >
-                  {searchQuery || "Search"}
+                  {searchQuery || "Search for dishes..."}
                 </span>
                 {searchQuery && (
                   <button 
