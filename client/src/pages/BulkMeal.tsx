@@ -1483,17 +1483,23 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                                 onChange={(e) => {
                                   handleInteraction();
                                   const val = e.target.value;
-                                  setQuantities(prev => ({ ...prev, [dishId]: val }));
-                                  // Clear error when user types
-                                  if (quantityErrors[dishId]) {
-                                    setQuantityErrors(prev => ({ ...prev, [dishId]: '' }));
-                                  }
-                                }}
-                                onBlur={(e) => {
-                                  const val = e.target.value;
                                   const numVal = parseInt(val) || 0;
+                                  setQuantities(prev => ({ ...prev, [dishId]: val }));
+                                  
+                                  // If item is in cart and quantity goes below 5, show error and remove from cart
                                   if (val && numVal < 5) {
                                     setQuantityErrors(prev => ({ ...prev, [dishId]: "accepts only from 5" }));
+                                    if (addedItems.has(dishId)) {
+                                      handleRemoveFromCart(dishId);
+                                      toast({
+                                        title: "Item Removed",
+                                        description: "accepts only from 5",
+                                        variant: "destructive",
+                                      });
+                                    }
+                                  } else if (numVal >= 5) {
+                                    // Clear error when valid quantity
+                                    setQuantityErrors(prev => ({ ...prev, [dishId]: '' }));
                                   }
                                 }}
                                 onClick={(e) => e.stopPropagation()}
@@ -1737,20 +1743,24 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                         onChange={(e) => {
                           if (!detailDish) return;
                           const value = e.target.value;
+                          const numVal = parseInt(value) || 0;
                           const dishId = parseInt(detailDish.id.replace('D-', '')) || 0;
                           setQuantities(prev => ({ ...prev, [dishId]: value }));
-                          // Clear error when user types
-                          if (quantityErrors[dishId]) {
-                            setQuantityErrors(prev => ({ ...prev, [dishId]: '' }));
-                          }
-                        }}
-                        onBlur={(e) => {
-                          if (!detailDish) return;
-                          const val = e.target.value;
-                          const numVal = parseInt(val) || 0;
-                          const dishId = parseInt(detailDish.id.replace('D-', '')) || 0;
-                          if (val && numVal < 5) {
+                          
+                          // If item is in cart and quantity goes below 5, show error and remove from cart
+                          if (value && numVal < 5) {
                             setQuantityErrors(prev => ({ ...prev, [dishId]: "accepts only from 5" }));
+                            if (addedItems.has(dishId)) {
+                              handleRemoveFromCart(dishId);
+                              toast({
+                                title: "Item Removed",
+                                description: "accepts only from 5",
+                                variant: "destructive",
+                              });
+                            }
+                          } else if (numVal >= 5) {
+                            // Clear error when valid quantity
+                            setQuantityErrors(prev => ({ ...prev, [dishId]: '' }));
                           }
                         }}
                         className={`w-20 h-10 text-center ${detailDish && quantityErrors[parseInt(detailDish.id.replace('D-', '')) || 0] ? 'border-red-500' : ''}`}
