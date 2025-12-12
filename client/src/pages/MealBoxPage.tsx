@@ -3662,28 +3662,33 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                               </div>
                             )}
                           </div>
-                          <div className="p-3 md:p-4">
-                            <h3 className="font-bold text-sm md:text-base mb-3" data-testid={`text-dish-name-${item.id}`}>
+                          <div className="p-3 md:p-4 flex flex-col h-[120px]">
+                            <h3 className="font-bold text-sm md:text-base line-clamp-2 h-10 mb-2" data-testid={`text-dish-name-${item.id}`}>
                               {item.name}
                             </h3>
                             <div className="flex items-center justify-between gap-2 mb-2">
-                              <span className="text-primary font-bold text-lg" data-testid={`text-dish-price-${item.id}`}>
-                                ₹{item.price.toFixed(0)}
-                              </span>
+                              <div className="flex items-baseline gap-1">
+                                <span className="text-primary font-bold text-lg" data-testid={`text-dish-price-${item.id}`}>
+                                  ₹{item.price.toFixed(0)}
+                                </span>
+                                <span className="text-[10px] text-gray-500" style={{ fontFamily: "Sweet Sans Pro" }}>per serve</span>
+                              </div>
                             </div>
-                            <Button
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleInteraction();
-                                handleItemSelection(item);
-                              }}
-                              variant={isSelected ? "secondary" : "default"}
-                              className="w-full rounded-full px-4"
-                              data-testid={`button-add-${item.id}`}
-                            >
-                              {isSelected ? "SELECTED" : "ADD"}
-                            </Button>
+                            <div className="mt-auto">
+                              <Button
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleInteraction();
+                                  handleItemSelection(item);
+                                }}
+                                variant={isSelected ? "secondary" : "default"}
+                                className="w-full rounded-full px-4"
+                                data-testid={`button-add-${item.id}`}
+                              >
+                                {isSelected ? "SELECTED" : "ADD"}
+                              </Button>
+                            </div>
                           </div>
                         </Card>
                       );

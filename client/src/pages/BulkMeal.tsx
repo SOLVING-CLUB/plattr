@@ -1474,15 +1474,18 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                             </div>
                           )}
                         </div>
-                        <div className="p-3 md:p-4">
-                          <h3 className="font-bold text-sm md:text-base mb-3" data-testid={`text-dish-name-${dish.id}`}>
+                        <div className="p-3 md:p-4 flex flex-col h-[140px]">
+                          <h3 className="font-bold text-sm md:text-base line-clamp-2 h-10 mb-2" data-testid={`text-dish-name-${dish.id}`}>
                             {dish.name}
                           </h3>
                           <div className="flex flex-col gap-1 mb-2">
                             <div className="flex items-center justify-between gap-2">
-                              <span className="text-primary font-bold text-lg" data-testid={`text-dish-price-${dish.id}`}>
-                                ₹{parseFloat(dish.price as string).toFixed(0)}
-                              </span>
+                              <div className="flex items-baseline gap-1">
+                                <span className="text-primary font-bold text-lg" data-testid={`text-dish-price-${dish.id}`}>
+                                  ₹{parseFloat(dish.price as string).toFixed(0)}
+                                </span>
+                                <span className="text-[10px] text-gray-500" style={{ fontFamily: "Sweet Sans Pro" }}>per serve</span>
+                              </div>
                               <Input
                                 type="number"
                                 min="5"
@@ -1522,23 +1525,25 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                               </span>
                             )}
                           </div>
-                          <Button
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleInteraction();
-                              if (addedItems.has(dishId)) {
-                                handleRemoveFromCart(dishId);
-                              } else {
-                                handleAddToCart(dishItem);
-                              }
-                            }}
-                            variant={addedItems.has(dishId) ? "secondary" : "default"}
-                            className="w-full rounded-full px-4"
-                            data-testid={`button-add-${dishId}`}
-                          >
-                            {addedItems.has(dishId) ? "Added" : "Add"}
-                          </Button>
+                          <div className="mt-auto">
+                            <Button
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleInteraction();
+                                if (addedItems.has(dishId)) {
+                                  handleRemoveFromCart(dishId);
+                                } else {
+                                  handleAddToCart(dishItem);
+                                }
+                              }}
+                              variant={addedItems.has(dishId) ? "secondary" : "default"}
+                              className="w-full rounded-full px-4"
+                              data-testid={`button-add-${dishId}`}
+                            >
+                              {addedItems.has(dishId) ? "Added" : "Add"}
+                            </Button>
+                          </div>
                         </div>
                       </Card>
                     );
