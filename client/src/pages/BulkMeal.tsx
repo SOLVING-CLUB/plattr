@@ -71,6 +71,7 @@ import thaliImage from '@assets/stock_images/indian_thali_meal_3a645a6d.jpg';
 import samosaImage from '@assets/stock_images/samosa_snacks_indian_0946aa28.jpg';
 import platterImage from '@assets/stock_images/indian_food_platter__b34d03e7.jpg';
 import FloatingNav from "@/pages/FloatingNav";
+import { SearchOverlay } from "@/components/SearchOverlay";
 import { useCart } from "@/context/CartContex";
 import {
   Carousel,
@@ -285,6 +286,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
   const [selectedMealCategory, setSelectedMealCategory] = useState<string>("lunch-dinner");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState<string>("");
+  const [searchOverlayOpen, setSearchOverlayOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedDishType, setSelectedDishType] = useState<string>("all");
   const [dietaryMode, setDietaryMode] = useState<'all' | 'veg' | 'egg' | 'non-veg'>('all');
@@ -1120,19 +1122,20 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
           boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
         }}
       >
-        {/* Search Bar */}
+        {/* Search Bar - Clickable trigger for overlay */}
         <div className="mb-3">
-          <div className="relative">
+          <div 
+            className="relative cursor-pointer"
+            onClick={() => { handleInteraction(); setSearchOverlayOpen(true); }}
+            data-testid="button-open-search"
+          >
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search"
-              value={searchQuery}
-              onChange={(e) => { handleInteraction(); setSearchQuery(e.target.value); }}
-              className="w-full pl-12 pr-12 py-3 bg-white text-base"
+            <div
+              className="w-full pl-12 pr-12 py-3 bg-white text-base text-gray-400 border border-gray-200"
               style={{ fontFamily: "Sweet Sans Pro", borderRadius: "10px" }}
-              data-testid="input-search"
-            />
+            >
+              {searchQuery || "Search"}
+            </div>
             <button className="absolute right-4 top-1/2 transform -translate-y-1/2">
               <Mic className="w-5 h-5 text-gray-400" />
             </button>
@@ -1854,6 +1857,19 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
         <Phone className="w-6 h-6 text-white" />
       </a>
       <FloatingNav activeTab={activeTab} onTabChange={handleTabChange} />
+      
+      {/* Search Overlay */}
+      <SearchOverlay
+        isOpen={searchOverlayOpen}
+        onClose={() => setSearchOverlayOpen(false)}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        onSearch={(query) => {
+          setSearchQuery(query);
+          setSearchOverlayOpen(false);
+        }}
+        placeholder="Search for dishes..."
+      />
     </div>
     </PageWithLoader>
   );
