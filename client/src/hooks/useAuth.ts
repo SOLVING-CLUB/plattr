@@ -82,7 +82,8 @@ function initAuthListener() {
       initialized: true,
     };
 
-    // Sync with localStorage
+    // Sync with localStorage - only update if we have a session, don't clear on null
+    // This preserves our localStorage fallback for OTP auth
       if (session?.user) {
         localStorage.setItem('userId', session.user.id);
         if (session.user.email) {
@@ -91,20 +92,22 @@ function initAuthListener() {
         if (session.user.phone) {
           localStorage.setItem('phone', session.user.phone);
         }
-      } else {
-        localStorage.removeItem('userId');
-        localStorage.removeItem('email');
-        localStorage.removeItem('phone');
-        localStorage.removeItem('username');
       }
+      // Only clear localStorage on explicit SIGNED_OUT event, not on null session
+      // This is handled separately in the event switch below
 
-    // Log significant events
+    // Log significant events and handle sign out
       switch (event) {
         case 'SIGNED_IN':
         console.log('✅ User signed in:', session?.user?.id);
           break;
         case 'SIGNED_OUT':
         console.log('👋 User signed out');
+        // Only clear localStorage on explicit sign out
+        localStorage.removeItem('userId');
+        localStorage.removeItem('email');
+        localStorage.removeItem('phone');
+        localStorage.removeItem('username');
           break;
         case 'USER_UPDATED':
         console.log('👤 User updated');

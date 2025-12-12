@@ -44,15 +44,16 @@ async function ensureUserExists(authUser: { id: string; phone?: string; email?: 
  * This supports both Supabase Auth sessions and our custom OTP auth
  */
 async function getAuthenticatedUser(): Promise<{ id: string; phone?: string; email?: string } | null> {
-  // First try Supabase auth
-  const { data: { user } } = await supabase.auth.getUser();
-  if (user) {
+  // First try Supabase auth - use getSession for reliability (cached, no network call)
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session?.user) {
+    const user = session.user;
     // Ensure user exists in database (auto-create if missing)
     await ensureUserExists({ id: user.id, phone: user.phone || undefined, email: user.email || undefined });
     return { id: user.id, phone: user.phone || undefined, email: user.email || undefined };
   }
   
-  // Fall back to localStorage (OTP auth)
+  // Fall back to localStorage (OTP auth) - important for maintaining auth after page refreshes
   const userId = localStorage.getItem('userId');
   const phone = localStorage.getItem('phone');
   if (userId && phone) {
