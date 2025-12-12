@@ -3477,7 +3477,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
             <div className="flex gap-0 flex-1 w-full max-w-full">
               {/* Left Sidebar - Category Filters (Starters, Sides, Mains, etc.) - Sticky with internal scroll */}
               <aside className="w-20 md:w-24 border-r bg-card/50 backdrop-blur-sm flex-shrink-0 sticky self-start" style={{ top: '244px', maxHeight: 'calc(100vh - 244px)', overflowY: 'auto' }}>
-                <div className="flex flex-col py-3">
+                <div className="flex flex-col py-3 pb-32">
                   {/* Always show "All" option */}
                   <button
                     onClick={() => { handleInteraction(); setSelectedCategory('all'); setSelectedDishType('all'); }}
