@@ -1865,19 +1865,39 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
     queryKey: ['/api/categories', 'all'],
   });
 
+  // Custom sidebar category order
+  const SIDEBAR_CATEGORY_ORDER = [
+    'soup',
+    'starters',
+    'beverages',
+    'salads',
+    'snacks',
+    'bakery',
+    'chaats',
+    'sides-and-accompaniments',
+    'sweets',
+    'desserts',
+    'main-course',
+    'after-meal',
+  ];
+
   // Filter categories dynamically from database meal_type column
-  // This replaces the hardcoded MEAL_TYPE_CATEGORIES mapping
+  // Categories are sorted by the custom SIDEBAR_CATEGORY_ORDER
   const categories = useMemo(() => {
     if (!mealType || allCategoriesFromDb.length === 0) return [];
     const filtered = filterCategoriesByMealType(allCategoriesFromDb, mealType);
     return filtered.sort((a, b) => {
-      // Priority category always comes first
-      if (a.id === priorityCategoryId) return -1;
-      if (b.id === priorityCategoryId) return 1;
-      // Then sort by displayOrder
+      const aIndex = SIDEBAR_CATEGORY_ORDER.indexOf(a.id);
+      const bIndex = SIDEBAR_CATEGORY_ORDER.indexOf(b.id);
+      // If both are in the custom order, sort by that order
+      if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+      // If only one is in the custom order, it comes first
+      if (aIndex !== -1) return -1;
+      if (bIndex !== -1) return 1;
+      // Otherwise sort by displayOrder
       return (a.displayOrder || 0) - (b.displayOrder || 0);
     }) as CategoryType[];
-  }, [allCategoriesFromDb, mealType, priorityCategoryId]);
+  }, [allCategoriesFromDb, mealType]);
 
   // Set first category as selected when categories load or when meal type changes
   // Keep 'all' as valid selection - only reset if it's an invalid category ID
