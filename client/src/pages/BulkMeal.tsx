@@ -1486,6 +1486,13 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                                     setQuantityErrors(prev => ({ ...prev, [dishId]: '' }));
                                   }
                                 }}
+                                onBlur={(e) => {
+                                  const val = e.target.value;
+                                  const numVal = parseInt(val) || 0;
+                                  if (val && numVal < 5) {
+                                    setQuantityErrors(prev => ({ ...prev, [dishId]: "accepts only from 5" }));
+                                  }
+                                }}
                                 onClick={(e) => e.stopPropagation()}
                                 className={`w-[60px] h-7 text-center text-xs px-2 ${quantityErrors[dishId] ? 'border-red-500' : 'border-gray-300'}`}
                                 style={{ fontFamily: "Sweet Sans Pro" }}
@@ -1732,6 +1739,15 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                           // Clear error when user types
                           if (quantityErrors[dishId]) {
                             setQuantityErrors(prev => ({ ...prev, [dishId]: '' }));
+                          }
+                        }}
+                        onBlur={(e) => {
+                          if (!detailDish) return;
+                          const val = e.target.value;
+                          const numVal = parseInt(val) || 0;
+                          const dishId = parseInt(detailDish.id.replace('D-', '')) || 0;
+                          if (val && numVal < 5) {
+                            setQuantityErrors(prev => ({ ...prev, [dishId]: "accepts only from 5" }));
                           }
                         }}
                         className={`w-20 h-10 text-center ${detailDish && quantityErrors[parseInt(detailDish.id.replace('D-', '')) || 0] ? 'border-red-500' : ''}`}
