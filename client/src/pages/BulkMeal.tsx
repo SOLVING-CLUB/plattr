@@ -296,7 +296,8 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
   const [dishDetailOpen, setDishDetailOpen] = useState(false);
   const [detailDish, setDetailDish] = useState<Dish | null>(null);
   const [scrollY, setScrollY] = useState(0);
-  const [quantities, setQuantities] = useState<Record<number, number>>({});
+  const [quantities, setQuantities] = useState<Record<number, string>>({});
+  const [quantityErrors, setQuantityErrors] = useState<Record<number, string>>({});
   const hasInteractedRef = useRef(false);
 
   // Track scroll position for sticky header styling (matches CateringPage)
@@ -320,16 +321,21 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
 
   const handleAddToCart = (item: { id: number; name: string; price: number; quantity?: number }) => {
     handleInteraction();
-    const quantity = quantities[item.id] !== undefined ? quantities[item.id] : (item.quantity || 5);
+    const quantityStr = quantities[item.id] || '';
+    const quantity = parseInt(quantityStr) || 0;
 
-    if (quantity < 5) {
+    if (!quantityStr || quantity < 5) {
+      setQuantityErrors(prev => ({ ...prev, [item.id]: "accepts only from 5" }));
       toast({
         title: "Minimum Order Required",
-        description: "Minimum 5 serves per dish required.",
+        description: "accepts only from 5",
         variant: "destructive",
       });
       return;
     }
+
+    // Clear any existing error
+    setQuantityErrors(prev => ({ ...prev, [item.id]: '' }));
 
     addToCart("bulk-meals", {
       id: item.id,
@@ -338,7 +344,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
       quantity
     });
 
-    setQuantities(prev => ({ ...prev, [item.id]: 5 }));
+    // Keep the quantity value after adding
   };
 
   const handleRemoveFromCart = (itemId: number) => {
@@ -1461,24 +1467,36 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                           <h3 className="font-bold text-sm md:text-base mb-3" data-testid={`text-dish-name-${dish.id}`}>
                             {dish.name}
                           </h3>
-                          <div className="flex items-center justify-between gap-2 mb-2">
-                            <span className="text-primary font-bold text-lg" data-testid={`text-dish-price-${dish.id}`}>
-                              ₹{parseFloat(dish.price as string).toFixed(0)}
-                            </span>
-                            <Input
-                              type="number"
-                              min="5"
-                              value={quantities[dishId] !== undefined ? quantities[dishId] : 5}
-                              onChange={(e) => {
-                                handleInteraction();
-                                const val = parseInt(e.target.value) || 5;
-                                setQuantities(prev => ({ ...prev, [dishId]: Math.max(5, val) }));
-                              }}
-                              onClick={(e) => e.stopPropagation()}
-                              className="w-[60px] h-7 text-center text-xs border-gray-300 px-2"
-                              style={{ fontFamily: "Sweet Sans Pro" }}
-                              data-testid={`input-quantity-${dishId}`}
-                            />
+                          <div className="flex flex-col gap-1 mb-2">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-primary font-bold text-lg" data-testid={`text-dish-price-${dish.id}`}>
+                                ₹{parseFloat(dish.price as string).toFixed(0)}
+                              </span>
+                              <Input
+                                type="number"
+                                min="5"
+                                placeholder=""
+                                value={quantities[dishId] || ''}
+                                onChange={(e) => {
+                                  handleInteraction();
+                                  const val = e.target.value;
+                                  setQuantities(prev => ({ ...prev, [dishId]: val }));
+                                  // Clear error when user types
+                                  if (quantityErrors[dishId]) {
+                                    setQuantityErrors(prev => ({ ...prev, [dishId]: '' }));
+                                  }
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                                className={`w-[60px] h-7 text-center text-xs px-2 ${quantityErrors[dishId] ? 'border-red-500' : 'border-gray-300'}`}
+                                style={{ fontFamily: "Sweet Sans Pro" }}
+                                data-testid={`input-quantity-${dishId}`}
+                              />
+                            </div>
+                            {quantityErrors[dishId] && (
+                              <span className="text-[10px] text-red-500 text-right" style={{ fontFamily: "Sweet Sans Pro" }}>
+                                {quantityErrors[dishId]}
+                              </span>
+                            )}
                           </div>
                           <Button
                             size="sm"
@@ -1697,59 +1715,64 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <div className="relative">
-                    <Input
-                      type="number"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      value={detailDish ? (quantities[parseInt(detailDish.id.replace('D-', '')) || 0] !== undefined ? quantities[parseInt(detailDish.id.replace('D-', '')) || 0] : 5) : 5}
-                      onChange={(e) => {
-                        if (!detailDish) return;
-                        const value = e.target.value;
-                        const dishId = parseInt(detailDish.id.replace('D-', '')) || 0;
-                        if (value === "") {
-                          setQuantities(prev => ({ ...prev, [dishId]: 0 }));
-                        } else {
-                          const numValue = parseInt(value);
-                          if (!isNaN(numValue)) {
-                            setQuantities(prev => ({ ...prev, [dishId]: numValue }));
+                <div className="flex flex-col items-end gap-1">
+                  <div className="flex items-center gap-2">
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        placeholder=""
+                        value={detailDish ? (quantities[parseInt(detailDish.id.replace('D-', '')) || 0] || '') : ''}
+                        onChange={(e) => {
+                          if (!detailDish) return;
+                          const value = e.target.value;
+                          const dishId = parseInt(detailDish.id.replace('D-', '')) || 0;
+                          setQuantities(prev => ({ ...prev, [dishId]: value }));
+                          // Clear error when user types
+                          if (quantityErrors[dishId]) {
+                            setQuantityErrors(prev => ({ ...prev, [dishId]: '' }));
                           }
+                        }}
+                        className={`w-20 h-10 text-center ${detailDish && quantityErrors[parseInt(detailDish.id.replace('D-', '')) || 0] ? 'border-red-500' : ''}`}
+                        min="5"
+                      />
+                    </div>
+                    <Button
+                      size="lg"
+                      onClick={() => {
+                        if (!detailDish) return;
+                        handleInteraction();
+                        const dishId = parseInt(detailDish.id.replace('D-', '')) || 0;
+                        const dishItem = {
+                          id: dishId,
+                          name: detailDish.name,
+                          price: parseFloat(detailDish.price as string),
+                          rating: 4.5,
+                          reviewCount: 0,
+                          category: detailDish.dishType?.toLowerCase() || 'all',
+                          type: (detailDish.dietaryType?.toLowerCase() || 'veg') as 'veg' | 'non-veg' | 'egg',
+                          image: detailDish.imageUrl ? getSupabaseImageUrl(detailDish.imageUrl) : undefined,
+                        };
+                        if (addedItems.has(dishId)) {
+                          handleRemoveFromCart(dishId);
+                        } else {
+                          handleAddToCart(dishItem);
                         }
+                        setDishDetailOpen(false);
                       }}
-                      className="w-20 h-10 text-center"
-                      min="5"
-                    />
+                      variant={detailDish && addedItems.has(parseInt(detailDish.id.replace('D-', '')) || 0) ? "secondary" : "default"}
+                      className="rounded-full px-8 min-w-[140px]"
+                      data-testid="button-add-from-detail"
+                    >
+                      {detailDish && addedItems.has(parseInt(detailDish.id.replace('D-', '')) || 0) ? "Added ✓" : "Add to Cart"}
+                    </Button>
                   </div>
-                  <Button
-                    size="lg"
-                    onClick={() => {
-                      if (!detailDish) return;
-                      handleInteraction();
-                      const dishId = parseInt(detailDish.id.replace('D-', '')) || 0;
-                      const dishItem = {
-                        id: dishId,
-                        name: detailDish.name,
-                        price: parseFloat(detailDish.price as string),
-                        rating: 4.5,
-                        reviewCount: 0,
-                        category: detailDish.dishType?.toLowerCase() || 'all',
-                        type: (detailDish.dietaryType?.toLowerCase() || 'veg') as 'veg' | 'non-veg' | 'egg',
-                        image: detailDish.imageUrl ? getSupabaseImageUrl(detailDish.imageUrl) : undefined,
-                      };
-                      if (addedItems.has(dishId)) {
-                        handleRemoveFromCart(dishId);
-                      } else {
-                        handleAddToCart(dishItem);
-                      }
-                      setDishDetailOpen(false);
-                    }}
-                    variant={detailDish && addedItems.has(parseInt(detailDish.id.replace('D-', '')) || 0) ? "secondary" : "default"}
-                    className="rounded-full px-8 min-w-[140px]"
-                    data-testid="button-add-from-detail"
-                  >
-                    {detailDish && addedItems.has(parseInt(detailDish.id.replace('D-', '')) || 0) ? "Added ✓" : "Add to Cart"}
-                  </Button>
+                  {detailDish && quantityErrors[parseInt(detailDish.id.replace('D-', '')) || 0] && (
+                    <span className="text-xs text-red-500" style={{ fontFamily: "Sweet Sans Pro" }}>
+                      {quantityErrors[parseInt(detailDish.id.replace('D-', '')) || 0]}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
