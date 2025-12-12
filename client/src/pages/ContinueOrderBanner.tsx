@@ -1,6 +1,6 @@
 import { useCart } from "@/context/CartContex";
 import { useLocation } from "wouter";
-import { ChevronRight, Truck, UtensilsCrossed } from "lucide-react";
+import { ChevronRight, Truck, UtensilsCrossed, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const categoryLabels = {
@@ -29,8 +29,15 @@ export default function ContinueOrderBanner() {
   const [location, setLocation] = useLocation();
   const [isVisible, setIsVisible] = useState(false);
   const [bannerConfig, setBannerConfig] = useState<BannerConfig | null>(null);
+  const [isDismissed, setIsDismissed] = useState(false);
 
   useEffect(() => {
+    // Don't show if dismissed
+    if (isDismissed) {
+      setIsVisible(false);
+      return;
+    }
+
     // Don't show on order-related pages
     const isOnOrderPage = 
       location.startsWith("/mealbox") || 
@@ -69,13 +76,19 @@ export default function ContinueOrderBanner() {
       setIsVisible(false);
       setBannerConfig(null);
     }
-  }, [activeCategory, cart.length, mealBoxProgress, location]);
+  }, [activeCategory, cart.length, mealBoxProgress, location, isDismissed]);
 
   const handleContinue = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (bannerConfig) {
       setLocation(categoryRoutes[bannerConfig.category]);
     }
+  };
+
+  const handleDismiss = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsDismissed(true);
+    setIsVisible(false);
   };
 
   if (!bannerConfig || !isVisible) {
@@ -135,6 +148,16 @@ export default function ContinueOrderBanner() {
 
       {/* Right Chevron */}
       <ChevronRight className="w-5 h-5 text-white flex-shrink-0" strokeWidth={2} />
+
+      {/* Close Button */}
+      <button
+        onClick={handleDismiss}
+        className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 hover:bg-white/30 transition-colors"
+        data-testid="button-dismiss-banner"
+        aria-label="Dismiss banner"
+      >
+        <X className="w-4 h-4 text-white" strokeWidth={2} />
+      </button>
     </div>
   );
 }
