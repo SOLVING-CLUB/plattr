@@ -3666,12 +3666,12 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                             <h3 className="font-bold text-sm md:text-base line-clamp-2 min-h-[40px] mb-2" data-testid={`text-dish-name-${item.id}`}>
                               {item.name}
                             </h3>
-                            <div className="flex items-center justify-between gap-2 mb-2">
-                              <div className="flex items-baseline gap-1">
+                            <div className="flex items-start justify-between gap-2 mb-2">
+                              <div className="flex flex-col">
                                 <span className="text-primary font-bold text-lg" data-testid={`text-dish-price-${item.id}`}>
                                   ₹{item.price.toFixed(0)}
                                 </span>
-                                <span className="text-[10px] text-gray-500" style={{ fontFamily: "Sweet Sans Pro" }}>per serve</span>
+                                <span className="text-[10px] text-gray-500 -mt-1" style={{ fontFamily: "Sweet Sans Pro" }}>per serve</span>
                               </div>
                             </div>
                             <div className="mt-auto">
