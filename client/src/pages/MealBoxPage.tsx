@@ -1060,7 +1060,7 @@ export interface Category {
 export type CategoryType = Category;
 import FloatingNav from "@/pages/FloatingNav";
 import ContinueOrderBanner from "@/pages/ContinueOrderBanner";
-import mealBoxHeroPattern from "@assets/Hero Pattern - Meal Box_1763885298156.png";
+import mealBoxHeroPattern from "@assets/Hero_MealBox.png";
 import mealBoxImage from "@assets/mockup8_1763889604975.png";
 import hiTeaIcon from "@assets/Image2322_1763882700309.png";
 import breakfastIcon from "@assets/Image34344_1763882700312.png";
