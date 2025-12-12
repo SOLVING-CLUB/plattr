@@ -321,10 +321,13 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
 
   const handleAddToCart = (item: { id: number; name: string; price: number; quantity?: number }) => {
     handleInteraction();
-    const quantityStr = quantities[item.id] || '';
-    const quantity = parseInt(quantityStr) || 0;
+    const quantityStr = quantities[item.id] !== undefined ? quantities[item.id] : '';
+    const quantity = quantityStr ? parseInt(quantityStr, 10) : 0;
 
-    if (!quantityStr || quantity < 5) {
+    console.log('handleAddToCart:', { itemId: item.id, quantityStr, quantity });
+
+    // Strict validation: quantity must be at least 5
+    if (quantity < 5) {
       setQuantityErrors(prev => ({ ...prev, [item.id]: "accepts only from 5" }));
       toast({
         title: "Minimum Order Required",
