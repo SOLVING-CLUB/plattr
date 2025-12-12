@@ -827,8 +827,8 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
             backgroundPosition: "center top",
             backgroundRepeat: "no-repeat",
             height: "350px",
-            borderBottomLeftRadius: "24px",
-            borderBottomRightRadius: "24px",
+            borderBottomLeftRadius: "40px",
+            borderBottomRightRadius: "40px",
           }}
         />
         {/* Header with Back Button */}
@@ -910,8 +910,8 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
           backgroundPosition: "center top",
           backgroundRepeat: "no-repeat",
           height: "350px",
-          borderBottomLeftRadius: "24px",
-          borderBottomRightRadius: "24px",
+          borderBottomLeftRadius: "40px",
+          borderBottomRightRadius: "40px",
         }}
       />
       {/* Sticky Back Button Header - Matches CateringPage exactly */}
