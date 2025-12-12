@@ -1045,9 +1045,12 @@ export default function Menu() {
                           )}
               </div>
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-primary font-bold text-lg" data-testid={`text-dish-price-${dish.id}`}>
-                            ₹{parseFloat(dish.price as string).toFixed(0)}
-                          </span>
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-primary font-bold text-lg" data-testid={`text-dish-price-${dish.id}`}>
+                              ₹{parseFloat(dish.price as string).toFixed(0)}
+                            </span>
+                            <span className="text-xs text-gray-500">per serve</span>
+                          </div>
               </div>
                       </div>
                     </Card>
