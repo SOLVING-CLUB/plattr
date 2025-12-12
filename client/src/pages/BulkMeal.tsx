@@ -1734,7 +1734,9 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
       {/* Floating Call Button */}
       <a
         href="tel:+919876543210"
-        className="fixed right-4 bottom-40 z-50 w-14 h-14 bg-[#1A9952] rounded-full flex items-center justify-center shadow-lg hover:bg-[#158043] transition-colors"
+        className={`fixed right-4 z-50 w-14 h-14 bg-[#1A9952] rounded-full flex items-center justify-center shadow-lg hover:bg-[#158043] transition-colors ${
+          cart.length > 0 ? 'bottom-40' : 'bottom-24'
+        }`}
         data-testid="button-call"
         aria-label="Call us"
       >
