@@ -25,7 +25,7 @@ interface BannerConfig {
 }
 
 export default function ContinueOrderBanner() {
-  const { activeCategory, cart, mealBoxProgress } = useCart();
+  const { activeCategory, cart, mealBoxProgress, clearCart, clearMealBoxProgress } = useCart();
   const [location, setLocation] = useLocation();
   const [isVisible, setIsVisible] = useState(false);
   const [bannerConfig, setBannerConfig] = useState<BannerConfig | null>(null);
@@ -87,6 +87,8 @@ export default function ContinueOrderBanner() {
 
   const handleDismiss = (e: React.MouseEvent) => {
     e.stopPropagation();
+    clearCart();
+    clearMealBoxProgress();
     setIsDismissed(true);
     setIsVisible(false);
   };
