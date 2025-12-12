@@ -49,10 +49,10 @@ export default function ServicesWeOfferSection({ onServiceClick }: ServicesWeOff
             backgroundImage={cateringImage}
           />
 
-          {/* Corporate Order - Bottom, spans full width */}
+          {/* Daily Corporate - Bottom, spans full width */}
           <ServiceCardSection
             serviceId="corporate"
-            title="Corporate Order"
+            title="Daily Corporate"
             description="Customizations & more"
             onClick={() => onServiceClick?.("corporate")}
             className="col-span-2 h-[160px]"
