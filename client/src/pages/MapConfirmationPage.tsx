@@ -64,8 +64,11 @@ export default function MapConfirmationPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [position, setPosition] = useState<[number, number]>([12.9716, 77.5946]);
-  const [initialCenter, setInitialCenter] = useState<[number, number]>([12.9716, 77.5946]);
+  // Default to Bangalore center
+  const BANGALORE_CENTER: [number, number] = [12.9716, 77.5946];
+  const [position, setPosition] = useState<[number, number]>(BANGALORE_CENTER);
+  const [initialCenter, setInitialCenter] = useState<[number, number]>(BANGALORE_CENTER);
+  const [isOutsideBangalore, setIsOutsideBangalore] = useState(false);
   const [address, setAddress] = useState("");
   const [areaName, setAreaName] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -90,27 +93,62 @@ export default function MapConfirmationPage() {
   const [showSearchResults, setShowSearchResults] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Bangalore bounding box for location validation
+  const BANGALORE_BOUNDS = {
+    minLat: 12.7,
+    maxLat: 13.2,
+    minLng: 77.35,
+    maxLng: 77.85
+  };
+
+  const isWithinBangalore = (lat: number, lng: number) => {
+    return lat >= BANGALORE_BOUNDS.minLat && 
+           lat <= BANGALORE_BOUNDS.maxLat && 
+           lng >= BANGALORE_BOUNDS.minLng && 
+           lng <= BANGALORE_BOUNDS.maxLng;
+  };
+
+  const showBangaloreOnlyError = () => {
+    toast({
+      title: "Service Area Limited",
+      description: "We currently serve only Bangalore. Please select a location within Bangalore.",
+      variant: "destructive",
+    });
+  };
+
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           const newPos: [number, number] = [pos.coords.latitude, pos.coords.longitude];
-          setPosition(newPos);
-          setInitialCenter(newPos);
-          reverseGeocode(newPos[0], newPos[1]);
+          
+          // Check if location is within Bangalore
+          if (isWithinBangalore(newPos[0], newPos[1])) {
+            setPosition(newPos);
+            setInitialCenter(newPos);
+            setIsOutsideBangalore(false);
+            reverseGeocode(newPos[0], newPos[1]);
+          } else {
+            // Location is outside Bangalore - use default Bangalore center
+            setPosition(BANGALORE_CENTER);
+            setInitialCenter(BANGALORE_CENTER);
+            setIsOutsideBangalore(true);
+            reverseGeocode(BANGALORE_CENTER[0], BANGALORE_CENTER[1]);
+            showBangaloreOnlyError();
+          }
           setIsLoading(false);
         },
         (error) => {
           console.error("Geolocation error:", error);
           setIsLoading(false);
 
-          let errorMessage = "Could not get your location. Using default location.";
+          let errorMessage = "Could not get your location. Using default Bangalore location.";
           if (error.code === 1) {
-            errorMessage = "Location permission denied. Please enable location access in your browser settings.";
+            errorMessage = "Location permission denied. Using default Bangalore location.";
           } else if (error.code === 2) {
-            errorMessage = "Location unavailable. Please check your device settings.";
+            errorMessage = "Location unavailable. Using default Bangalore location.";
           } else if (error.code === 3) {
-            errorMessage = "Location request timed out. Please try again.";
+            errorMessage = "Location request timed out. Using default Bangalore location.";
           }
 
           toast({
@@ -118,7 +156,7 @@ export default function MapConfirmationPage() {
             description: errorMessage,
             variant: "destructive",
           });
-          reverseGeocode(position[0], position[1]);
+          reverseGeocode(BANGALORE_CENTER[0], BANGALORE_CENTER[1]);
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
@@ -126,10 +164,10 @@ export default function MapConfirmationPage() {
       setIsLoading(false);
       toast({
         title: "Location Not Supported",
-        description: "Your browser doesn't support geolocation.",
+        description: "Your browser doesn't support geolocation. Using default Bangalore location.",
         variant: "destructive",
       });
-      reverseGeocode(position[0], position[1]);
+      reverseGeocode(BANGALORE_CENTER[0], BANGALORE_CENTER[1]);
     }
   }, []);
 
@@ -167,23 +205,16 @@ export default function MapConfirmationPage() {
   };
 
   const handlePositionChange = (newPos: [number, number]) => {
-    setPosition(newPos);
-    reverseGeocode(newPos[0], newPos[1]);
-  };
-
-  // Bangalore bounding box for location validation
-  const BANGALORE_BOUNDS = {
-    minLat: 12.7,
-    maxLat: 13.2,
-    minLng: 77.35,
-    maxLng: 77.85
-  };
-
-  const isWithinBangalore = (lat: number, lng: number) => {
-    return lat >= BANGALORE_BOUNDS.minLat && 
-           lat <= BANGALORE_BOUNDS.maxLat && 
-           lng >= BANGALORE_BOUNDS.minLng && 
-           lng <= BANGALORE_BOUNDS.maxLng;
+    // Check if new position is within Bangalore
+    if (isWithinBangalore(newPos[0], newPos[1])) {
+      setPosition(newPos);
+      setIsOutsideBangalore(false);
+      reverseGeocode(newPos[0], newPos[1]);
+    } else {
+      setIsOutsideBangalore(true);
+      setPosition(newPos);
+      reverseGeocode(newPos[0], newPos[1]);
+    }
   };
 
   // Search for locations using Nominatim API - restricted to Bangalore
@@ -251,9 +282,21 @@ export default function MapConfirmationPage() {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           const newPos: [number, number] = [pos.coords.latitude, pos.coords.longitude];
-          setPosition(newPos);
-          setShouldRecenter(true);
-          reverseGeocode(newPos[0], newPos[1]);
+          
+          // Check if location is within Bangalore
+          if (isWithinBangalore(newPos[0], newPos[1])) {
+            setPosition(newPos);
+            setShouldRecenter(true);
+            setIsOutsideBangalore(false);
+            reverseGeocode(newPos[0], newPos[1]);
+          } else {
+            // Location is outside Bangalore - show error and use Bangalore center
+            showBangaloreOnlyError();
+            setPosition(BANGALORE_CENTER);
+            setShouldRecenter(true);
+            setIsOutsideBangalore(true);
+            reverseGeocode(BANGALORE_CENTER[0], BANGALORE_CENTER[1]);
+          }
         },
         (error) => {
           console.error("Geolocation error:", error);
@@ -285,6 +328,11 @@ export default function MapConfirmationPage() {
   };
 
   const handleConfirmClick = () => {
+    // Final check before confirming - ensure location is within Bangalore
+    if (!isWithinBangalore(position[0], position[1])) {
+      showBangaloreOnlyError();
+      return;
+    }
     setShowLabelModal(true);
   };
 
@@ -545,14 +593,21 @@ export default function MapConfirmationPage() {
           </div>
         </div>
 
+        {isOutsideBangalore && (
+          <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
+            <span className="text-red-600 text-sm" style={{ fontFamily: "'Sweet Sans Pro', sans-serif" }}>
+              ⚠️ We currently serve only Bangalore. Please select a location within Bangalore city limits.
+            </span>
+          </div>
+        )}
         <Button
           onClick={handleConfirmClick}
-          disabled={isGeocoding}
+          disabled={isGeocoding || isOutsideBangalore}
           className="w-full bg-[#1A9952] hover:bg-[#158544] text-white py-6 rounded-xl font-semibold text-base disabled:opacity-60"
           style={{ fontFamily: "'Sweet Sans Pro', sans-serif" }}
           data-testid="button-confirm-location"
         >
-          Confirm & proceed
+          {isOutsideBangalore ? "Location outside Bangalore" : "Confirm & proceed"}
         </Button>
       </div>
 
