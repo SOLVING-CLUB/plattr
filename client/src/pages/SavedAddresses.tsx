@@ -32,10 +32,44 @@ export default function SavedAddresses() {
   
   const [formData, setFormData] = useState({
     label: "",
-    address: "",
+    flatHouse: "",
+    street: "",
+    addressLine1: "",
+    addressLine2: "",
+    city: "Bengaluru",
+    state: "Karnataka",
+    pincode: "",
     landmark: "",
     isDefault: false
   });
+
+  const resetFormData = () => {
+    setFormData({
+      label: "",
+      flatHouse: "",
+      street: "",
+      addressLine1: "",
+      addressLine2: "",
+      city: "Bengaluru",
+      state: "Karnataka",
+      pincode: "",
+      landmark: "",
+      isDefault: false
+    });
+  };
+
+  const combineAddressFields = () => {
+    const parts = [
+      formData.flatHouse,
+      formData.street,
+      formData.addressLine1,
+      formData.addressLine2,
+      formData.city,
+      formData.state,
+      formData.pincode
+    ].filter(part => part && part.trim());
+    return parts.join(", ");
+  };
 
   // Fetch addresses
   const { data: addresses = [], isLoading } = useQuery<Address[]>({
@@ -55,7 +89,7 @@ export default function SavedAddresses() {
         description: "Your address has been saved successfully",
       });
       setModalState("none");
-      setFormData({ label: "", address: "", landmark: "", isDefault: false });
+      resetFormData();
     },
     onError: (error: any) => {
       toast({
@@ -79,7 +113,7 @@ export default function SavedAddresses() {
       });
       setModalState("none");
       setSelectedAddress(null);
-      setFormData({ label: "", address: "", landmark: "", isDefault: false });
+      resetFormData();
     },
     onError: (error: any) => {
       toast({
@@ -145,7 +179,13 @@ export default function SavedAddresses() {
     setSelectedAddress(address);
     setFormData({
       label: address.label,
-      address: address.address,
+      flatHouse: "",
+      street: "",
+      addressLine1: address.address,
+      addressLine2: "",
+      city: "Bengaluru",
+      state: "Karnataka",
+      pincode: "",
       landmark: address.landmark || "",
       isDefault: address.isDefault
     });
@@ -154,12 +194,7 @@ export default function SavedAddresses() {
 
   const handleAddNew = () => {
     setSelectedAddress(null);
-    setFormData({
-      label: "",
-      address: "",
-      landmark: "",
-      isDefault: false
-    });
+    resetFormData();
     setModalState("add");
   };
 
@@ -190,39 +225,41 @@ export default function SavedAddresses() {
   };
 
   const handleSaveAddress = () => {
-    if (!formData.label.trim() || !formData.address.trim()) {
+    if (!formData.label.trim() || !formData.addressLine1.trim() || !formData.pincode.trim()) {
       toast({
         title: "Validation Error",
-        description: "Please fill in all required fields",
+        description: "Please fill in all required fields (Name, Address Line 1, and Pincode)",
         variant: "destructive",
       });
       return;
     }
 
-    // Validate Bangalore address
-    if (!isAddressInBangalore(formData.address)) {
+    // Validate pincode is Bangalore (starts with 56)
+    if (!formData.pincode.startsWith("56")) {
       toast({
         title: "Service Area Limited",
-        description: "We currently serve only Bangalore. Please enter a Bangalore address.",
+        description: "We currently serve only Bangalore. Please enter a Bangalore pincode (starting with 56).",
         variant: "destructive",
       });
       return;
     }
+
+    const combinedAddress = combineAddressFields();
 
     if (modalState === "edit" && selectedAddress) {
       updateAddressMutation.mutate({
         id: selectedAddress.id,
         addressData: {
           label: formData.label,
-          address: formData.address,
-          landmark: formData.landmark || null,
+          address: combinedAddress,
+          landmark: formData.landmark || undefined,
           isDefault: formData.isDefault
         }
       });
     } else if (modalState === "add") {
       createAddressMutation.mutate({
         label: formData.label,
-        address: formData.address,
+        address: combinedAddress,
         landmark: formData.landmark || undefined,
         isDefault: formData.isDefault
       });
@@ -268,20 +305,101 @@ export default function SavedAddresses() {
         </div>
 
         {/* Form */}
-        <div className="px-5 space-y-5">
+        <div className="px-5 space-y-4">
           <div>
             <label className="block text-sm font-medium text-[#1C1C1C] mb-2">
-              Complete Address *
+              Flat / House No. / Building
             </label>
             <Input
-              value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              placeholder="Enter your complete address"
-              className="w-full border-[#1A9952] rounded-lg py-3 px-4"
-              data-testid="input-address"
+              value={formData.flatHouse}
+              onChange={(e) => setFormData({ ...formData, flatHouse: e.target.value })}
+              placeholder="e.g., Flat 101, Tower A"
+              className="w-full border-gray-200 rounded-lg py-3 px-4"
+              data-testid="input-flat-house"
             />
-            <p className="text-xs text-gray-500 mt-1">Include street, area, city, state, and pincode</p>
-            <p className="text-xs text-orange-600 mt-1">⚠️ We currently serve only Bangalore</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[#1C1C1C] mb-2">
+              Street / Road
+            </label>
+            <Input
+              value={formData.street}
+              onChange={(e) => setFormData({ ...formData, street: e.target.value })}
+              placeholder="e.g., 5th Main Road"
+              className="w-full border-gray-200 rounded-lg py-3 px-4"
+              data-testid="input-street"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[#1C1C1C] mb-2">
+              Address Line 1 *
+            </label>
+            <Input
+              value={formData.addressLine1}
+              onChange={(e) => setFormData({ ...formData, addressLine1: e.target.value })}
+              placeholder="e.g., Koramangala, 4th Block"
+              className="w-full border-[#1A9952] rounded-lg py-3 px-4"
+              data-testid="input-address-line1"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[#1C1C1C] mb-2">
+              Address Line 2
+            </label>
+            <Input
+              value={formData.addressLine2}
+              onChange={(e) => setFormData({ ...formData, addressLine2: e.target.value })}
+              placeholder="e.g., Near Sony Signal"
+              className="w-full border-gray-200 rounded-lg py-3 px-4"
+              data-testid="input-address-line2"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-[#1C1C1C] mb-2">
+                City *
+              </label>
+              <Input
+                value={formData.city}
+                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                placeholder="Bengaluru"
+                className="w-full border-gray-200 rounded-lg py-3 px-4 bg-gray-50"
+                data-testid="input-city"
+                readOnly
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#1C1C1C] mb-2">
+                State *
+              </label>
+              <Input
+                value={formData.state}
+                onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                placeholder="Karnataka"
+                className="w-full border-gray-200 rounded-lg py-3 px-4 bg-gray-50"
+                data-testid="input-state"
+                readOnly
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[#1C1C1C] mb-2">
+              Pincode *
+            </label>
+            <Input
+              value={formData.pincode}
+              onChange={(e) => setFormData({ ...formData, pincode: e.target.value.replace(/\D/g, '').slice(0, 6) })}
+              placeholder="e.g., 560034"
+              className="w-full border-[#1A9952] rounded-lg py-3 px-4"
+              data-testid="input-pincode"
+              maxLength={6}
+            />
+            <p className="text-xs text-orange-600 mt-1">⚠️ We currently serve only Bangalore (pincodes starting with 56)</p>
           </div>
 
           <div>
@@ -291,8 +409,8 @@ export default function SavedAddresses() {
             <Input
               value={formData.landmark}
               onChange={(e) => setFormData({ ...formData, landmark: e.target.value })}
-              placeholder="Enter landmark (optional)"
-              className="w-full border-[#1A9952] rounded-lg py-3 px-4"
+              placeholder="e.g., Near Forum Mall"
+              className="w-full border-gray-200 rounded-lg py-3 px-4"
               data-testid="input-landmark"
             />
           </div>
@@ -456,7 +574,7 @@ export default function SavedAddresses() {
             </h2>
             
             <div className="border border-gray-200 rounded-lg py-3 px-4 mb-4 text-center">
-              <span className="text-[#1C1C1C]">{selectedAddress.name}</span>
+              <span className="text-[#1C1C1C]">{selectedAddress.label}</span>
             </div>
 
             <Button
