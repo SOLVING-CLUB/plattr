@@ -2022,12 +2022,38 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
       .filter(dish => dish.isAvailable !== false) // Only show available dishes
       .map((dish) => {
         // Map dietary type from database to FoodItem type
-        const dietaryType = dish.dietaryType?.toLowerCase() || 'veg';
+        const dietaryType = dish.dietaryType?.toLowerCase() || '';
+        const dishName = dish.name?.toLowerCase() || '';
+        
+        // Non-veg keywords to check in dish name (excluding egg - handled separately)
+        const nonVegKeywords = ['chicken', 'mutton', 'fish', 'prawn', 'shrimp', 'lamb', 'meat', 'keema', 'gosht', 'murgh', 'jhinga', 'machli', 'seafood', 'crab', 'lobster', 'beef', 'pork'];
+        const eggKeywords = ['egg', 'anda', 'omelette', 'omelet'];
+        
         let type: "veg" | "egg" | "non-veg" = "veg";
-        if (dietaryType === 'egg' || dietaryType === 'egg-veg') {
-          type = "egg";
-        } else if (dietaryType === 'non-veg' || dietaryType === 'non-veg') {
+        
+        // First check explicit dietary type from database
+        if (dietaryType === 'non-veg' || dietaryType === 'nonveg' || dietaryType === 'non veg') {
           type = "non-veg";
+        } else if (dietaryType === 'egg' || dietaryType === 'egg-veg' || dietaryType === 'eggetarian') {
+          type = "egg";
+        } else if (dietaryType === 'veg' || dietaryType === 'vegetarian') {
+          type = "veg";
+        } else {
+          // Fallback: check dish name for non-veg keywords (excluding egg-only items)
+          const hasNonVegKeyword = nonVegKeywords.some(keyword => dishName.includes(keyword));
+          const hasEggKeyword = eggKeywords.some(keyword => dishName.includes(keyword));
+          
+          if (hasNonVegKeyword && !hasEggKeyword) {
+            // Contains meat/fish keywords but not just egg
+            type = "non-veg";
+          } else if (hasEggKeyword && !hasNonVegKeyword) {
+            // Contains only egg keywords
+            type = "egg";
+          } else if (hasNonVegKeyword && hasEggKeyword) {
+            // Contains both - classify as non-veg
+            type = "non-veg";
+          }
+          // else stays as "veg" (default)
         }
 
         // Map dish_type to category
