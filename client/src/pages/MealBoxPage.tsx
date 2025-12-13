@@ -1961,13 +1961,43 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
     return LUNCH_DINNER_CATEGORY_ORDER;
   };
 
+  // OPTIMIZATION: Lazy-load category counts in background after page renders
+  // This query fetches all dishes for the meal type but is non-blocking
+  // Add 'sixtymin' filter when accessed from 60-min delivery flow (onNavigate present)
+  const { data: allDishesForCounts = [] } = useQuery<Dish[]>({
+    queryKey: onNavigate 
+      ? ['/api/dishes', mealType, 'all', 'all', 'sixtymin']
+      : ['/api/dishes', mealType, 'all', 'all'],
+    enabled: !!mealType && currentStep === 4,
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+    refetchOnWindowFocus: false,
+  });
+
   // Filter categories dynamically from database meal_type column
   // Categories are sorted by the custom category order based on meal type
+  // Also filter out categories that have no dishes (e.g., when 60-min filter is active)
   const categories = useMemo(() => {
     if (!mealType || allCategoriesFromDb.length === 0) return [];
     const filtered = filterCategoriesByMealType(allCategoriesFromDb, mealType);
     const categoryOrder = getCategoryOrder(mealType);
-    return filtered.sort((a, b) => {
+    
+    // Build a set of category IDs that have at least one available dish
+    const categoriesWithDishes = new Set<string>();
+    allDishesForCounts.forEach(dish => {
+      const categoryId = (dish as any).category_id || dish.categoryId;
+      const isAvailable = (dish as any).is_available !== false && dish.isAvailable !== false;
+      if (categoryId && isAvailable) {
+        categoriesWithDishes.add(categoryId);
+      }
+    });
+    
+    // Filter to only categories that have at least one dish
+    // (skip this filter if allDishesForCounts hasn't loaded yet to prevent flickering)
+    const withDishes = allDishesForCounts.length > 0 
+      ? filtered.filter(cat => categoriesWithDishes.has(cat.id))
+      : filtered;
+    
+    return withDishes.sort((a, b) => {
       const aIndex = categoryOrder.indexOf(a.id);
       const bIndex = categoryOrder.indexOf(b.id);
       // If both are in the custom order, sort by that order
@@ -1978,7 +2008,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
       // Otherwise sort by displayOrder
       return (a.displayOrder || 0) - (b.displayOrder || 0);
     }) as CategoryType[];
-  }, [allCategoriesFromDb, mealType]);
+  }, [allCategoriesFromDb, mealType, allDishesForCounts]);
 
   // Set first category as selected when categories load or when meal type changes
   // Keep 'all' as valid selection - only reset if it's an invalid category ID
@@ -1992,18 +2022,6 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
       }
     }
   }, [categories, selectedCategory, mealType, currentStep]);
-
-  // OPTIMIZATION: Lazy-load category counts in background after page renders
-  // This query fetches all dishes for the meal type but is non-blocking
-  // Add 'sixtymin' filter when accessed from 60-min delivery flow (onNavigate present)
-  const { data: allDishesForCounts = [] } = useQuery<Dish[]>({
-    queryKey: onNavigate 
-      ? ['/api/dishes', mealType, 'all', 'all', 'sixtymin']
-      : ['/api/dishes', mealType, 'all', 'all'],
-    enabled: !!mealType && currentStep === 4,
-    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
-    refetchOnWindowFocus: false,
-  });
 
   // Filter to available dishes only
   const allDishes = useMemo(() => {
@@ -2148,9 +2166,23 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
 
   // Use allUniqueDishTypes when "All" is selected, otherwise use fetched dish types
   // Filter out empty strings from fetched dish types (API may return [""] for categories with no dish types)
-  const dishTypes = selectedCategory === 'all'
-    ? allUniqueDishTypes
-    : fetchedDishTypes.filter(dt => dt && dt.trim() !== '');
+  // Also filter out dish types that have 0 dishes (when 60-min filter is active)
+  const dishTypes = useMemo(() => {
+    const rawTypes = selectedCategory === 'all'
+      ? allUniqueDishTypes
+      : fetchedDishTypes.filter(dt => dt && dt.trim() !== '');
+    
+    // Filter to only dish types that have at least one dish in the current filtered set
+    return rawTypes.filter(dt => {
+      const count = foodItems.filter(item => {
+        const dish = dishes.find(d => d.id === item.id);
+        if (!dish) return false;
+        const dishDishType = (dish as any).dish_type || dish.dishType;
+        return dishDishType === dt;
+      }).length;
+      return count > 0;
+    });
+  }, [selectedCategory, allUniqueDishTypes, fetchedDishTypes, foodItems, dishes]);
 
   // Reset dish type filter when category changes
   useEffect(() => {
