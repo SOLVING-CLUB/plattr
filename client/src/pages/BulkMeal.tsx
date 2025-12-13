@@ -59,6 +59,8 @@ export interface Dish {
   protein?: number | null;
   carbs?: number | null;
   fat?: number | null;
+  is_sixty_min?: boolean;
+  isSixtyMin?: boolean;
 }
 import { getSupabaseImageUrl, getDishTypeImage } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
@@ -609,6 +611,12 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
 
     return searchResults
       .filter(dish => {
+        // 60-min delivery filter - only show dishes with is_sixty_min: true
+        const isSixtyMin = (dish as any).is_sixty_min || dish.isSixtyMin;
+        if (isSixtyMin !== true) {
+          return false;
+        }
+
         // Dish type filter
         if (selectedDishType !== 'all') {
           const dishDishType = (dish as any).dish_type || dish.dishType;
