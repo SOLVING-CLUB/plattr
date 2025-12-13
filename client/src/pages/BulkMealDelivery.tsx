@@ -29,6 +29,7 @@ export default function BulkMealsDelivery() {
   });
   const [email, setEmail] = useState(() => localStorage.getItem('email') || "");
   const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [saveAddressForFuture, setSaveAddressForFuture] = useState(false);
 
   // Calculate T+12 hours for default date/time
   const getMinDateTime = () => {
@@ -162,13 +163,43 @@ export default function BulkMealsDelivery() {
         }
       }
       
-      // Validate addressId - only use if it's a valid UUID (not empty string or invalid value)
+      // Handle address - use saved address ID or inline address text
       let validAddressId: string | undefined = undefined;
+      let deliveryAddressText: string | undefined = undefined;
+      
       if (selectedAddressId && selectedAddressId.trim() !== "" && selectedAddressId !== "home" && selectedAddressId !== "office") {
-        // Check if it's a valid UUID format
+        // Check if it's a valid UUID format (existing saved address)
         const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
         if (uuidRegex.test(selectedAddressId)) {
           validAddressId = selectedAddressId;
+        }
+      } else if (addressLine1 && city) {
+        // No saved address selected but manual address fields are filled
+        const fullAddress = [addressLine1, addressLine2, city, state, pincode].filter(Boolean).join(", ");
+        
+        if (saveAddressForFuture) {
+          // Only save to addresses table when user opts in
+          try {
+            const newAddress = await addressService.create({
+              label: "My Location",
+              address: fullAddress,
+              landmark: addressLine2 || undefined,
+              isDefault: false,
+            });
+            validAddressId = newAddress.id;
+          } catch (addressError: any) {
+            console.error("Error creating address:", addressError);
+            toast({
+              variant: "destructive",
+              title: "Address Error",
+              description: "Failed to save address. Please try again.",
+            });
+            setIsCreatingOrder(false);
+            return;
+          }
+        } else {
+          // Don't save to addresses table - just pass the address text with the order
+          deliveryAddressText = fullAddress;
         }
       }
       
@@ -203,6 +234,7 @@ export default function BulkMealsDelivery() {
         deliveryDate: eventDate || undefined,
         deliveryTime: eventTime || undefined,
         addressId: validAddressId,
+        deliveryAddress: deliveryAddressText,
       });
       
     localStorage.removeItem("bulkMealsAddons");
@@ -459,6 +491,8 @@ export default function BulkMealsDelivery() {
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
+                  checked={saveAddressForFuture}
+                  onChange={(e) => setSaveAddressForFuture(e.target.checked)}
                   className="w-5 h-5 rounded border-2 border-gray-300"
                   style={{ accentColor: "#1A9952" }}
                   data-testid="checkbox-save-address"

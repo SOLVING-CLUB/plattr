@@ -63,10 +63,15 @@ export default function Orders() {
     queryFn: () => orderService.getAllUnified(),
   });
 
-  // Format date for display
+  // Format date for display in IST (Indian Standard Time)
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });
+    return date.toLocaleDateString("en-GB", { 
+      day: "2-digit", 
+      month: "2-digit", 
+      year: "numeric",
+      timeZone: "Asia/Kolkata"
+    });
   };
 
   // Format order number with fallback for missing numbers

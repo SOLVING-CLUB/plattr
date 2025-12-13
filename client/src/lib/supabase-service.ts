@@ -842,6 +842,7 @@ export const bulkMealOrderService = {
     deliveryDate?: string;
     deliveryTime?: string;
     addressId?: string;
+    deliveryAddress?: string;
   }) {
     const user = await getAuthenticatedUser();
     if (!user) throw new Error('Not authenticated');
@@ -867,6 +868,7 @@ export const bulkMealOrderService = {
         delivery_date: orderData.deliveryDate || null,
         delivery_time: orderData.deliveryTime || null,
         address_id: orderData.addressId || null,
+        delivery_address: orderData.deliveryAddress || null,
         status: 'pending',
       })
       .select()
