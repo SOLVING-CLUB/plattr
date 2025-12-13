@@ -296,7 +296,7 @@ export default function SavedAddresses() {
               <Input
                 value={formData.label}
                 onChange={(e) => setFormData({ ...formData, label: e.target.value })}
-                placeholder="e.g., Home, Office"
+                placeholder=""
                 className="w-full border-gray-200 rounded-lg py-3 px-4"
                 data-testid="input-address-name"
               />
@@ -313,7 +313,7 @@ export default function SavedAddresses() {
             <Input
               value={formData.flatHouse}
               onChange={(e) => setFormData({ ...formData, flatHouse: e.target.value })}
-              placeholder="e.g., Flat 101, Tower A"
+              placeholder=""
               className="w-full border-gray-200 rounded-lg py-3 px-4"
               data-testid="input-flat-house"
             />
@@ -326,7 +326,7 @@ export default function SavedAddresses() {
             <Input
               value={formData.street}
               onChange={(e) => setFormData({ ...formData, street: e.target.value })}
-              placeholder="e.g., 5th Main Road"
+              placeholder=""
               className="w-full border-gray-200 rounded-lg py-3 px-4"
               data-testid="input-street"
             />
@@ -339,7 +339,7 @@ export default function SavedAddresses() {
             <Input
               value={formData.addressLine1}
               onChange={(e) => setFormData({ ...formData, addressLine1: e.target.value })}
-              placeholder="e.g., Koramangala, 4th Block"
+              placeholder=""
               className="w-full border-[#1A9952] rounded-lg py-3 px-4"
               data-testid="input-address-line1"
             />
@@ -352,7 +352,7 @@ export default function SavedAddresses() {
             <Input
               value={formData.addressLine2}
               onChange={(e) => setFormData({ ...formData, addressLine2: e.target.value })}
-              placeholder="e.g., Near Sony Signal"
+              placeholder=""
               className="w-full border-gray-200 rounded-lg py-3 px-4"
               data-testid="input-address-line2"
             />
@@ -394,7 +394,7 @@ export default function SavedAddresses() {
             <Input
               value={formData.pincode}
               onChange={(e) => setFormData({ ...formData, pincode: e.target.value.replace(/\D/g, '').slice(0, 6) })}
-              placeholder="e.g., 560034"
+              placeholder=""
               className="w-full border-[#1A9952] rounded-lg py-3 px-4"
               data-testid="input-pincode"
               maxLength={6}
@@ -409,7 +409,7 @@ export default function SavedAddresses() {
             <Input
               value={formData.landmark}
               onChange={(e) => setFormData({ ...formData, landmark: e.target.value })}
-              placeholder="e.g., Near Forum Mall"
+              placeholder=""
               className="w-full border-gray-200 rounded-lg py-3 px-4"
               data-testid="input-landmark"
             />
