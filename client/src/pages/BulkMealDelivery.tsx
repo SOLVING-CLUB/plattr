@@ -350,7 +350,7 @@ export default function BulkMealsDelivery() {
           {/* Delivery Time Selection */}
           <div className="bg-white rounded-xl p-4 border border-gray-200">
             <DeliveryTimePicker
-              mealType="lunch-dinner"
+              mealType="all"
               value={eventTime}
               onChange={setEventTime}
             />
