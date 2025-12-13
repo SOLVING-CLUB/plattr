@@ -60,10 +60,8 @@ export default function HelpPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20">
-      <AppHeader />
-
-      <main className="max-w-4xl mx-auto px-4 py-8">
+    <div className="min-h-screen bg-white pb-20">
+      <main className="max-w-4xl mx-auto px-4 py-8 pt-12">
         <Button 
           variant="ghost" 
           size="sm" 
