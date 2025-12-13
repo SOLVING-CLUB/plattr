@@ -518,6 +518,16 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
     });
   }, [allDishesForCounts]);
 
+  // Debug: Log breakdown of is_sixty_min values
+  useEffect(() => {
+    if (allDishesForCounts.length > 0) {
+      const nullCount = allDishesForCounts.filter(d => (d as any).is_sixty_min === null || (d as any).is_sixty_min === undefined).length;
+      const trueCount = allDishesForCounts.filter(d => (d as any).is_sixty_min === true).length;
+      const falseCount = allDishesForCounts.filter(d => (d as any).is_sixty_min === false).length;
+      console.log(`[BulkMeal Debug] Total dishes: ${allDishesForCounts.length}, is_sixty_min breakdown - NULL: ${nullCount}, TRUE: ${trueCount}, FALSE: ${falseCount}, onNavigate: ${!!onNavigate}`);
+    }
+  }, [allDishesForCounts, onNavigate]);
+
   // Fetch dishes for selected category (for display)
   // Add 'sixtymin' filter when accessed from 60-min delivery flow (onNavigate present)
   // When accessed directly from home page (onNavigate NOT present) - show ALL dishes (no filter)
