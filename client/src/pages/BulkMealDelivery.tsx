@@ -168,10 +168,10 @@ export default function BulkMealsDelivery() {
   };
 
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const gst = Math.round(subtotal * 0.18);
-  const platformFee = 499;
-  const packagingFee = 399;
-  const grandTotal = subtotal + gst + platformFee + packagingFee;
+  const packagingFee = Math.round(subtotal * 0.06);
+  const deliveryCharges = subtotal >= 2000 ? 0 : 250;
+  const gst = Math.round(subtotal * 0.05);
+  const grandTotal = subtotal + packagingFee + deliveryCharges + gst;
 
   const handleSubmit = async () => {
     try {
@@ -263,7 +263,7 @@ export default function BulkMealsDelivery() {
         selectedAddons: selectedAddons.length > 0 ? selectedAddons : undefined,
         subtotal: subtotal,
         gst: gst,
-        platformFee: platformFee,
+        platformFee: deliveryCharges,
         packagingFee: packagingFee,
         total: grandTotal,
         deliveryDate: eventDate || undefined,

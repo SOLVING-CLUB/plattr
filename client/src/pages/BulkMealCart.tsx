@@ -80,10 +80,10 @@ export default function BulkMealCart() {
   };
 
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const gst = Math.round(subtotal * 0.18);
-  const platformFee = 499;
-  const packagingFee = 399;
-  const grandTotal = subtotal + gst + platformFee + packagingFee;
+  const packagingFee = Math.round(subtotal * 0.06);
+  const deliveryCharges = subtotal >= 2000 ? 0 : 250;
+  const gst = Math.round(subtotal * 0.05);
+  const grandTotal = subtotal + packagingFee + deliveryCharges + gst;
 
   const handleQuantityChange = (itemId: number, change: number) => {
     const item = cart.find(i => i.id === itemId);
@@ -240,26 +240,26 @@ export default function BulkMealCart() {
           </div>
           <div className="flex items-center justify-between">
             <span className="text-sm text-gray-700" style={{ fontFamily: "Sweet Sans Pro" }}>
-              GST (18%)
-            </span>
-            <span className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-              ₹{gst.toLocaleString('en-IN')}
-            </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-700" style={{ fontFamily: "Sweet Sans Pro" }}>
-              Platform Fee
-            </span>
-            <span className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-              ₹{platformFee.toLocaleString('en-IN')}
-            </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-700" style={{ fontFamily: "Sweet Sans Pro" }}>
-              Packaging & Handling
+              Packaging (6%)
             </span>
             <span className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
               ₹{packagingFee.toLocaleString('en-IN')}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-700" style={{ fontFamily: "Sweet Sans Pro" }}>
+              Delivery Charges
+            </span>
+            <span className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+              {deliveryCharges === 0 ? "FREE" : `₹${deliveryCharges.toLocaleString('en-IN')}`}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-700" style={{ fontFamily: "Sweet Sans Pro" }}>
+              GST (5%)
+            </span>
+            <span className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+              ₹{gst.toLocaleString('en-IN')}
             </span>
           </div>
           <div className="border-t border-gray-300 pt-3 mt-3">
