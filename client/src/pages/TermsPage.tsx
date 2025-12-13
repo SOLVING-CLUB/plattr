@@ -8,7 +8,7 @@ export default function TermsPage() {
   return (
     <div className="min-h-screen bg-[#FDF8F3] flex flex-col">
       <div className="sticky top-0 z-50 bg-white border-b border-gray-100">
-        <div className="flex items-center gap-3 px-4 pt-12 pb-3">
+        <div className="flex items-center gap-3 px-4 pt-16 pb-3">
           <button
             onClick={() => setLocation("/about")}
             className="p-2 -ml-2 rounded-full hover:bg-gray-100 transition-colors"
