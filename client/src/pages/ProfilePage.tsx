@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, Clock, MapPin, CreditCard, Bell, Pencil, HelpCircle, LogOut } from "lucide-react";
+import { ChevronRight, Clock, MapPin, CreditCard, Bell, Pencil, HelpCircle, LogOut, Info } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { userService } from "@/lib/supabase-service";
 import { supabaseAuth } from "@/lib/supabase-auth";
@@ -25,6 +25,7 @@ const menuItems: MenuItem[] = [
   { id: "order-history", label: "Order History", icon: Clock, hasChevron: true },
   { id: "saved-addresses", label: "Saved Addresses", icon: MapPin, hasChevron: true },
   { id: "payment-methods", label: "Payment Methods", icon: CreditCard, hasChevron: true },
+  { id: "about", label: "About", icon: Info, hasChevron: true },
   { id: "notifications", label: "Notifications", icon: Bell, hasChevron: false },
 ];
 
@@ -253,6 +254,8 @@ export default function Profile() {
                     setLocation("/saved-addresses");
                   } else if (item.id === "payment-methods") {
                     setLocation("/payment-methods");
+                  } else if (item.id === "about") {
+                    setLocation("/about");
                   }
                 }}
                 className={`w-full flex items-center justify-between px-5 py-4 hover-elevate ${index < menuItems.length - 1 ? "border-b border-gray-100" : ""

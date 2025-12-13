@@ -21,6 +21,9 @@ import SavedAddresses from "@/pages/SavedAddresses";
 import PaymentMethods from "@/pages/PaymentMethods";
 import HelpPage from "@/pages/HelpPage";
 import AboutPage from "@/pages/AboutPage";
+import TermsPage from "@/pages/TermsPage";
+import PrivacyPage from "@/pages/PrivacyPage";
+import LicensesPage from "@/pages/LicensesPage";
 import ReferralPage from "@/pages/ReferralPage";
 import CorporatePage from "@/pages/CorporatePage";
 import CateringPage from "@/pages/CateringPage";
@@ -200,6 +203,9 @@ function Router() {
   const GuardedPaymentMethods = withAuthGuard(PaymentMethods);
   const GuardedHelpPage = withAuthGuard(HelpPage);
   const GuardedAboutPage = withAuthGuard(AboutPage);
+  const GuardedTermsPage = withAuthGuard(TermsPage);
+  const GuardedPrivacyPage = withAuthGuard(PrivacyPage);
+  const GuardedLicensesPage = withAuthGuard(LicensesPage);
   const GuardedReferralPage = withAuthGuard(ReferralPage);
   const GuardedCorporatePage = withAuthGuard(CorporatePage);
   const GuardedCateringPage = withAuthGuard(CateringPage);
@@ -262,6 +268,9 @@ function Router() {
       <Route path="/payment-methods" component={GuardedPaymentMethods} />
       <Route path="/help" component={GuardedHelpPage} />
       <Route path="/about" component={GuardedAboutPage} />
+      <Route path="/terms" component={GuardedTermsPage} />
+      <Route path="/privacy" component={GuardedPrivacyPage} />
+      <Route path="/licenses" component={GuardedLicensesPage} />
       <Route path="/referral" component={GuardedReferralPage} />
       <Route path="/corporate" component={GuardedCorporatePage} />
       <Route path="/corporate-thank-you" component={CorporateThankYouPage} />
