@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Clock } from "lucide-react";
+import { Clock, ChevronDown } from "lucide-react";
 
 interface TimeSlot {
   label: string;
@@ -139,6 +139,7 @@ export default function DeliveryTimePicker({
   value, 
   onChange 
 }: DeliveryTimePickerProps) {
+  const [isOpen, setIsOpen] = useState(false);
   const periods = getPeriods(mealType);
   const [activePeriod, setActivePeriod] = useState(periods[0]?.id || "");
 
@@ -156,61 +157,72 @@ export default function DeliveryTimePicker({
   const currentPeriod = periods.find(p => p.id === activePeriod) || periods[0];
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Clock className="w-5 h-5 text-gray-500" />
-        <span 
-          className="font-medium text-gray-800"
-          style={{ fontFamily: "Sweet Sans Pro" }}
-        >
-          Delivery time
-        </span>
-        <span 
-          className="ml-auto text-gray-500 text-sm"
-          style={{ fontFamily: "Sweet Sans Pro" }}
-        >
-          {value || "Select time"}
-        </span>
-      </div>
-
-      <div 
-        className="flex w-full bg-gray-100 rounded-full p-1"
-        data-testid="time-period-toggle"
+    <div 
+      className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
+      style={{ fontFamily: "Sweet Sans Pro" }}
+    >
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+        data-testid="button-toggle-time-picker"
       >
-        {periods.map((period) => (
-          <button
-            key={period.id}
-            onClick={() => setActivePeriod(period.id)}
-            className={`flex-1 px-4 py-2 rounded-full text-xs font-medium transition-colors text-center ${
-              activePeriod === period.id
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-600 hover:text-gray-900"
-            }`}
-            style={{ fontFamily: "Sweet Sans Pro" }}
-            data-testid={`button-period-${period.id}`}
-          >
-            {period.label}
-          </button>
-        ))}
-      </div>
+        <div className="flex items-center gap-2">
+          <Clock className="w-5 h-5 text-gray-500" />
+          <span className="font-medium text-gray-800">Delivery time</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-gray-500 text-sm">
+            {value || "Select time"}
+          </span>
+          <ChevronDown 
+            className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} 
+          />
+        </div>
+      </button>
 
-      <div className="grid grid-cols-2 gap-2">
-        {currentPeriod?.slots.map((slot) => (
-          <button
-            key={slot.value}
-            onClick={() => onChange(slot.value)}
-            className={`px-3 py-2.5 rounded-xl text-xs font-medium border-2 transition-colors ${
-              value === slot.value
-                ? "border-orange-500 bg-orange-50 text-orange-700"
-                : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
-            }`}
-            style={{ fontFamily: "Sweet Sans Pro" }}
-            data-testid={`button-time-${slot.value}`}
+      {isOpen && (
+        <div className="px-4 pb-4 border-t border-gray-100 pt-4 space-y-4">
+          <div 
+            className="flex w-full bg-gray-100 rounded-full p-1"
+            data-testid="time-period-toggle"
           >
-            {slot.label}
-          </button>
-        ))}
-      </div>
+            {periods.map((period) => (
+              <button
+                key={period.id}
+                onClick={() => setActivePeriod(period.id)}
+                className={`flex-1 px-4 py-2 rounded-full text-xs font-medium transition-colors text-center ${
+                  activePeriod === period.id
+                    ? "bg-white text-gray-900 shadow-sm"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
+                style={{ fontFamily: "Sweet Sans Pro" }}
+                data-testid={`button-period-${period.id}`}
+              >
+                {period.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            {currentPeriod?.slots.map((slot) => (
+              <button
+                key={slot.value}
+                onClick={() => onChange(slot.value)}
+                className={`px-3 py-2.5 rounded-xl text-xs font-medium border-2 transition-colors ${
+                  value === slot.value
+                    ? "border-orange-500 bg-orange-50 text-orange-700"
+                    : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
+                }`}
+                style={{ fontFamily: "Sweet Sans Pro" }}
+                data-testid={`button-time-${slot.value}`}
+              >
+                {slot.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
