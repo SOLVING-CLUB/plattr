@@ -503,7 +503,7 @@
 
 
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useLocation } from "wouter";
 import AppHeader from "@/pages/AppHeader";
 import HeroSection from "@/pages/HeroSection";
@@ -512,6 +512,7 @@ import SpotlightFeaturesSection from "@/pages/SpotlightSection";
 import SmartMenuConciergeSection from "@/pages/SmartMenuSection";
 import FloatingNav from "@/pages/FloatingNav";
 import ContinueOrderBanner from "@/pages/ContinueOrderBanner";
+import NoServicePage from "@/pages/NoServicePage";
 import { useToast } from "@/hooks/use-toast";
 import { PageWithLoader } from "@/components/PageWithLoader";
 
@@ -519,7 +520,14 @@ export default function Home() {
   const [, setLocation] = useLocation();
   const [cartCount, setCartCount] = useState(0);
   const [activeTab, setActiveTab] = useState<"home" | "menu" | "profile">("home");
+  const [serviceUnavailable, setServiceUnavailable] = useState(false);
+  const [currentLocationLabel, setCurrentLocationLabel] = useState("Select Address");
   const { toast } = useToast();
+
+  const handleServiceAvailabilityChange = useCallback((isUnavailable: boolean, locationLabel: string) => {
+    setServiceUnavailable(isUnavailable);
+    setCurrentLocationLabel(locationLabel);
+  }, []);
 
   const handleLocationClick = () => {
     console.log("Location selector clicked");
@@ -576,11 +584,21 @@ export default function Home() {
     setLocation("/concierge");
   };
 
+  if (serviceUnavailable) {
+    return (
+      <NoServicePage 
+        onLocationClick={handleLocationClick}
+        locationLabel={currentLocationLabel}
+      />
+    );
+  }
+
   return (
     <PageWithLoader>
       <div className="min-h-screen pb-44 bg-white">
         <AppHeader 
           onLocationClick={handleLocationClick}
+          onServiceAvailabilityChange={handleServiceAvailabilityChange}
         />
         
         <HeroSection onExploreMenu={handleExploreMenu} />
@@ -594,7 +612,6 @@ export default function Home() {
           <SmartMenuConciergeSection onTryNow={handleTryMenuConcierge} />
         </div>
       
-        {/* Continue Order Banner */}
         <ContinueOrderBanner />
         <FloatingNav activeTab={activeTab} onTabChange={handleTabChange} />
       </div>

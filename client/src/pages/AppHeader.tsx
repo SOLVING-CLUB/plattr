@@ -1,13 +1,12 @@
 import { useState, useEffect } from "react";
-import { createPortal } from "react-dom";
 import { MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import headerBg from "@assets/Hero_1763854193361.png";
-import noServiceImage from "@assets/Good_Food_Takes_Time_(4)_1765642758756.png";
 
 interface AppHeaderProps {
   onLocationClick?: () => void;
+  onServiceAvailabilityChange?: (isUnavailable: boolean, locationLabel: string) => void;
 }
 
 const LOCATION_STORAGE_KEY = "activeLocation";
@@ -28,12 +27,19 @@ const isWithinBangalore = (lat: number, lng: number) => {
 };
 
 export default function AppHeader({ 
-  onLocationClick
+  onLocationClick,
+  onServiceAvailabilityChange
 }: AppHeaderProps) {
   const [, setLocation] = useLocation();
   const [locationLabel, setLocationLabel] = useState("Select Address");
   const [showServiceUnavailable, setShowServiceUnavailable] = useState(false);
   const [isCheckingLocation, setIsCheckingLocation] = useState(false);
+
+  useEffect(() => {
+    if (onServiceAvailabilityChange) {
+      onServiceAvailabilityChange(showServiceUnavailable, locationLabel);
+    }
+  }, [showServiceUnavailable, locationLabel, onServiceAvailabilityChange]);
 
   // Check if the selected/saved address is in Bangalore
   const checkSavedLocationServiceAvailability = (savedData: any) => {
@@ -177,22 +183,6 @@ export default function AppHeader({
 
   return (
     <>
-      {showServiceUnavailable && createPortal(
-        <div 
-          className="fixed left-0 right-0 bottom-0 z-[9999] bg-white"
-          style={{ top: '160px' }}
-          data-testid="screen-service-unavailable"
-          role="dialog"
-          aria-modal="true"
-        >
-          <img 
-            src={noServiceImage} 
-            alt="Good food takes time - We're setting up kitchens and deliveries in your area"
-            className="w-full h-full object-cover object-top"
-          />
-        </div>,
-        document.body
-      )}
       <header 
         className="h-40"
         style={{
