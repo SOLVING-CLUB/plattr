@@ -208,6 +208,10 @@ export function mapApiRouteToSupabase(route: string[]): { table: string; options
     if (sixtyMinFilter === 'sixtymin') {
       filters['is_sixty_min'] = 'eq.true';
     }
+    // Add bulk meal filter - show dishes where is_sixty_min is NULL (regular bulk orders)
+    else if (sixtyMinFilter === 'bulkmeal') {
+      filters['is_sixty_min'] = 'is.null';
+    }
     
     return filters;
   };

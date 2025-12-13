@@ -450,10 +450,11 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
   // OPTIMIZATION: Lazy-load category counts in background after page renders
   // This query fetches all dishes for the meal type but is non-blocking (loads after initial render)
   // Add 'sixtymin' filter when accessed from 60-min delivery flow (onNavigate present)
+  // Add 'bulkmeal' filter when accessed directly from home page (onNavigate NOT present) - shows dishes with is_sixty_min = NULL
   const { data: allDishesForCounts = [] } = useQuery<Dish[]>({
     queryKey: onNavigate 
       ? ['/api/dishes', mealType, 'all', 'all', 'sixtymin']
-      : ['/api/dishes', mealType, 'all', 'all'],
+      : ['/api/dishes', mealType, 'all', 'all', 'bulkmeal'],
     enabled: !!mealType,
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes - counts don't change often
     refetchOnWindowFocus: false,
@@ -519,10 +520,11 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
 
   // Fetch dishes for selected category (for display)
   // Add 'sixtymin' filter when accessed from 60-min delivery flow (onNavigate present)
+  // Add 'bulkmeal' filter when accessed directly from home page (onNavigate NOT present) - shows dishes with is_sixty_min = NULL
   const { data: dishes = [], isLoading: isLoadingDishes } = useQuery<Dish[]>({
     queryKey: onNavigate
       ? ['/api/dishes', mealType, selectedCategory, dietaryMode, 'sixtymin']
-      : ['/api/dishes', mealType, selectedCategory, dietaryMode],
+      : ['/api/dishes', mealType, selectedCategory, dietaryMode, 'bulkmeal'],
     enabled: !!selectedCategory,
   });
 

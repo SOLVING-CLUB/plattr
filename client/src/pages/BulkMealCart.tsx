@@ -26,10 +26,11 @@ export default function BulkMealCart() {
   const isSixtyMinOrder = cart.length > 0 && cart.every(item => item.isSixtyMin === true);
 
   // Fetch dishes from lunch-dinner (main meal type) to get related suggestions
+  // Use 'sixtymin' filter for 60-min orders, 'bulkmeal' filter for regular bulk orders
   const { data: allDishes = [] } = useQuery<SuggestedDish[]>({
     queryKey: isSixtyMinOrder 
       ? ['/api/dishes', 'lunch-dinner', 'all', 'all', 'sixtymin']
-      : ['/api/dishes', 'lunch-dinner', 'all', 'all'],
+      : ['/api/dishes', 'lunch-dinner', 'all', 'all', 'bulkmeal'],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: cart.length > 0,
   });

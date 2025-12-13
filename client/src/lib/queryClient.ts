@@ -213,6 +213,10 @@ export const getQueryFn = <T>(options: {
             if (sixtyMinFilter === 'sixtymin') {
               options.filter['is_sixty_min'] = 'eq.true';
             }
+            // Add bulk meal filter - show dishes where is_sixty_min is NULL (regular bulk orders)
+            else if (sixtyMinFilter === 'bulkmeal') {
+              options.filter['is_sixty_min'] = 'is.null';
+            }
             result = await supabase.select('dishes', options);
           } else {
             result = await supabase.select(mapped.table, mapped.options);
