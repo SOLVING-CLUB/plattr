@@ -6,6 +6,8 @@ import { useCart } from "@/context/CartContex";
 import FloatingNav from "@/pages/FloatingNav";
 import { useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
+import { getSupabaseImageUrl } from "@/lib/supabase";
+import dishFallbackImage from "@assets/stock_images/biryani_rice_dish_fo_8445bdd6.jpg";
 
 interface SuggestedDish {
   id: string;
@@ -35,12 +37,14 @@ export default function BulkMealCart() {
     .slice(0, 6);
 
   const handleAddSuggestion = (dish: SuggestedDish) => {
+    const imageUrl = dish.image_url ? getSupabaseImageUrl(dish.image_url) : dishFallbackImage;
     addToCart("bulk-meals", {
       id: Number(dish.id),
       name: dish.name,
       price: typeof dish.price === 'string' ? parseFloat(dish.price) : dish.price,
       quantity: 5,
       isSixtyMin: isSixtyMinOrder,
+      image: imageUrl,
     });
   };
 
@@ -106,22 +110,32 @@ export default function BulkMealCart() {
               className="bg-white border-2 border-gray-200 rounded-lg p-4"
               data-testid={`cart-item-${item.id}`}
             >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex-1">
-                  <h3 className="font-semibold text-base mb-1" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                    {item.name}
-                  </h3>
-                  <p className="text-sm text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
-                    ₹{item.price.toLocaleString('en-IN')} per serving
-                  </p>
+              <div className="flex gap-3 mb-3">
+                {/* Item Image */}
+                <img 
+                  src={item.image || dishFallbackImage} 
+                  alt={item.name}
+                  className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-base mb-1 truncate" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                        {item.name}
+                      </h3>
+                      <p className="text-sm text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
+                        ₹{item.price.toLocaleString('en-IN')} per serving
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => removeFromCart(item.id)}
+                      className="text-red-500 hover:text-red-700 p-1 flex-shrink-0"
+                      data-testid={`button-remove-${item.id}`}
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </div>
                 </div>
-                <button
-                  onClick={() => removeFromCart(item.id)}
-                  className="text-red-500 hover:text-red-700 p-1"
-                  data-testid={`button-remove-${item.id}`}
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
               </div>
 
               {/* Quantity Controls */}
@@ -171,13 +185,11 @@ export default function BulkMealCart() {
                   className="flex-shrink-0 w-36 bg-white border border-gray-200 rounded-lg p-3"
                   data-testid={`suggestion-${dish.id}`}
                 >
-                  {dish.image_url && (
-                    <img 
-                      src={dish.image_url} 
-                      alt={dish.name}
-                      className="w-full h-20 object-cover rounded-md mb-2"
-                    />
-                  )}
+                  <img 
+                    src={dish.image_url ? getSupabaseImageUrl(dish.image_url) : dishFallbackImage} 
+                    alt={dish.name}
+                    className="w-full h-20 object-cover rounded-md mb-2"
+                  />
                   <h4 className="font-medium text-sm mb-1 line-clamp-2" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
                     {dish.name}
                   </h4>

@@ -332,7 +332,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
     }
   };
 
-  const handleAddToCart = (item: { id: number; name: string; price: number; quantity?: number }) => {
+  const handleAddToCart = (item: { id: number; name: string; price: number; quantity?: number; image?: string }) => {
     handleInteraction();
     const quantityStr = quantities[item.id] !== undefined ? quantities[item.id] : '5';
     const quantity = quantityStr ? parseInt(quantityStr, 10) : 5;
@@ -359,6 +359,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
       price: item.price,
       quantity,
       isSixtyMin: !!onNavigate,
+      image: item.image,
     });
 
     // Keep the quantity value after adding

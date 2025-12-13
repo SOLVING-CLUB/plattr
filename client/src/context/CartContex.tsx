@@ -14,6 +14,7 @@ export interface CartItem {
   price: number;
   quantity: number;
   isSixtyMin?: boolean;
+  image?: string;
 }
 
 export interface StoredPortionSelection {
