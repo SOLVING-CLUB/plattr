@@ -112,12 +112,12 @@ export function SearchOverlay({
           isOpen ? "translate-y-0" : "-translate-y-full"
         )}
         style={{
-          paddingTop: "calc(env(safe-area-inset-top, 0px) + 40px)",
-          maxHeight: "80vh",
+          paddingTop: "calc(env(safe-area-inset-top, 0px) + 56px)",
+          maxHeight: "85vh",
           overflowY: "auto",
         }}
       >
-        <div className="p-4 pt-0">
+        <div className="p-4 pt-2">
           <form onSubmit={handleSearchSubmit}>
             <div className="flex items-center gap-3 mb-4">
               <button
