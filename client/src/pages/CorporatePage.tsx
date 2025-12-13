@@ -1188,21 +1188,35 @@ export default function CorporateOrder() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [slideCount, setSlideCount] = useState(0);
   
-  const [formData, setFormData] = useState({
-    companyName: "",
-    contactPerson: "",
-    email: "",
-    phone: "",
-    veg: "",
-    nonVeg: "",
-    egg: "",
-    numberOfPeople: "",
-    eventType: "",
-    budgetMin: "",
-    budgetMax: "",
-    eventDate: "",
-    eventTime: "",
-    message: "",
+  // Calculate T+12 hours for default date/time
+  const getMinDateTime = () => {
+    const minTime = new Date(Date.now() + 12 * 60 * 60 * 1000);
+    return {
+      date: minTime.toISOString().split('T')[0],
+      time: `${minTime.getHours().toString().padStart(2, '0')}:00`
+    };
+  };
+
+  const minDateTime = getMinDateTime();
+
+  const [formData, setFormData] = useState(() => {
+    const minDT = getMinDateTime();
+    return {
+      companyName: "",
+      contactPerson: "",
+      email: "",
+      phone: "",
+      veg: "",
+      nonVeg: "",
+      egg: "",
+      numberOfPeople: "",
+      eventType: "",
+      budgetMin: "",
+      budgetMax: "",
+      eventDate: minDT.date,
+      eventTime: minDT.time,
+      message: "",
+    };
   });
 
   // Calculate total people from dietary preferences
@@ -1790,6 +1804,7 @@ export default function CorporateOrder() {
                         setFormData({ ...formData, eventDate: e.target.value })
                       }
                       required
+                      min={minDateTime.date}
                       className="pl-10 border-[#1A9952] focus-visible:ring-[#1A9952]"
                       style={{ fontFamily: "Sweet Sans Pro" }}
                     />

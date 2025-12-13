@@ -1027,10 +1027,22 @@ export default function CateringOrder() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [slideCount, setSlideCount] = useState(0);
 
+  // Calculate T+12 hours for default date/time
+  const getMinDateTime = () => {
+    const minTime = new Date(Date.now() + 12 * 60 * 60 * 1000);
+    return {
+      date: minTime.toISOString().split('T')[0],
+      time: `${minTime.getHours().toString().padStart(2, '0')}:00`
+    };
+  };
+
+  const minDateTime = getMinDateTime();
+
   const [formData, setFormData] = useState(() => {
     // Prefill phone and email from localStorage (logged in user)
     const savedPhone = localStorage.getItem("phone");
     const savedEmail = localStorage.getItem("email");
+    const minDT = getMinDateTime();
     return {
       eventType: "",
       numberOfPeople: "",
@@ -1041,8 +1053,8 @@ export default function CateringOrder() {
       budgetMin: "",
       budgetMax: "",
       mealTimes: [] as string[],
-      eventDate: "",
-      eventTime: "",
+      eventDate: minDT.date,
+      eventTime: minDT.time,
       phone: savedPhone ? `+91 ${savedPhone}` : "",
       email: savedEmail || "",
     };
@@ -1995,6 +2007,7 @@ export default function CateringOrder() {
                         setFormData({ ...formData, eventDate: e.target.value })
                       }
                       required
+                      min={minDateTime.date}
                       className="pl-10 border-[#1A9952] focus-visible:ring-[#1A9952]"
                       style={{ fontFamily: "Sweet Sans Pro" }}
                       placeholder="10/05/2025"

@@ -30,6 +30,19 @@ export default function BulkMealsDelivery() {
   const [email, setEmail] = useState(() => localStorage.getItem('email') || "");
   const [isGettingLocation, setIsGettingLocation] = useState(false);
 
+  // Calculate T+12 hours for default date/time
+  const getMinDateTime = () => {
+    const minTime = new Date(Date.now() + 12 * 60 * 60 * 1000);
+    return {
+      date: minTime.toISOString().split('T')[0],
+      time: `${minTime.getHours().toString().padStart(2, '0')}:00`
+    };
+  };
+  
+  const minDateTime = getMinDateTime();
+  const [eventDate, setEventDate] = useState(minDateTime.date);
+  const [eventTime, setEventTime] = useState(minDateTime.time);
+
   // Function to get current location and reverse geocode
   const getCurrentLocation = async () => {
     if (!navigator.geolocation) {
@@ -132,14 +145,9 @@ export default function BulkMealsDelivery() {
     try {
       setIsCreatingOrder(true);
       
-      // Get form values
-      const deliveryDate = (document.querySelector('[data-testid="input-event-date"]') as HTMLInputElement)?.value || null;
-      const deliveryTime = (document.querySelector('[data-testid="input-event-time"]') as HTMLInputElement)?.value || null;
-      const selectedAddressId = (document.querySelector('[data-testid="select-saved-address"]') as HTMLSelectElement)?.value || "";
-      
       // Check 12-hour minimum advance booking
-      if (deliveryDate) {
-        const selectedDateTime = new Date(`${deliveryDate}T${deliveryTime || '12:00'}`);
+      if (eventDate) {
+        const selectedDateTime = new Date(`${eventDate}T${eventTime || '12:00'}`);
         const now = new Date();
         const hoursDiff = (selectedDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
         
@@ -192,8 +200,8 @@ export default function BulkMealsDelivery() {
         platformFee: platformFee,
         packagingFee: packagingFee,
         total: grandTotal,
-        deliveryDate: deliveryDate || undefined,
-        deliveryTime: deliveryTime || undefined,
+        deliveryDate: eventDate || undefined,
+        deliveryTime: eventTime || undefined,
         addressId: validAddressId,
       });
       
@@ -262,14 +270,17 @@ export default function BulkMealsDelivery() {
             <div className="grid grid-cols-2 gap-3">
               <input
                 type="date"
-                defaultValue="2025-10-12"
+                value={eventDate}
+                onChange={(e) => setEventDate(e.target.value)}
+                min={minDateTime.date}
                 className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                 style={{ fontFamily: "Sweet Sans Pro" }}
                 data-testid="input-event-date"
               />
               <input
                 type="time"
-                defaultValue="12:00"
+                value={eventTime}
+                onChange={(e) => setEventTime(e.target.value)}
                 className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                 style={{ fontFamily: "Sweet Sans Pro" }}
                 data-testid="input-event-time"

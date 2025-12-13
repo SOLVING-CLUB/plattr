@@ -1445,6 +1445,21 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
   const [pincode, setPincode] = useState("");
   const [saveAddressForFuture, setSaveAddressForFuture] = useState(false);
   
+  // Calculate T+12 hours for default date/time
+  const getMinDateTime = () => {
+    const minTime = new Date(Date.now() + 12 * 60 * 60 * 1000);
+    return {
+      date: minTime.toISOString().split('T')[0],
+      time: `${minTime.getHours().toString().padStart(2, '0')}:00`
+    };
+  };
+
+  const minDateTime = getMinDateTime();
+
+  // Event date/time state with T+12 default
+  const [eventDate, setEventDate] = useState(minDateTime.date);
+  const [eventTime, setEventTime] = useState(minDateTime.time);
+
   // Contact info - prefilled from localStorage (logged in user)
   const [phone, setPhone] = useState(() => {
     const savedPhone = localStorage.getItem('phone');
@@ -4441,14 +4456,17 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                 <div className="grid grid-cols-2 gap-3">
                   <input
                     type="date"
-                    defaultValue="2025-10-12"
+                    value={eventDate}
+                    onChange={(e) => setEventDate(e.target.value)}
+                    min={minDateTime.date}
                     className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                     style={{ fontFamily: "Sweet Sans Pro" }}
                     data-testid="input-event-date"
                   />
                   <input
                     type="time"
-                    defaultValue="12:00"
+                    value={eventTime}
+                    onChange={(e) => setEventTime(e.target.value)}
                     className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                     style={{ fontFamily: "Sweet Sans Pro" }}
                     data-testid="input-event-time"
