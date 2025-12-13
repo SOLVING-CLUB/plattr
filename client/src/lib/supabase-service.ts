@@ -134,6 +134,67 @@ export const userService = {
       isVerified: data.is_verified || data.isVerified,
     };
   },
+
+  async deleteAccount(reason: string) {
+    const user = await getAuthenticatedUser();
+    if (!user) throw new Error('Not authenticated');
+
+    try {
+      await supabase.from('account_deletion_logs').insert({
+        user_id: user.id,
+        reason: reason,
+        deleted_at: new Date().toISOString(),
+      });
+    } catch (e) {
+      console.log('Note: account_deletion_logs table may not exist, continuing with deletion');
+    }
+
+    const { data: userOrders } = await supabase
+      .from('orders')
+      .select('id')
+      .eq('user_id', user.id);
+
+    if (userOrders && userOrders.length > 0) {
+      const orderIds = userOrders.map(o => o.id);
+      await supabase.from('order_items').delete().in('order_id', orderIds);
+    }
+
+    const tablesToClear = [
+      'cart_items',
+      'orders',
+      'mealbox_orders',
+      'bulk_meal_orders',
+      'catering_orders',
+      'corporate_orders',
+      'concierge_preferences',
+      'addresses',
+    ];
+
+    for (const table of tablesToClear) {
+      try {
+        await supabase.from(table).delete().eq('user_id', user.id);
+      } catch (e) {
+        console.log(`Note: Could not clear ${table}, may not exist or have different structure`);
+      }
+    }
+
+    const { error: userDeleteError } = await supabase
+      .from('users')
+      .delete()
+      .eq('id', user.id);
+
+    if (userDeleteError) {
+      console.error('Error deleting user record:', userDeleteError);
+      throw new Error('Failed to delete account');
+    }
+
+    const { error: signOutError } = await supabase.auth.signOut();
+    if (signOutError) {
+      console.warn('Sign out warning:', signOutError);
+    }
+
+    return { success: true };
+  },
 };
 
 /**
