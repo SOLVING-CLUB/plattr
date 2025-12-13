@@ -1019,7 +1019,8 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { LazyImage } from "@/components/ui/lazy-image";
-import { ArrowLeft, Building2, MapPin, ShoppingCart, UtensilsCrossed, Package, Truck, Search, Check, ChevronRight, ChevronLeft, Star, ArrowUpDown, SlidersHorizontal, LayoutGrid, Leaf, Drumstick, Egg, Sparkles, Phone, X } from "lucide-react";
+import { ArrowLeft, Building2, MapPin, ShoppingCart, UtensilsCrossed, Package, Truck, Search, Check, ChevronRight, ChevronLeft, Star, ArrowUpDown, SlidersHorizontal, LayoutGrid, Leaf, Drumstick, Egg, Sparkles, Phone, X, Calendar } from "lucide-react";
+import DeliveryTimePicker from "@/components/DeliveryTimePicker";
 
 // Define missing types locally to resolve import errors
 export interface Dish {
@@ -4560,30 +4561,37 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
 
             {/* Form */}
             <div className="space-y-4 mb-6">
-              {/* Select Event Date & Time */}
-              <div>
-                <label className="block text-sm font-semibold mb-2" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                  Select Event Date & Time
-                </label>
-                <div className="grid grid-cols-2 gap-3">
+              {/* When - Date Selection */}
+              <div className="bg-white rounded-xl p-4 border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-5 h-5 text-gray-500" />
+                    <span 
+                      className="font-medium text-gray-800"
+                      style={{ fontFamily: "Sweet Sans Pro" }}
+                    >
+                      When
+                    </span>
+                  </div>
                   <input
                     type="date"
                     value={eventDate}
                     onChange={(e) => setEventDate(e.target.value)}
                     min={minDateTime.date}
-                    className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="text-gray-700 bg-transparent border-0 focus:outline-none cursor-pointer"
                     style={{ fontFamily: "Sweet Sans Pro" }}
                     data-testid="input-event-date"
                   />
-                  <input
-                    type="time"
-                    value={eventTime}
-                    onChange={(e) => setEventTime(e.target.value)}
-                    className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                    style={{ fontFamily: "Sweet Sans Pro" }}
-                    data-testid="input-event-time"
-                  />
                 </div>
+              </div>
+
+              {/* Delivery Time Selection */}
+              <div className="bg-white rounded-xl p-4 border border-gray-200">
+                <DeliveryTimePicker
+                  mealType="all"
+                  value={eventTime}
+                  onChange={setEventTime}
+                />
               </div>
 
               {/* Phone Number */}
@@ -4790,9 +4798,9 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                   const packagingFee = 399;
                   const total = subtotal + gst + platformFee + packagingFee;
 
-                  // Get form values
-                  const deliveryDate = (document.querySelector('[data-testid="input-event-date"]') as HTMLInputElement)?.value || null;
-                  const deliveryTime = (document.querySelector('[data-testid="input-event-time"]') as HTMLInputElement)?.value || null;
+                  // Get form values - use state variables directly
+                  const deliveryDate = eventDate || null;
+                  const deliveryTime = eventTime || null;
                   const selectedAddressId = (document.querySelector('[data-testid="select-saved-address"]') as HTMLSelectElement)?.value || "";
 
                   // Check 12-hour minimum advance booking
