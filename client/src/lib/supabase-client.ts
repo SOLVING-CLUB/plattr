@@ -147,14 +147,15 @@ export const supabase = {
 
 /**
  * Map API routes to Supabase table queries
- * Route format: ['/api/dishes', 'tiffins', 'all', 'veg'] or ['/api/categories', 'snacks']
+ * Route format: ['/api/dishes', 'tiffins', 'all', 'veg', 'sixtymin'] or ['/api/categories', 'snacks']
  */
 export function mapApiRouteToSupabase(route: string[]): { table: string; options?: SupabaseQueryOptions } {
-  // Route format: ['/api/dishes', 'tiffins', 'all', 'veg'] or ['/api/dishes', 'tiffins', 'all']
+  // Route format: ['/api/dishes', 'tiffins', 'all', 'veg', 'sixtymin'] or ['/api/dishes', 'tiffins', 'all']
   const endpoint = route[0]; // '/api/dishes', '/api/categories', etc.
   const mealType = route[1]; // 'tiffins', 'snacks', etc.
   const categoryId = route[2]; // 'all', categoryId, or undefined
   const dietaryFilter = route[3]; // 'all', 'veg', 'non-veg', 'egg' or undefined
+  const sixtyMinFilter = route[4]; // 'sixtymin' or undefined - for 60-minute delivery dishes
   
   // Map meal type names
   // Map UI route segment to categories.meal_type (text)
@@ -201,6 +202,11 @@ export function mapApiRouteToSupabase(route: string[]): { table: string; options
         // PostgREST filter: dietary_type=eq.Non-Veg or dietary_type=eq.Veg
         filters['dietary_type'] = `eq.${dbDietaryType}`;
       }
+    }
+    
+    // Add 60-minute delivery filter - only show dishes available for quick delivery
+    if (sixtyMinFilter === 'sixtymin') {
+      filters['is_sixty_min'] = 'eq.true';
     }
     
     return filters;

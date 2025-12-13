@@ -1995,8 +1995,11 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
 
   // OPTIMIZATION: Lazy-load category counts in background after page renders
   // This query fetches all dishes for the meal type but is non-blocking
+  // Add 'sixtymin' filter when accessed from 60-min delivery flow (onNavigate present)
   const { data: allDishesForCounts = [] } = useQuery<Dish[]>({
-    queryKey: ['/api/dishes', mealType, 'all', 'all'],
+    queryKey: onNavigate 
+      ? ['/api/dishes', mealType, 'all', 'all', 'sixtymin']
+      : ['/api/dishes', mealType, 'all', 'all'],
     enabled: !!mealType && currentStep === 4,
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
     refetchOnWindowFocus: false,
@@ -2011,8 +2014,11 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
   }, [allDishesForCounts]);
 
   // Fetch dishes for selected category (for display)
+  // Add 'sixtymin' filter when accessed from 60-min delivery flow (onNavigate present)
   const { data: dishes = [], isLoading: isLoadingDishes } = useQuery<Dish[]>({
-    queryKey: ['/api/dishes', mealType, selectedCategory, currentDietaryTab],
+    queryKey: onNavigate
+      ? ['/api/dishes', mealType, selectedCategory, currentDietaryTab, 'sixtymin']
+      : ['/api/dishes', mealType, selectedCategory, currentDietaryTab],
     enabled: !!selectedCategory && currentStep === 4,
   });
 

@@ -192,6 +192,7 @@ export const getQueryFn = <T>(options: {
         } else if (route[0] === '/api/dishes' || route[0]?.includes('dishes')) {
           const mealType = route[1];
           const categoryId = route[2];
+          const sixtyMinFilter = route[4]; // 'sixtymin' or undefined - for 60-minute delivery dishes
           // If category is 'all' or empty, filter dishes by categories of this mealType
           if (!categoryId || categoryId === 'all') {
             // Fetch categories for this mealType using ilike since meal_type is comma-separated
@@ -208,6 +209,10 @@ export const getQueryFn = <T>(options: {
             // Remove meal_type filter if present
             if (options.filter['meal_type']) delete options.filter['meal_type'];
             if (inList) options.filter['category_id'] = inList;
+            // Add 60-minute delivery filter if specified
+            if (sixtyMinFilter === 'sixtymin') {
+              options.filter['is_sixty_min'] = 'eq.true';
+            }
             result = await supabase.select('dishes', options);
           } else {
             result = await supabase.select(mapped.table, mapped.options);
