@@ -1077,6 +1077,16 @@ import plate6Portions from "@assets/mockup 83_1763911387449.png";
 import plate8Portions from "@assets/01. Take Away Package22 1_1763911387446.png";
 import chefHatIcon from "@assets/tabler_chef-hat-filled_1763917839168.png";
 import servingStaffIcon from "@assets/ic_baseline-people_1763917839170.png";
+
+// Service category icons (cream/beige for active, dark green for inactive)
+import bulkMealsIconActive from "@assets/Group234_1765649076929.png";
+import bulkMealsIconInactive from "@assets/fi_809724162362_1765649112053.png";
+import mealBoxIconActive from "@assets/fi_116537845_1765649076928.png";
+import mealBoxIconInactive from "@assets/fi_1165378_1765649076929.png";
+import cateringIconActive from "@assets/streamline-plump_food-truck-event-fair-solid34_1765649076927.png";
+import cateringIconInactive from "@assets/streamline-plump_food-truck-event-fair-solid_1765649076929.png";
+import corporateIconActive from "@assets/fi_12471703678_1765649076915.png";
+import corporateIconInactive from "@assets/Vector34567_1765649076929.png";
 import decorIcon from "@assets/streamline-ultimate_party-decoration-bold_1763917839170.png";
 import tablewareIcon from "@assets/roentgen_fork-and-knife_1763917839169.png";
 import musicIcon from "@assets/roentgen_fork-and-knife_1763917839169.png";
@@ -2621,7 +2631,11 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
               color: selectedService === "bulk-meals" ? "#F5E9DB" : "#06352A",
             }}
           >
-            <UtensilsCrossed className="w-6 h-6 mb-1" />
+            <img 
+              src={selectedService === "bulk-meals" ? bulkMealsIconActive : bulkMealsIconInactive} 
+              alt="Bulk Meals" 
+              className="w-6 h-6 mb-1"
+            />
             <span
               className="text-[9px] xs:text-[10px] sm:text-xs font-semibold text-center leading-tight"
               style={{ fontFamily: "Sweet Sans Pro" }}
@@ -2640,7 +2654,11 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
               color: selectedService === "mealbox" ? "#F5E9DB" : "#06352A",
             }}
           >
-            <Package className="w-6 h-6 mb-1" />
+            <img 
+              src={selectedService === "mealbox" ? mealBoxIconActive : mealBoxIconInactive} 
+              alt="MealBox" 
+              className="w-6 h-6 mb-1"
+            />
             <span
               className="text-[9px] xs:text-[10px] sm:text-xs font-semibold text-center leading-tight"
               style={{ fontFamily: "Sweet Sans Pro" }}
@@ -2664,7 +2682,11 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                   color: selectedService === "catering" ? "#F5E9DB" : "#06352A",
                 }}
               >
-                <Truck className="w-6 h-6 mb-1" />
+                <img 
+                  src={selectedService === "catering" ? cateringIconActive : cateringIconInactive} 
+                  alt="Catering" 
+                  className="w-6 h-6 mb-1"
+                />
                 <span
                   className="text-[9px] xs:text-[10px] sm:text-xs font-semibold text-center leading-tight"
                   style={{ fontFamily: "Sweet Sans Pro" }}
@@ -2686,7 +2708,11 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                   color: selectedService === "corporate" ? "#F5E9DB" : "#06352A",
                 }}
               >
-                <Building2 className="w-6 h-6 mb-1" />
+                <img 
+                  src={selectedService === "corporate" ? corporateIconActive : corporateIconInactive} 
+                  alt="Corporate" 
+                  className="w-6 h-6 mb-1"
+                />
                 <span
                   className="text-[9px] xs:text-[10px] sm:text-xs font-semibold text-center leading-tight"
                   style={{ fontFamily: "Sweet Sans Pro" }}

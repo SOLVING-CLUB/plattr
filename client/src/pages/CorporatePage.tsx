@@ -1111,6 +1111,16 @@ import {
 } from "@/components/ui/carousel";
 import corporateHeroPattern from "@assets/Hero_Corporate.png";
 import corporateManImage from "@assets/image 1661 (1).png";
+
+// Service category icons (cream/beige for active, dark green for inactive)
+import bulkMealsIconActive from "@assets/Group234_1765649076929.png";
+import bulkMealsIconInactive from "@assets/fi_809724162362_1765649112053.png";
+import mealBoxIconActive from "@assets/fi_116537845_1765649076928.png";
+import mealBoxIconInactive from "@assets/fi_1165378_1765649076929.png";
+import cateringIconActive from "@assets/streamline-plump_food-truck-event-fair-solid34_1765649076927.png";
+import cateringIconInactive from "@assets/streamline-plump_food-truck-event-fair-solid_1765649076929.png";
+import corporateIconActive from "@assets/fi_12471703678_1765649076915.png";
+import corporateIconInactive from "@assets/Vector34567_1765649076929.png";
 import customizedMenuImg from "@assets/Menu (2).png"; 
 import photographyImg from "@assets/Photography (2).png";
 import eventDecorImg from "@assets/Event Decor (2).png";
@@ -1378,7 +1388,7 @@ export default function CorporateOrder() {
         {/* Service Navigation Tabs */}
         <div className="grid grid-cols-4 gap-2">
           <button
-            onClick={() => setLocation("/bulk-meals")}
+            onClick={() => { setSelectedService("bulk-meals"); setLocation("/bulk-meals"); }}
             data-testid="service-tab-bulk-meals"
             className="flex flex-col items-center justify-center p-3 transition-all hover-elevate active-elevate-2 aspect-square"
             style={{
@@ -1387,7 +1397,11 @@ export default function CorporateOrder() {
               color: selectedService === "bulk-meals" ? "#F5E9DB" : "#06352A",
             }}
           >
-            <UtensilsCrossed className="w-6 h-6 mb-1" />
+            <img 
+              src={selectedService === "bulk-meals" ? bulkMealsIconActive : bulkMealsIconInactive} 
+              alt="Bulk Meals" 
+              className="w-6 h-6 mb-1"
+            />
             <span 
               className="text-[10px] font-semibold text-center leading-tight"
               style={{ fontFamily: "Sweet Sans Pro" }}
@@ -1397,7 +1411,7 @@ export default function CorporateOrder() {
           </button>
 
           <button
-            onClick={() => setLocation("/mealbox")}
+            onClick={() => { setSelectedService("mealbox"); setLocation("/mealbox"); }}
             data-testid="service-tab-mealbox"
             className="flex flex-col items-center justify-center p-3 transition-all hover-elevate active-elevate-2 aspect-square"
             style={{
@@ -1406,7 +1420,11 @@ export default function CorporateOrder() {
               color: selectedService === "mealbox" ? "#F5E9DB" : "#06352A",
             }}
           >
-            <Package className="w-6 h-6 mb-1" />
+            <img 
+              src={selectedService === "mealbox" ? mealBoxIconActive : mealBoxIconInactive} 
+              alt="MealBox" 
+              className="w-6 h-6 mb-1"
+            />
             <span 
               className="text-[10px] font-semibold text-center leading-tight"
               style={{ fontFamily: "Sweet Sans Pro" }}
@@ -1416,7 +1434,7 @@ export default function CorporateOrder() {
           </button>
 
           <button
-            onClick={() => setLocation("/catering")}
+            onClick={() => { setSelectedService("catering"); setLocation("/catering"); }}
             data-testid="service-tab-catering"
             className="flex flex-col items-center justify-center p-3 transition-all hover-elevate active-elevate-2 aspect-square"
             style={{
@@ -1425,7 +1443,11 @@ export default function CorporateOrder() {
               color: selectedService === "catering" ? "#F5E9DB" : "#06352A",
             }}
           >
-            <Truck className="w-6 h-6 mb-1" />
+            <img 
+              src={selectedService === "catering" ? cateringIconActive : cateringIconInactive} 
+              alt="Catering" 
+              className="w-6 h-6 mb-1"
+            />
             <span 
               className="text-[10px] font-semibold text-center leading-tight"
               style={{ fontFamily: "Sweet Sans Pro" }}
@@ -1444,7 +1466,11 @@ export default function CorporateOrder() {
               color: selectedService === "corporate" ? "#F5E9DB" : "#06352A",
             }}
           >
-            <Building2 className="w-6 h-6 mb-1" />
+            <img 
+              src={selectedService === "corporate" ? corporateIconActive : corporateIconInactive} 
+              alt="Corporate" 
+              className="w-6 h-6 mb-1"
+            />
             <span 
               className="text-[10px] font-semibold text-center leading-tight"
               style={{ fontFamily: "Sweet Sans Pro" }}
