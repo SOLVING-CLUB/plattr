@@ -71,45 +71,57 @@ export default function BulkMealsDelivery() {
     return false;
   };
 
-  // Function to get current location using browser geolocation
+  // Function to get current location using IP-based fallback
   const getCurrentLocation = async () => {
-    if (!navigator.geolocation) {
-      toast({ title: "Error", description: "Geolocation is not supported by your browser", variant: "destructive" });
-      return;
-    }
-
     setIsGettingLocation(true);
     try {
-      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 15000,
-          maximumAge: 0
-        });
-      });
+      // First try browser geolocation
+      if (navigator.geolocation) {
+        try {
+          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              enableHighAccuracy: true,
+              timeout: 5000,
+              maximumAge: 0
+            });
+          });
 
-      const { latitude, longitude } = position.coords;
-      const success = await reverseGeocode(latitude, longitude);
-      if (success) {
-        toast({ title: "Location Found", description: "Address filled from your current location" });
+          const { latitude, longitude } = position.coords;
+          const success = await reverseGeocode(latitude, longitude);
+          if (success) {
+            toast({ title: "Location Found", description: "Address filled from your current location" });
+            return;
+          }
+        } catch (geoError) {
+          console.log('Browser geolocation failed, trying IP-based fallback...');
+        }
+      }
+
+      // Fallback: IP-based geolocation using free API
+      const ipResponse = await fetch('https://ipapi.co/json/');
+      const ipData = await ipResponse.json();
+      
+      if (ipData && !ipData.error) {
+        // Use IP-based location data directly
+        setAddressLine1(ipData.city ? `${ipData.city} Area` : "");
+        setAddressLine2("");
+        setCity(ipData.city || "");
+        setState(ipData.region || "");
+        setPincode(ipData.postal || "");
+        setSelectedAddressId("");
+        
+        toast({ 
+          title: "Approximate Location Found", 
+          description: "Address filled based on your approximate location. Please verify and update if needed." 
+        });
       } else {
-        toast({ title: "Location Error", description: "Could not get address details", variant: "destructive" });
+        throw new Error("IP geolocation failed");
       }
     } catch (error: any) {
       console.error('Location error:', error);
-      let errorMessage = "Could not get your location. Please enter your address manually.";
-      
-      if (error.code === 1) {
-        errorMessage = "Location access denied. Please allow location access in your browser settings.";
-      } else if (error.code === 2) {
-        errorMessage = "Location unavailable. Please check that Location Services is enabled in your device settings (System Settings > Privacy & Security > Location Services).";
-      } else if (error.code === 3) {
-        errorMessage = "Location request timed out. Please try again.";
-      }
-      
       toast({ 
         title: "Location Error", 
-        description: errorMessage, 
+        description: "Could not detect your location. Please enter your address manually.", 
         variant: "destructive" 
       });
     } finally {
