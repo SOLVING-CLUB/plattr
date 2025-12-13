@@ -1,15 +1,16 @@
 import { useState, useEffect } from "react";
-import { MapPin, AlertTriangle, X } from "lucide-react";
+import { createPortal } from "react-dom";
+import { MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import headerBg from "@assets/Hero_1763854193361.png";
+import noServiceImage from "@assets/Good_Food_Takes_Time_(4)_1765642758756.png";
 
 interface AppHeaderProps {
   onLocationClick?: () => void;
 }
 
 const LOCATION_STORAGE_KEY = "activeLocation";
-const SERVICE_CHECK_KEY = "serviceAvailabilityChecked";
 
 // Bangalore service area bounds
 const BANGALORE_BOUNDS = {
@@ -173,37 +174,24 @@ export default function AppHeader({
       window.removeEventListener("locationchange", handleLocationChange);
     };
   }, []);
-  const handleDismissBanner = () => {
-    setShowServiceUnavailable(false);
-    sessionStorage.setItem(SERVICE_CHECK_KEY, "dismissed");
-  };
 
   return (
     <>
-      {showServiceUnavailable && (
+      {showServiceUnavailable && createPortal(
         <div 
-          className="bg-[#FF5722] text-white px-4 py-3 flex items-center justify-between"
-          style={{ 
-            fontFamily: "Sweet Sans Pro",
-            marginTop: 'env(safe-area-inset-top)'
-          }}
-          data-testid="banner-service-unavailable"
+          className="fixed left-0 right-0 bottom-0 z-[9999] bg-white"
+          style={{ top: '160px' }}
+          data-testid="screen-service-unavailable"
+          role="dialog"
+          aria-modal="true"
         >
-          <div className="flex items-center gap-2 flex-1">
-            <AlertTriangle className="w-5 h-5 flex-shrink-0" />
-            <div className="flex-1">
-              <p className="font-semibold text-sm">Service Not Available</p>
-              <p className="text-xs opacity-90">We currently serve only in Bangalore. Please select a Bangalore address to order.</p>
-            </div>
-          </div>
-          <button
-            onClick={handleDismissBanner}
-            className="p-1 hover:bg-white/20 rounded-full transition-colors ml-2"
-            data-testid="button-dismiss-service-banner"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+          <img 
+            src={noServiceImage} 
+            alt="Good food takes time - We're setting up kitchens and deliveries in your area"
+            className="w-full h-full object-cover object-top"
+          />
+        </div>,
+        document.body
       )}
       <header 
         className="h-40"
