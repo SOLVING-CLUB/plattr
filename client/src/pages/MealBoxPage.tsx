@@ -996,7 +996,7 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useCart } from "@/context/CartContex";
-import { mealboxOrderService, addressService } from "@/lib/supabase-service";
+import { mealboxOrderService, sixtyMinMealboxOrderService, addressService } from "@/lib/supabase-service";
 import { useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
 // import { getQueryFn } from "@/lib/queryClient"; // Duplicate removed
@@ -4803,26 +4803,57 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                     }
                   }
 
-                  // Create order
-                  await mealboxOrderService.create({
-                    portions: `${selectedPortions}-portions`,
-                    mealPreference: mealPreference,
-                    selectedMealType: selectedMealType,
-                    vegBoxes: vegCount,
-                    eggBoxes: eggCount,
-                    nonVegBoxes: nonVegCount,
-                    vegPlateSelections: vegPlateSelections,
-                    eggPlateSelections: eggPlateSelections,
-                    nonVegPlateSelections: nonVegPlateSelections,
-                    selectedAddons: selectedAddOns,
-                    subtotal: subtotal,
-                    deliveryFee: 0,
-                    tax: gst,
-                    total: total,
-                    deliveryDate: deliveryDate || undefined,
-                    deliveryTime: deliveryTime || undefined,
-                    addressId: validAddressId,
-                  });
+                  // Create order - use 60-min service if accessed from ExploreMenuPage (onNavigate passed)
+                  const isSixtyMinOrder = !!onNavigate;
+                  
+                  // Build delivery address text for 60-min orders
+                  let deliveryAddressText: string | undefined = undefined;
+                  if (isSixtyMinOrder && !validAddressId && addressLine1) {
+                    deliveryAddressText = [addressLine1, addressLine2, city, addressState, pincode].filter(Boolean).join(', ');
+                  }
+                  
+                  if (isSixtyMinOrder) {
+                    await sixtyMinMealboxOrderService.create({
+                      portions: `${selectedPortions}-portions`,
+                      mealPreference: mealPreference,
+                      selectedMealType: selectedMealType,
+                      vegBoxes: vegCount,
+                      eggBoxes: eggCount,
+                      nonVegBoxes: nonVegCount,
+                      vegPlateSelections: vegPlateSelections,
+                      eggPlateSelections: eggPlateSelections,
+                      nonVegPlateSelections: nonVegPlateSelections,
+                      selectedAddons: selectedAddOns,
+                      subtotal: subtotal,
+                      deliveryFee: 0,
+                      tax: gst,
+                      total: total,
+                      deliveryDate: deliveryDate || undefined,
+                      deliveryTime: deliveryTime || undefined,
+                      addressId: validAddressId,
+                      deliveryAddress: deliveryAddressText,
+                    });
+                  } else {
+                    await mealboxOrderService.create({
+                      portions: `${selectedPortions}-portions`,
+                      mealPreference: mealPreference,
+                      selectedMealType: selectedMealType,
+                      vegBoxes: vegCount,
+                      eggBoxes: eggCount,
+                      nonVegBoxes: nonVegCount,
+                      vegPlateSelections: vegPlateSelections,
+                      eggPlateSelections: eggPlateSelections,
+                      nonVegPlateSelections: nonVegPlateSelections,
+                      selectedAddons: selectedAddOns,
+                      subtotal: subtotal,
+                      deliveryFee: 0,
+                      tax: gst,
+                      total: total,
+                      deliveryDate: deliveryDate || undefined,
+                      deliveryTime: deliveryTime || undefined,
+                      addressId: validAddressId,
+                    });
+                  }
 
                   // Clear mealbox progress when order is placed
                   clearMealBoxProgress();

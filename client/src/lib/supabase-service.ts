@@ -1035,6 +1035,160 @@ export const sixtyMinBulkOrderService = {
 };
 
 /**
+ * 60-Min MealBox Order Operations
+ * For mealbox orders placed through the Explore Menu (60-min delivery)
+ */
+export const sixtyMinMealboxOrderService = {
+  /**
+   * Create a new 60-min MealBox order
+   */
+  async create(orderData: {
+    portions: string;
+    mealPreference: string;
+    selectedMealType?: string;
+    vegBoxes: number;
+    eggBoxes: number;
+    nonVegBoxes: number;
+    vegPlateSelections: any[];
+    eggPlateSelections: any[];
+    nonVegPlateSelections: any[];
+    selectedAddons: string[];
+    subtotal: number;
+    deliveryFee: number;
+    tax: number;
+    total: number;
+    deliveryDate?: string;
+    deliveryTime?: string;
+    addressId?: string;
+    deliveryAddress?: string;
+  }) {
+    const user = await getAuthenticatedUser();
+    if (!user) throw new Error('Not authenticated');
+
+    // Generate unique order number as TEXT
+    const orderNumber = `60MB-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+    // Resolve delivery address
+    let finalDeliveryAddress = orderData.deliveryAddress || 'Address not provided';
+    
+    if (orderData.addressId && !orderData.deliveryAddress) {
+      const { data: addressData } = await supabase
+        .from('addresses')
+        .select('address, landmark')
+        .eq('id', orderData.addressId)
+        .single();
+      
+      if (addressData) {
+        finalDeliveryAddress = addressData.address;
+        if (addressData.landmark) {
+          finalDeliveryAddress += `, ${addressData.landmark}`;
+        }
+      }
+    }
+
+    // Parse portion size
+    const portionSize = parseInt(orderData.portions.replace('-portions', '')) || 5;
+    const boxQuantity = orderData.vegBoxes + orderData.eggBoxes + orderData.nonVegBoxes;
+    const perBoxPrice = boxQuantity > 0 ? orderData.subtotal / boxQuantity : 0;
+
+    // Build items array from plate selections
+    const items = [
+      ...orderData.vegPlateSelections.filter(s => s.item).map(s => ({
+        type: 'veg',
+        itemId: s.item?.id,
+        name: s.item?.name,
+        price: s.item?.price,
+        slot: s.slot
+      })),
+      ...orderData.eggPlateSelections.filter(s => s.item).map(s => ({
+        type: 'egg',
+        itemId: s.item?.id,
+        name: s.item?.name,
+        price: s.item?.price,
+        slot: s.slot
+      })),
+      ...orderData.nonVegPlateSelections.filter(s => s.item).map(s => ({
+        type: 'non-veg',
+        itemId: s.item?.id,
+        name: s.item?.name,
+        price: s.item?.price,
+        slot: s.slot
+      }))
+    ];
+
+    const customerPhone = user.phone || '';
+
+    const { data, error } = await supabase
+      .from('sixty_min_mealbox_orders')
+      .insert({
+        user_id: user.id,
+        order_number: orderNumber,
+        customer_name: user.phone || 'Customer',
+        customer_phone: customerPhone,
+        customer_email: user.email || null,
+        portion_size: portionSize,
+        box_quantity: boxQuantity,
+        veg_count: orderData.vegBoxes,
+        egg_count: orderData.eggBoxes,
+        nonveg_count: orderData.nonVegBoxes,
+        dietary_preference: orderData.mealPreference,
+        items: items,
+        per_box_price: perBoxPrice.toFixed(2),
+        subtotal: orderData.subtotal.toFixed(2),
+        tax_amount: orderData.tax.toFixed(2),
+        delivery_fee: orderData.deliveryFee.toFixed(2),
+        total_amount: orderData.total.toFixed(2),
+        requested_delivery_time: orderData.deliveryDate && orderData.deliveryTime 
+          ? `${orderData.deliveryDate}T${orderData.deliveryTime}:00` 
+          : null,
+        delivery_address: finalDeliveryAddress,
+        order_status: 'pending',
+        payment_status: 'pending',
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  /**
+   * Get all 60-min MealBox orders for current user
+   */
+  async getAll() {
+    const user = await getAuthenticatedUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const { data, error } = await supabase
+      .from('sixty_min_mealbox_orders')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data;
+  },
+
+  /**
+   * Get 60-min MealBox order by ID
+   */
+  async getById(orderId: string) {
+    const user = await getAuthenticatedUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const { data, error } = await supabase
+      .from('sixty_min_mealbox_orders')
+      .select('*')
+      .eq('id', orderId)
+      .eq('user_id', user.id)
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+};
+
+/**
  * Catering Order Operations
  */
 export const cateringOrderService = {
