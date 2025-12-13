@@ -15,11 +15,6 @@ export function validateBangaloreAddress(address: string): boolean {
     return true;
   }
   
-  // Check for Karnataka state
-  if (addressText.includes('karnataka')) {
-    return true;
-  }
-  
   // Check for Bangalore pincodes (560xxx pattern)
   if (/\b56\d{4}\b/.test(addressText)) {
     return true;

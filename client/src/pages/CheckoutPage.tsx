@@ -96,7 +96,11 @@ export default function CheckoutPage() {
 
       // Validate Bangalore address
       if (!validateBangaloreAddress(deliveryAddress)) {
-        throw new Error(BANGALORE_VALIDATION_ERROR.description);
+        return { 
+          validationError: true,
+          title: BANGALORE_VALIDATION_ERROR.title,
+          description: BANGALORE_VALIDATION_ERROR.description
+        };
       }
 
       // For guests, just return a success response without creating order
@@ -126,6 +130,16 @@ export default function CheckoutPage() {
       return order;
     },
     onSuccess: (orderData) => {
+      // Handle validation error (address not in Bangalore)
+      if (orderData?.validationError) {
+        toast({
+          title: orderData.title,
+          description: orderData.description,
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Clear cart from localStorage
       cartStorage.clearCart();
       
