@@ -2164,7 +2164,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
     }).length;
   };
 
-  // Filter items based on category, dish type, allowed types for current dietary tab, and exclude already selected items
+  // Filter items based on category, dish type, allowed types for current dietary tab, dietaryMode filter, and exclude already selected items
   const filteredItems = useMemo(() => {
     return foodItems
       .filter(item => {
@@ -2184,9 +2184,14 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
           if (dishDishType !== selectedDishType) return false;
         }
 
-        // Only show items allowed for current plate type
+        // Only show items allowed for current plate type (main tab: veg/egg/non-veg)
         const allowedTypes = getAllowedItemTypes();
         if (!allowedTypes.includes(item.type)) return false;
+
+        // Apply dietaryMode filter (the secondary filter buttons: All, Veg, Egg, Non-Veg)
+        if (dietaryMode !== 'all') {
+          if (item.type !== dietaryMode) return false;
+        }
 
         // Filter by subcategory (grilled/fried/etc) if selected
         if (selectedSubcategory !== 'all') {
@@ -2209,7 +2214,18 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
         return true;
       })
       .sort((a, b) => {
-        // When viewing "All", priority category dishes come first
+        // Apply sortOption first
+        if (sortOption === 'price-low') {
+          return a.price - b.price;
+        } else if (sortOption === 'price-high') {
+          return b.price - a.price;
+        } else if (sortOption === 'name-az') {
+          return a.name.localeCompare(b.name);
+        } else if (sortOption === 'name-za') {
+          return b.name.localeCompare(a.name);
+        }
+        
+        // Fallback: When viewing "All", priority category dishes come first
         if (selectedCategory === 'all' && priorityCategoryId) {
           const dishA = dishes.find(d => d.id === a.id);
           const dishB = dishes.find(d => d.id === b.id);
@@ -2225,7 +2241,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
         // Default: sort by name
         return a.name.localeCompare(b.name);
       });
-  }, [foodItems, dishes, selectedCategory, selectedDishType, priorityCategoryId, searchQuery, selectedSubcategory]);
+  }, [foodItems, dishes, selectedCategory, selectedDishType, priorityCategoryId, searchQuery, selectedSubcategory, dietaryMode, sortOption]);
 
   // Check if all slots for current dietary tab are filled
   const currentPlateSelections = getCurrentPlateSelections();
