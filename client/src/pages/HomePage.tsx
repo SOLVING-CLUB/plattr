@@ -90,7 +90,7 @@
 //   };
 
 //   return (
-//     <div className="min-h-screen bg-background pb-20">
+//     <div className="min-h-screen bg-white pb-20">
 //       {/* Header with Background Image */}
 //       <div
 //         className="relative overflow-hidden"
@@ -578,7 +578,7 @@ export default function Home() {
 
   return (
     <PageWithLoader>
-      <div className="min-h-screen pb-44">
+      <div className="min-h-screen pb-44 bg-white">
         <AppHeader 
           onLocationClick={handleLocationClick}
         />
