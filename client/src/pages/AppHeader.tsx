@@ -34,11 +34,53 @@ export default function AppHeader({
   const [showServiceUnavailable, setShowServiceUnavailable] = useState(false);
   const [isCheckingLocation, setIsCheckingLocation] = useState(false);
 
-  // Check current location on app load (always fetch live location)
+  // Check if the selected/saved address is in Bangalore
+  const checkSavedLocationServiceAvailability = (savedData: any) => {
+    // If saved location has coordinates, check them
+    if (savedData.lat && savedData.lng) {
+      const isInBangalore = isWithinBangalore(savedData.lat, savedData.lng);
+      console.log('Saved location coordinates check:', { lat: savedData.lat, lng: savedData.lng, isInBangalore });
+      setShowServiceUnavailable(!isInBangalore);
+      return;
+    }
+    
+    // If no coordinates, check the address text for Bangalore/Bengaluru
+    const addressText = (savedData.addressLine || savedData.label || '').toLowerCase();
+    const isInBangalore = addressText.includes('bangalore') || 
+                          addressText.includes('bengaluru') ||
+                          addressText.includes('karnataka') ||
+                          addressText.includes('btm') ||
+                          addressText.includes('koramangala') ||
+                          addressText.includes('whitefield') ||
+                          addressText.includes('indiranagar') ||
+                          addressText.includes('jayanagar') ||
+                          addressText.includes('hsr') ||
+                          addressText.includes('electronic city') ||
+                          addressText.includes('marathahalli');
+    
+    console.log('Saved location text check:', { address: savedData.addressLine, label: savedData.label, isInBangalore });
+    setShowServiceUnavailable(!isInBangalore);
+  };
+
+  // Check location on app load - both saved address AND current location
   useEffect(() => {
     const checkLocationServiceAvailability = async () => {
       setIsCheckingLocation(true);
 
+      // First, check if there's a saved location
+      const savedLocation = localStorage.getItem(LOCATION_STORAGE_KEY);
+      if (savedLocation) {
+        try {
+          const parsed = JSON.parse(savedLocation);
+          checkSavedLocationServiceAvailability(parsed);
+          setIsCheckingLocation(false);
+          return;
+        } catch (e) {
+          console.error("Error parsing saved location for service check:", e);
+        }
+      }
+
+      // No saved location - check current location
       try {
         // First try browser geolocation for accurate current location
         if (navigator.geolocation) {
@@ -130,6 +172,8 @@ export default function AppHeader({
       const customEvent = e as CustomEvent;
       if (customEvent.detail?.label) {
         setLocationLabel(customEvent.detail.label);
+        // Re-check service availability for the new location
+        checkSavedLocationServiceAvailability(customEvent.detail);
       } else {
         readLocationFromStorage();
       }
