@@ -18,6 +18,7 @@ import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { cartStorage } from "@/lib/cartStorage";
 import { useGoBack } from "@/hooks/useGoBack";
+import { validateBangaloreAddress, BANGALORE_VALIDATION_ERROR } from "@/lib/addressValidation";
 
 // Generate next 7 days for delivery date selection
 const generateDeliveryDates = () => {
@@ -91,6 +92,11 @@ export default function CheckoutPage() {
 
       if (!deliveryDate || !deliveryTime) {
         throw new Error('Please select delivery date and time');
+      }
+
+      // Validate Bangalore address
+      if (!validateBangaloreAddress(deliveryAddress)) {
+        throw new Error(BANGALORE_VALIDATION_ERROR.description);
       }
 
       // For guests, just return a success response without creating order

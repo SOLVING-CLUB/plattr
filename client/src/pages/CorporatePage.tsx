@@ -1129,6 +1129,7 @@ import deliveryImg from "@assets/Delivery (1).png";
 import priorityServiceImg from "@assets/Priority Service (1).png";
 import DeliveryTimePicker from "@/components/DeliveryTimePicker";
 import DeliveryDatePicker from "@/components/DeliveryDatePicker";
+import { validateBangaloreAddress, BANGALORE_VALIDATION_ERROR } from "@/lib/addressValidation";
 
 type ServiceType = "bulk-meals" | "mealbox" | "catering" | "corporate";
 
@@ -1268,6 +1269,25 @@ export default function CorporateOrder() {
         variant: "destructive",
       });
       return;
+    }
+
+    // Validate Bangalore address from saved location
+    const savedLocation = localStorage.getItem(LOCATION_STORAGE_KEY);
+    if (savedLocation) {
+      try {
+        const parsed = JSON.parse(savedLocation);
+        const addressText = parsed.addressLine || parsed.label || parsed.address || '';
+        if (!validateBangaloreAddress(addressText)) {
+          toast({
+            title: BANGALORE_VALIDATION_ERROR.title,
+            description: BANGALORE_VALIDATION_ERROR.description,
+            variant: "destructive",
+          });
+          return;
+        }
+      } catch (e) {
+        console.error("Error parsing location:", e);
+      }
     }
 
     // Check 12-hour minimum advance booking
