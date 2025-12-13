@@ -165,7 +165,7 @@ export default function AboutPage() {
       </div>
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent className="max-w-md mx-4 rounded-2xl max-h-[90vh] overflow-y-auto">
+        <AlertDialogContent className="w-[calc(100%-32px)] max-w-md rounded-2xl max-h-[85vh] overflow-y-auto">
           <AlertDialogHeader>
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
