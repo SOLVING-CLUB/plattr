@@ -22,6 +22,8 @@ interface OrderItem {
 interface Order {
   id: string;
   orderNumber: number;
+  orderType: string;
+  orderTypeLabel: string;
   subtotal: string;
   deliveryFee: string;
   tax: string;
@@ -33,6 +35,21 @@ interface Order {
   addressLabel: string;
   address: string;
   items: OrderItem[];
+  mealDetails?: {
+    portions: string;
+    mealPreference: string;
+    vegBoxes: number;
+    eggBoxes: number;
+    nonVegBoxes: number;
+  };
+  cateringDetails?: {
+    eventType: string;
+    guestCount: number;
+  };
+  corporateDetails?: {
+    companyName: string;
+    employeeCount: number;
+  };
 }
 
 export default function Orders() {
@@ -40,10 +57,10 @@ export default function Orders() {
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<"home" | "menu" | "profile">("profile");
 
-  // Fetch orders
+  // Fetch all orders from all order types (unified view)
   const { data: orders = [], isLoading } = useQuery<Order[]>({
-    queryKey: ["orders"],
-    queryFn: () => orderService.getAll(),
+    queryKey: ["orders-unified"],
+    queryFn: () => orderService.getAllUnified(),
   });
 
   // Format date for display
@@ -52,8 +69,11 @@ export default function Orders() {
     return date.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });
   };
 
-  // Format order number
-  const formatOrderNumber = (orderNumber: number) => {
+  // Format order number with fallback for missing numbers
+  const formatOrderNumber = (orderNumber: number | undefined | null) => {
+    if (!orderNumber && orderNumber !== 0) {
+      return '#----';
+    }
     return `#${String(orderNumber).padStart(4, "0")}`;
   };
 
@@ -156,26 +176,35 @@ export default function Orders() {
             <div className="bg-white rounded-t-2xl pt-5 px-5 pb-4">
               {/* Order Header */}
               <div className="flex items-center justify-between mb-4">
-                <span 
-                  className="text-xl font-bold text-[#1C1C1C]"
-                  data-testid={`text-order-number-${order.id}`}
-                >
-                      {formatOrderNumber(order.orderNumber)}
-                </span>
-                  <Badge 
-                      variant={statusDisplay.variant}
-                      className={`${
-                        statusDisplay.variant === "outline" 
-                          ? "border-[#1A9952] text-[#1A9952]" 
-                          : statusDisplay.variant === "destructive"
-                          ? "bg-red-500 text-white"
-                          : "bg-[#1A9952] text-white"
-                      } px-3 py-1 rounded-full flex items-center gap-1`}
-                    data-testid={`badge-status-${order.id}`}
+                <div className="flex items-center gap-2">
+                  <span 
+                    className="text-xl font-bold text-[#1C1C1C]"
+                    data-testid={`text-order-number-${order.id}`}
                   >
-                      <StatusIcon className="w-3 h-3" />
-                      {statusDisplay.label}
+                    {formatOrderNumber(order.orderNumber)}
+                  </span>
+                  <Badge 
+                    variant="outline"
+                    className="border-gray-300 text-gray-600 px-2 py-0.5 text-xs rounded-full"
+                    data-testid={`badge-type-${order.id}`}
+                  >
+                    {order.orderTypeLabel}
                   </Badge>
+                </div>
+                <Badge 
+                    variant={statusDisplay.variant}
+                    className={`${
+                      statusDisplay.variant === "outline" 
+                        ? "border-[#1A9952] text-[#1A9952]" 
+                        : statusDisplay.variant === "destructive"
+                        ? "bg-red-500 text-white"
+                        : "bg-[#1A9952] text-white"
+                    } px-3 py-1 rounded-full flex items-center gap-1`}
+                  data-testid={`badge-status-${order.id}`}
+                >
+                    <StatusIcon className="w-3 h-3" />
+                    {statusDisplay.label}
+                </Badge>
               </div>
 
               {/* Order Info */}
@@ -214,47 +243,96 @@ export default function Orders() {
               {/* Expanded Details */}
               {isExpanded(order.id) && (
                 <div className="mb-4 space-y-4" data-testid={`details-${order.id}`}>
-                      <div>
-                        <h4 className="font-semibold text-[#1C1C1C] mb-2">Order Items</h4>
-                        <div className="space-y-2">
-                          {order.items.map((item) => (
-                            <div key={item.id} className="flex items-center justify-between text-sm">
-                              <div className="flex items-center gap-2">
-                                <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center ${
-                                  item.dishDietaryType === "veg" ? "border-green-600" : "border-red-600"
-                                }`}>
-                                  <div className={`w-1.5 h-1.5 rounded-full ${
-                                    item.dishDietaryType === "veg" ? "bg-green-600" : "bg-red-600"
-                                  }`} />
-                                </div>
-                                <span className="text-gray-800">{item.dishName}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-gray-600">x{item.quantity}</span>
-                                <span className="font-semibold text-[#1C1C1C]">₹{parseFloat(item.price).toFixed(2)}</span>
+                  {/* Order Type Specific Details */}
+                  {order.orderType === 'mealbox' && order.mealDetails && (
+                    <div>
+                      <h4 className="font-semibold text-[#1C1C1C] mb-2">Meal Box Details</h4>
+                      <div className="space-y-1 text-sm text-gray-700">
+                        <p>Portions: {order.mealDetails.portions}</p>
+                        <p>Preference: {order.mealDetails.mealPreference}</p>
+                        {order.mealDetails.vegBoxes > 0 && <p>Veg Boxes: {order.mealDetails.vegBoxes}</p>}
+                        {order.mealDetails.eggBoxes > 0 && <p>Egg Boxes: {order.mealDetails.eggBoxes}</p>}
+                        {order.mealDetails.nonVegBoxes > 0 && <p>Non-Veg Boxes: {order.mealDetails.nonVegBoxes}</p>}
                       </div>
                     </div>
-                  ))}
-                        </div>
+                  )}
+
+                  {order.orderType === 'catering' && order.cateringDetails && (
+                    <div>
+                      <h4 className="font-semibold text-[#1C1C1C] mb-2">Catering Details</h4>
+                      <div className="space-y-1 text-sm text-gray-700">
+                        <p>Event Type: {order.cateringDetails.eventType}</p>
+                        <p>Guest Count: {order.cateringDetails.guestCount}</p>
                       </div>
-                      <div className="pt-2 border-t border-gray-200">
-                        <div className="flex justify-between text-sm mb-1">
-                          <span className="text-gray-600">Subtotal</span>
-                          <span className="text-[#1C1C1C]">₹{parseFloat(order.subtotal).toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between text-sm mb-1">
-                          <span className="text-gray-600">Delivery Fee</span>
-                          <span className="text-[#1C1C1C]">₹{parseFloat(order.deliveryFee).toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between text-sm mb-1">
-                          <span className="text-gray-600">Tax</span>
-                          <span className="text-[#1C1C1C]">₹{parseFloat(order.tax).toFixed(2)}</span>
-                        </div>
+                    </div>
+                  )}
+
+                  {order.orderType === 'corporate' && order.corporateDetails && (
+                    <div>
+                      <h4 className="font-semibold text-[#1C1C1C] mb-2">Corporate Details</h4>
+                      <div className="space-y-1 text-sm text-gray-700">
+                        <p>Company: {order.corporateDetails.companyName}</p>
+                        {order.corporateDetails.employeeCount && <p>Employees: {order.corporateDetails.employeeCount}</p>}
                       </div>
+                    </div>
+                  )}
+
+                  {order.orderType === 'bulk' && (
+                    <div>
+                      <h4 className="font-semibold text-[#1C1C1C] mb-2">Bulk Meal Order</h4>
+                      <p className="text-sm text-gray-700">Large quantity meal order</p>
+                    </div>
+                  )}
+
+                  {/* Regular order items (if any) */}
+                  {order.items && order.items.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold text-[#1C1C1C] mb-2">Order Items</h4>
+                      <div className="space-y-2">
+                        {order.items.map((item) => (
+                          <div key={item.id} className="flex items-center justify-between text-sm">
+                            <div className="flex items-center gap-2">
+                              <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center ${
+                                item.dishDietaryType === "veg" ? "border-green-600" : "border-red-600"
+                              }`}>
+                                <div className={`w-1.5 h-1.5 rounded-full ${
+                                  item.dishDietaryType === "veg" ? "bg-green-600" : "bg-red-600"
+                                }`} />
+                              </div>
+                              <span className="text-gray-800">{item.dishName}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-gray-600">x{item.quantity}</span>
+                              <span className="font-semibold text-[#1C1C1C]">₹{parseFloat(item.price).toFixed(2)}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="pt-2 border-t border-gray-200">
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-gray-600">Subtotal</span>
+                      <span className="text-[#1C1C1C]">₹{parseFloat(order.subtotal || '0').toFixed(2)}</span>
+                    </div>
+                    {parseFloat(order.deliveryFee || '0') > 0 && (
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-gray-600">Delivery/Platform Fee</span>
+                        <span className="text-[#1C1C1C]">₹{parseFloat(order.deliveryFee).toFixed(2)}</span>
+                      </div>
+                    )}
+                    {parseFloat(order.tax || '0') > 0 && (
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-gray-600">Tax/GST</span>
+                        <span className="text-[#1C1C1C]">₹{parseFloat(order.tax).toFixed(2)}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
-              {/* Grand Total and Re-order */}
+              {/* Grand Total */}
               <div className="flex items-end justify-between">
                 <div>
                   <span className="text-sm text-gray-500">Grand Total</span>
@@ -262,17 +340,9 @@ export default function Orders() {
                     className="text-2xl font-bold text-[#1C1C1C]"
                     data-testid={`text-order-total-${order.id}`}
                   >
-                        ₹{parseFloat(order.total).toFixed(2)}
+                    ₹{parseFloat(order.total || '0').toFixed(2)}
                   </p>
                 </div>
-                <Button
-                      onClick={() => setLocation(`/orders/${order.id}`)}
-                  className="bg-[#1C1C1C] hover:bg-[#333] text-white rounded-full px-4"
-                      data-testid={`button-view-order-${order.id}`}
-                >
-                      View Details
-                  <ChevronRight className="w-4 h-4 ml-1" />
-                </Button>
               </div>
             </div>
 

@@ -436,6 +436,158 @@ export const orderService = {
   },
 
   /**
+   * Get all orders from specialized order tables (mealbox, bulk, catering, corporate)
+   */
+  async getAllUnified() {
+    const user = await getAuthenticatedUser();
+    if (!user) throw new Error('Not authenticated');
+
+    // Fetch from specialized order tables in parallel (excluding main orders table)
+    const [mealboxOrders, bulkMealOrders, cateringOrders, corporateOrders] = await Promise.all([
+      supabase
+        .from('mealbox_orders')
+        .select('*')
+        .eq('user_id', user.id),
+      supabase
+        .from('bulk_meal_orders')
+        .select('*')
+        .eq('user_id', user.id),
+      supabase
+        .from('catering_orders')
+        .select('*')
+        .eq('user_id', user.id),
+      supabase
+        .from('corporate_orders')
+        .select('*')
+        .eq('user_id', user.id),
+    ]);
+
+    // Handle errors from any of the queries
+    if (mealboxOrders.error) throw mealboxOrders.error;
+    if (bulkMealOrders.error) throw bulkMealOrders.error;
+    if (cateringOrders.error) throw cateringOrders.error;
+    if (corporateOrders.error) throw corporateOrders.error;
+
+    const allOrders: any[] = [];
+
+    // Process mealbox orders
+    if (mealboxOrders.data) {
+      mealboxOrders.data.forEach(order => {
+        allOrders.push({
+          id: order.id,
+          orderNumber: order.order_number,
+          orderType: 'mealbox',
+          orderTypeLabel: 'Meal Box',
+          subtotal: String(order.subtotal || 0),
+          deliveryFee: String(order.delivery_fee || 0),
+          tax: String(order.tax || 0),
+          total: String(order.total || 0),
+          deliveryDate: order.delivery_date || order.event_date,
+          deliveryTime: order.delivery_time || order.event_time || '',
+          status: order.status || 'pending',
+          createdAt: order.created_at,
+          addressLabel: 'Delivery',
+          address: '',
+          items: [],
+          mealDetails: {
+            portions: order.portions,
+            mealPreference: order.meal_preference,
+            vegBoxes: order.veg_boxes,
+            eggBoxes: order.egg_boxes,
+            nonVegBoxes: order.non_veg_boxes,
+          },
+        });
+      });
+    }
+
+    // Process bulk meal orders
+    if (bulkMealOrders.data) {
+      bulkMealOrders.data.forEach(order => {
+        allOrders.push({
+          id: order.id,
+          orderNumber: order.order_number,
+          orderType: 'bulk',
+          orderTypeLabel: 'Bulk Meal',
+          subtotal: String(order.subtotal || 0),
+          deliveryFee: String(order.platform_fee || 0),
+          tax: String(order.gst || 0),
+          total: String(order.total || 0),
+          deliveryDate: order.delivery_date || order.event_date,
+          deliveryTime: order.delivery_time || order.event_time || '',
+          status: order.status || 'pending',
+          createdAt: order.created_at,
+          addressLabel: 'Delivery',
+          address: '',
+          items: [],
+        });
+      });
+    }
+
+    // Process catering orders
+    if (cateringOrders.data) {
+      cateringOrders.data.forEach(order => {
+        allOrders.push({
+          id: order.id,
+          orderNumber: order.order_number || Math.floor(Math.random() * 10000),
+          orderType: 'catering',
+          orderTypeLabel: 'Catering',
+          subtotal: String(order.budget_min || order.estimated_total || 0),
+          deliveryFee: '0',
+          tax: '0',
+          total: String(order.budget_max || order.estimated_total || 0),
+          deliveryDate: order.event_date,
+          deliveryTime: order.event_time || '',
+          status: order.status || 'pending',
+          createdAt: order.created_at,
+          addressLabel: order.event_type || 'Catering Event',
+          address: order.venue_address || '',
+          items: [],
+          cateringDetails: {
+            eventType: order.event_type,
+            guestCount: order.guest_count,
+          },
+        });
+      });
+    }
+
+    // Process corporate orders
+    if (corporateOrders.data) {
+      corporateOrders.data.forEach(order => {
+        allOrders.push({
+          id: order.id,
+          orderNumber: order.order_number || Math.floor(Math.random() * 10000),
+          orderType: 'corporate',
+          orderTypeLabel: 'Corporate',
+          subtotal: String(order.subtotal || order.estimated_total || 0),
+          deliveryFee: '0',
+          tax: '0',
+          total: String(order.total || order.estimated_total || 0),
+          deliveryDate: order.delivery_date || order.event_date,
+          deliveryTime: order.delivery_time || order.event_time || '',
+          status: order.status || 'pending',
+          createdAt: order.created_at,
+          addressLabel: order.company_name || 'Corporate Order',
+          address: order.delivery_address || '',
+          items: [],
+          corporateDetails: {
+            companyName: order.company_name,
+            employeeCount: order.employee_count,
+          },
+        });
+      });
+    }
+
+    // Sort all orders by created_at descending
+    allOrders.sort((a, b) => {
+      const dateA = new Date(a.createdAt || 0).getTime();
+      const dateB = new Date(b.createdAt || 0).getTime();
+      return dateB - dateA;
+    });
+
+    return allOrders;
+  },
+
+  /**
    * Get order by ID
    */
   async getById(orderId: string) {
