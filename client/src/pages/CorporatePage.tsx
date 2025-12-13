@@ -1118,6 +1118,7 @@ import bulkOrderImg from "@assets/Bulk Order (1).png";
 import deliveryImg from "@assets/Delivery (1).png";
 import priorityServiceImg from "@assets/Priority Service (1).png";
 import DeliveryTimePicker from "@/components/DeliveryTimePicker";
+import DeliveryDatePicker from "@/components/DeliveryDatePicker";
 
 type ServiceType = "bulk-meals" | "mealbox" | "catering" | "corporate";
 
@@ -1790,28 +1791,11 @@ export default function CorporateOrder() {
               </div>
 
               {/* When - Date Selection */}
-              <div className="bg-white rounded-xl p-4 border border-gray-200">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-5 h-5 text-gray-500" />
-                    <span 
-                      className="font-medium text-gray-800"
-                      style={{ fontFamily: "Sweet Sans Pro" }}
-                    >
-                      When
-                    </span>
-                  </div>
-                  <Input
-                    type="date"
-                    value={formData.eventDate}
-                    onChange={(e) => setFormData({ ...formData, eventDate: e.target.value })}
-                    min={minDateTime.date}
-                    className="w-auto text-gray-700 bg-transparent border-0 focus-visible:ring-0 cursor-pointer"
-                    style={{ fontFamily: "Sweet Sans Pro" }}
-                    data-testid="input-event-date"
-                  />
-                </div>
-              </div>
+              <DeliveryDatePicker
+                value={formData.eventDate}
+                onChange={(date) => setFormData({ ...formData, eventDate: date })}
+                minDate={new Date(minDateTime.date)}
+              />
 
               {/* Delivery Time Selection */}
               <div className="bg-white rounded-xl p-4 border border-gray-200">

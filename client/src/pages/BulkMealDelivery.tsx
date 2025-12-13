@@ -8,6 +8,7 @@ import { bulkMealOrderService, sixtyMinBulkOrderService, addressService } from "
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import DeliveryTimePicker from "@/components/DeliveryTimePicker";
+import DeliveryDatePicker from "@/components/DeliveryDatePicker";
 
 const SIXTY_MIN_ORDER_FLAG = "isSixtyMinOrder";
 
@@ -340,28 +341,11 @@ export default function BulkMealsDelivery() {
         {/* Form */}
         <div className="space-y-4 mb-6">
           {/* When - Date Selection */}
-          <div className="bg-white rounded-xl p-4 border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-gray-500" />
-                <span 
-                  className="font-medium text-gray-800"
-                  style={{ fontFamily: "Sweet Sans Pro" }}
-                >
-                  When
-                </span>
-              </div>
-              <input
-                type="date"
-                value={eventDate}
-                onChange={(e) => setEventDate(e.target.value)}
-                min={minDateTime.date}
-                className="text-gray-700 bg-transparent border-0 focus:outline-none cursor-pointer"
-                style={{ fontFamily: "Sweet Sans Pro" }}
-                data-testid="input-event-date"
-              />
-            </div>
-          </div>
+          <DeliveryDatePicker
+            value={eventDate}
+            onChange={setEventDate}
+            minDate={new Date(minDateTime.date)}
+          />
 
           {/* Delivery Time Selection */}
           <div className="bg-white rounded-xl p-4 border border-gray-200">

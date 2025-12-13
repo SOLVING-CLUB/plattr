@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import OrderSummaryCard from "@/components/OrderSummaryCard";
 import DeliveryTimePicker from "@/components/DeliveryTimePicker";
+import DeliveryDatePicker from "@/components/DeliveryDatePicker";
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { getSupabaseImageUrl } from "@/lib/supabase";
@@ -296,24 +297,10 @@ export default function CheckoutPage() {
         <Card className="p-6" data-testid="card-delivery-schedule">
           <h2 className="text-lg font-semibold mb-4">Delivery Schedule</h2>
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="delivery-date" className="flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
-                Delivery Date
-              </Label>
-              <Select value={deliveryDate} onValueChange={setDeliveryDate}>
-                <SelectTrigger id="delivery-date" data-testid="select-delivery-date">
-                  <SelectValue placeholder="Select delivery date" />
-                </SelectTrigger>
-                <SelectContent>
-                  {deliveryDates.map((date) => (
-                    <SelectItem key={date.value} value={date.value} data-testid={`option-date-${date.value}`}>
-                      {date.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <DeliveryDatePicker
+              value={deliveryDate}
+              onChange={setDeliveryDate}
+            />
 
             <DeliveryTimePicker
               mealType="all"
