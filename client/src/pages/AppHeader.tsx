@@ -69,14 +69,59 @@ export default function AppHeader({
     setShowServiceUnavailable(!isInBangalore);
   };
 
-  // Check CURRENT location on app load (always fetch live GPS location first)
+  // Check location on app load - SAVED ADDRESS takes priority over GPS
   useEffect(() => {
     const checkLocationServiceAvailability = async () => {
       setIsCheckingLocation(true);
 
-      // Always try to get CURRENT location first (not saved address)
+      // FIRST: Check if there's a saved address - this takes priority!
+      const savedLocation = localStorage.getItem(LOCATION_STORAGE_KEY);
+      if (savedLocation) {
+        try {
+          const parsed = JSON.parse(savedLocation);
+          console.log('Found saved address, checking service availability:', parsed);
+          
+          // Check if saved address is in Bangalore
+          if (parsed.lat && parsed.lng) {
+            const isInBangalore = isWithinBangalore(parsed.lat, parsed.lng);
+            console.log('Saved address coordinates check:', { lat: parsed.lat, lng: parsed.lng, isInBangalore });
+            setShowServiceUnavailable(!isInBangalore);
+            setIsCheckingLocation(false);
+            return;
+          }
+          
+          // Check by address text if no coordinates
+          const addressText = (parsed.addressLine || parsed.label || parsed.address || '').toLowerCase();
+          const isInBangalore = addressText.includes('bangalore') || 
+                                addressText.includes('bengaluru') ||
+                                addressText.includes('karnataka') ||
+                                addressText.includes('560') ||
+                                addressText.includes('btm') ||
+                                addressText.includes('koramangala') ||
+                                addressText.includes('whitefield') ||
+                                addressText.includes('indiranagar') ||
+                                addressText.includes('jayanagar') ||
+                                addressText.includes('hsr') ||
+                                addressText.includes('electronic city') ||
+                                addressText.includes('marathahalli') ||
+                                addressText.includes('hebbal') ||
+                                addressText.includes('yelahanka') ||
+                                addressText.includes('jp nagar') ||
+                                addressText.includes('banashankari');
+          
+          console.log('Saved address text check:', { addressText, isInBangalore });
+          setShowServiceUnavailable(!isInBangalore);
+          setIsCheckingLocation(false);
+          return;
+        } catch (e) {
+          console.error("Error parsing saved location:", e);
+        }
+      }
+
+      // ONLY if no saved address exists, fall back to GPS/IP location
+      console.log('No saved address found, checking GPS/IP location...');
+      
       try {
-        // First try browser geolocation for accurate current location
         if (navigator.geolocation) {
           const position = await new Promise<GeolocationPosition>((resolve, reject) => {
             navigator.geolocation.getCurrentPosition(resolve, reject, {
@@ -89,7 +134,7 @@ export default function AppHeader({
           const { latitude, longitude } = position.coords;
           const isInBangalore = isWithinBangalore(latitude, longitude);
           
-          console.log('Current location detected:', { latitude, longitude, isInBangalore });
+          console.log('GPS location detected (no saved address):', { latitude, longitude, isInBangalore });
           setShowServiceUnavailable(!isInBangalore);
           setIsCheckingLocation(false);
           return;
@@ -110,13 +155,11 @@ export default function AppHeader({
           console.log('IP-based location check:', { lat: ipData.latitude, lng: ipData.longitude, isInBangalore });
           setShowServiceUnavailable(!isInBangalore);
         } else if (ipData && !ipData.error && ipData.city) {
-          // Check if city is Bangalore/Bengaluru
           const cityLower = ipData.city.toLowerCase();
           const isInBangalore = cityLower.includes('bangalore') || cityLower.includes('bengaluru');
           console.log('IP city check:', { city: ipData.city, isInBangalore });
           setShowServiceUnavailable(!isInBangalore);
         } else {
-          // Can't determine location - don't show banner
           console.log('Could not determine location from IP');
         }
       } catch (ipError) {
