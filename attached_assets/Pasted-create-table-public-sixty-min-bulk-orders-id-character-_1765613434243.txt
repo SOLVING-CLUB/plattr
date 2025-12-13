@@ -1,0 +1,57 @@
+create table public.sixty_min_bulk_orders (
+  id character varying not null default gen_random_uuid (),
+  user_id character varying null,
+  customer_name text not null,
+  customer_phone text not null,
+  customer_email text null,
+  delivery_address text not null,
+  delivery_landmark text null,
+  delivery_city text null default 'Bangalore'::text,
+  delivery_pincode text null,
+  delivery_latitude numeric(10, 8) null,
+  delivery_longitude numeric(11, 8) null,
+  order_number text not null,
+  headcount integer not null,
+  special_instructions text null,
+  dietary_preference text null default 'all'::text,
+  items jsonb not null,
+  requested_delivery_time timestamp without time zone null,
+  promised_delivery_by timestamp without time zone null,
+  order_placed_at timestamp without time zone null default now(),
+  subtotal numeric(10, 2) not null,
+  delivery_fee numeric(10, 2) null default 0,
+  tax_amount numeric(10, 2) null default 0,
+  discount_amount numeric(10, 2) null default 0,
+  discount_code text null,
+  total_amount numeric(10, 2) not null,
+  payment_method text null,
+  payment_status text null default 'pending'::text,
+  transaction_id text null,
+  order_status text null default 'pending'::text,
+  preparation_status text null default 'pending'::text,
+  is_express boolean null default true,
+  include_utensils boolean null default true,
+  packaging_type text null default 'standard'::text,
+  service_type text null default 'delivery'::text,
+  created_at timestamp without time zone null default now(),
+  updated_at timestamp without time zone null default now(),
+  address_id character varying null,
+  delivery_date character varying null,
+  delivery_time character varying null,
+  gst character varying null,
+  packaging_fee character varying null,
+  platform_fee character varying null,
+  selected_addons character varying null,
+  status character varying null,
+  total character varying null,
+  constraint sixty_min_bulk_orders_pkey primary key (id),
+  constraint sixty_min_bulk_orders_order_number_key unique (order_number)
+) TABLESPACE pg_default;
+
+create index IF not exists idx_sixty_min_bulk_orders_user on public.sixty_min_bulk_orders using btree (user_id) TABLESPACE pg_default;
+
+create index IF not exists idx_sixty_min_bulk_orders_status on public.sixty_min_bulk_orders using btree (order_status) TABLESPACE pg_default;
+
+create index IF not exists idx_sixty_min_bulk_orders_date on public.sixty_min_bulk_orders using btree (order_placed_at) TABLESPACE pg_default;
+
+create index IF not exists idx_sixty_min_bulk_orders_items on public.sixty_min_bulk_orders using gin (items) TABLESPACE pg_default;
