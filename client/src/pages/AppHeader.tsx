@@ -34,26 +34,18 @@ export default function AppHeader({
   const [showServiceUnavailable, setShowServiceUnavailable] = useState(false);
   const [isCheckingLocation, setIsCheckingLocation] = useState(false);
 
-  // Check location on app load
+  // Check current location on app load (always fetch live location)
   useEffect(() => {
     const checkLocationServiceAvailability = async () => {
-      // Only check once per session
-      const alreadyChecked = sessionStorage.getItem(SERVICE_CHECK_KEY);
-      if (alreadyChecked) {
-        const wasOutside = alreadyChecked === "outside";
-        setShowServiceUnavailable(wasOutside);
-        return;
-      }
-
       setIsCheckingLocation(true);
 
       try {
-        // First try browser geolocation
+        // First try browser geolocation for accurate current location
         if (navigator.geolocation) {
           const position = await new Promise<GeolocationPosition>((resolve, reject) => {
             navigator.geolocation.getCurrentPosition(resolve, reject, {
               enableHighAccuracy: true,
-              timeout: 5000,
+              timeout: 8000,
               maximumAge: 0
             });
           });
@@ -61,13 +53,13 @@ export default function AppHeader({
           const { latitude, longitude } = position.coords;
           const isInBangalore = isWithinBangalore(latitude, longitude);
           
-          sessionStorage.setItem(SERVICE_CHECK_KEY, isInBangalore ? "inside" : "outside");
+          console.log('Current location detected:', { latitude, longitude, isInBangalore });
           setShowServiceUnavailable(!isInBangalore);
           setIsCheckingLocation(false);
           return;
         }
       } catch (geoError) {
-        console.log('Browser geolocation failed, trying IP-based fallback...');
+        console.log('Browser geolocation failed, trying IP-based fallback...', geoError);
       }
 
       // Fallback: IP-based geolocation
@@ -75,21 +67,24 @@ export default function AppHeader({
         const ipResponse = await fetch('https://ipapi.co/json/');
         const ipData = await ipResponse.json();
         
+        console.log('IP location data:', ipData);
+        
         if (ipData && !ipData.error && ipData.latitude && ipData.longitude) {
           const isInBangalore = isWithinBangalore(ipData.latitude, ipData.longitude);
-          sessionStorage.setItem(SERVICE_CHECK_KEY, isInBangalore ? "inside" : "outside");
+          console.log('IP-based location check:', { lat: ipData.latitude, lng: ipData.longitude, isInBangalore });
           setShowServiceUnavailable(!isInBangalore);
         } else if (ipData && !ipData.error && ipData.city) {
           // Check if city is Bangalore/Bengaluru
           const cityLower = ipData.city.toLowerCase();
           const isInBangalore = cityLower.includes('bangalore') || cityLower.includes('bengaluru');
-          sessionStorage.setItem(SERVICE_CHECK_KEY, isInBangalore ? "inside" : "outside");
+          console.log('IP city check:', { city: ipData.city, isInBangalore });
           setShowServiceUnavailable(!isInBangalore);
+        } else {
+          // Can't determine location - don't show banner
+          console.log('Could not determine location from IP');
         }
       } catch (ipError) {
         console.error('IP geolocation failed:', ipError);
-        // Don't show error banner if we can't detect location
-        sessionStorage.setItem(SERVICE_CHECK_KEY, "unknown");
       }
 
       setIsCheckingLocation(false);
