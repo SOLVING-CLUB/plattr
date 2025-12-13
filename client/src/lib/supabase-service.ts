@@ -149,6 +149,7 @@ export const userService = {
       console.log('Note: account_deletion_logs table may not exist, continuing with deletion');
     }
 
+    // Step 1: Delete order_items first (references orders)
     const { data: userOrders } = await supabase
       .from('orders')
       .select('id')
@@ -159,6 +160,27 @@ export const userService = {
       await supabase.from('order_items').delete().in('order_id', orderIds);
     }
 
+    // Step 2: Delete all order tables that reference addresses (BEFORE addresses)
+    const orderTables = [
+      'mealbox_orders',
+      'bulk_meal_orders',
+      'catering_orders',
+      'corporate_orders',
+      'orders',
+    ];
+
+    for (const table of orderTables) {
+      try {
+        const { error } = await supabase.from(table).delete().eq('user_id', user.id);
+        if (error) {
+          console.log(`Note: Error clearing ${table}:`, error.message);
+        }
+      } catch (e) {
+        console.log(`Note: Could not clear ${table}, may not exist`);
+      }
+    }
+
+    // Step 3: Now delete addresses (after order tables that reference them)
     const { error: addressError } = await supabase
       .from('addresses')
       .delete()
@@ -168,24 +190,21 @@ export const userService = {
       console.error('Error deleting addresses:', addressError);
     }
 
-    const tablesToClear = [
+    // Step 4: Delete other user-related tables
+    const otherTables = [
       'cart_items',
-      'orders',
-      'mealbox_orders',
-      'bulk_meal_orders',
-      'catering_orders',
-      'corporate_orders',
       'concierge_preferences',
     ];
 
-    for (const table of tablesToClear) {
+    for (const table of otherTables) {
       try {
         await supabase.from(table).delete().eq('user_id', user.id);
       } catch (e) {
-        console.log(`Note: Could not clear ${table}, may not exist or have different structure`);
+        console.log(`Note: Could not clear ${table}, may not exist`);
       }
     }
 
+    // Step 5: Finally delete the user record
     const { error: userDeleteError } = await supabase
       .from('users')
       .delete()
