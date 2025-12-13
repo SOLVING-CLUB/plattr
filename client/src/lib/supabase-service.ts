@@ -941,6 +941,26 @@ export const sixtyMinBulkOrderService = {
     const timePart = Date.now() % 100000000;
     const nextOrderNumber = Math.floor(timePart / 100) + Math.floor(Math.random() * 1000)
 
+    // For sixty_min_bulk_orders, we only use delivery_address text (no address_id foreign key)
+    // If an addressId was passed, we need to look up the address and use it as text
+    let finalDeliveryAddress = orderData.deliveryAddress || null;
+    
+    if (orderData.addressId && !finalDeliveryAddress) {
+      // Look up the saved address and use its text
+      const { data: addressData } = await supabase
+        .from('addresses')
+        .select('address, landmark')
+        .eq('id', orderData.addressId)
+        .single();
+      
+      if (addressData) {
+        finalDeliveryAddress = addressData.address;
+        if (addressData.landmark) {
+          finalDeliveryAddress += `, ${addressData.landmark}`;
+        }
+      }
+    }
+
     const { data, error } = await supabase
       .from('sixty_min_bulk_orders')
       .insert({
@@ -957,8 +977,7 @@ export const sixtyMinBulkOrderService = {
         total: orderData.total.toFixed(2),
         delivery_date: orderData.deliveryDate || null,
         delivery_time: orderData.deliveryTime || null,
-        address_id: orderData.addressId || null,
-        delivery_address: orderData.deliveryAddress || null,
+        delivery_address: finalDeliveryAddress,
         status: 'pending',
       })
       .select()
