@@ -4,11 +4,45 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Trash2, Plus, Minus } from "lucide-react";
 import { useCart } from "@/context/CartContex";
 import FloatingNav from "@/pages/FloatingNav";
+import { useQuery } from "@tanstack/react-query";
+import { getQueryFn } from "@/lib/queryClient";
+
+interface SuggestedDish {
+  id: string;
+  name: string;
+  price: string | number;
+  image_url?: string | null;
+}
 
 export default function BulkMealCart() {
   const [, setLocation] = useLocation();
-  const { cart, removeFromCart, updateQuantity } = useCart();
+  const { cart, removeFromCart, updateQuantity, addToCart } = useCart();
   const [activeTab, setActiveTab] = useState<"home" | "menu" | "profile">("menu");
+
+  const isSixtyMinOrder = cart.length > 0 && cart.every(item => item.isSixtyMin === true);
+
+  const { data: suggestedDishes = [] } = useQuery<SuggestedDish[]>({
+    queryKey: isSixtyMinOrder 
+      ? ['/api/dishes', 'tiffins', 'all', 'all', 'sixtymin']
+      : ['/api/dishes', 'tiffins', 'all', 'all'],
+    queryFn: getQueryFn({ on401: "returnNull" }),
+    enabled: cart.length > 0,
+  });
+
+  const cartItemIds = new Set(cart.map(item => item.id));
+  const filteredSuggestions = suggestedDishes
+    .filter(dish => !cartItemIds.has(Number(dish.id)))
+    .slice(0, 6);
+
+  const handleAddSuggestion = (dish: SuggestedDish) => {
+    addToCart("bulk-meals", {
+      id: Number(dish.id),
+      name: dish.name,
+      price: typeof dish.price === 'string' ? parseFloat(dish.price) : dish.price,
+      quantity: 5,
+      isSixtyMin: isSixtyMinOrder,
+    });
+  };
 
   useEffect(() => {
     if (cart.length === 0) {
@@ -123,6 +157,48 @@ export default function BulkMealCart() {
             </div>
           ))}
         </div>
+
+        {/* Suggested Items */}
+        {filteredSuggestions.length > 0 && (
+          <div className="mb-6">
+            <h3 className="font-semibold text-base mb-3" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+              You might also like
+            </h3>
+            <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+              {filteredSuggestions.map((dish) => (
+                <div
+                  key={dish.id}
+                  className="flex-shrink-0 w-36 bg-white border border-gray-200 rounded-lg p-3"
+                  data-testid={`suggestion-${dish.id}`}
+                >
+                  {dish.image_url && (
+                    <img 
+                      src={dish.image_url} 
+                      alt={dish.name}
+                      className="w-full h-20 object-cover rounded-md mb-2"
+                    />
+                  )}
+                  <h4 className="font-medium text-sm mb-1 line-clamp-2" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                    {dish.name}
+                  </h4>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold" style={{ fontFamily: "Sweet Sans Pro", color: "#1A9952" }}>
+                      ₹{typeof dish.price === 'string' ? parseFloat(dish.price).toLocaleString('en-IN') : dish.price.toLocaleString('en-IN')}
+                    </span>
+                    <button
+                      onClick={() => handleAddSuggestion(dish)}
+                      className="w-7 h-7 rounded-full flex items-center justify-center"
+                      style={{ backgroundColor: "#1A9952" }}
+                      data-testid={`button-add-suggestion-${dish.id}`}
+                    >
+                      <Plus className="w-4 h-4 text-white" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Price Summary */}
         <div className="bg-gray-50 rounded-lg p-4 mb-6 space-y-3">
