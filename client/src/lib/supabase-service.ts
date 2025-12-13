@@ -161,24 +161,25 @@ export const userService = {
     }
 
     // Step 2: Delete all order tables that reference addresses (BEFORE addresses)
-    const orderTables = [
-      'mealbox_orders',
-      'bulk_meal_orders',
-      'catering_orders',
-      'corporate_orders',
-      'orders',
-    ];
-
-    for (const table of orderTables) {
-      try {
-        const { error } = await supabase.from(table).delete().eq('user_id', user.id);
-        if (error) {
-          console.log(`Note: Error clearing ${table}:`, error.message);
-        }
-      } catch (e) {
-        console.log(`Note: Could not clear ${table}, may not exist`);
-      }
-    }
+    // Delete bulk_meal_orders first
+    const { error: bulkError } = await supabase.from('bulk_meal_orders').delete().eq('user_id', user.id);
+    if (bulkError) console.error('Error deleting bulk_meal_orders:', bulkError);
+    
+    // Delete mealbox_orders
+    const { error: mealboxError } = await supabase.from('mealbox_orders').delete().eq('user_id', user.id);
+    if (mealboxError) console.error('Error deleting mealbox_orders:', mealboxError);
+    
+    // Delete catering_orders
+    const { error: cateringError } = await supabase.from('catering_orders').delete().eq('user_id', user.id);
+    if (cateringError) console.error('Error deleting catering_orders:', cateringError);
+    
+    // Delete corporate_orders
+    const { error: corpError } = await supabase.from('corporate_orders').delete().eq('user_id', user.id);
+    if (corpError) console.error('Error deleting corporate_orders:', corpError);
+    
+    // Delete orders (main orders table)
+    const { error: ordersError } = await supabase.from('orders').delete().eq('user_id', user.id);
+    if (ordersError) console.error('Error deleting orders:', ordersError);
 
     // Step 3: Now delete addresses (after order tables that reference them)
     const { error: addressError } = await supabase
