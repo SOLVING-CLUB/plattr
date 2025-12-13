@@ -868,7 +868,6 @@ export const bulkMealOrderService = {
         delivery_date: orderData.deliveryDate || null,
         delivery_time: orderData.deliveryTime || null,
         address_id: orderData.addressId || null,
-        delivery_address: orderData.deliveryAddress || null,
         status: 'pending',
       })
       .select()

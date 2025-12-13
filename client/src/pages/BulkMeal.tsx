@@ -323,8 +323,8 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
 
   const handleAddToCart = (item: { id: number; name: string; price: number; quantity?: number }) => {
     handleInteraction();
-    const quantityStr = quantities[item.id] !== undefined ? quantities[item.id] : '';
-    const quantity = quantityStr ? parseInt(quantityStr, 10) : 0;
+    const quantityStr = quantities[item.id] !== undefined ? quantities[item.id] : '5';
+    const quantity = quantityStr ? parseInt(quantityStr, 10) : 5;
 
     console.log('handleAddToCart:', { itemId: item.id, quantityStr, quantity });
 
