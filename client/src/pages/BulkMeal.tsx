@@ -1479,11 +1479,11 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                             {dish.name}
                           </h3>
                           <div className="flex items-center justify-between gap-2 mb-2">
-                            <div className="flex flex-col">
+                            <div className="flex items-baseline gap-1">
                               <span className="text-primary font-bold text-lg" data-testid={`text-dish-price-${dish.id}`}>
                                 ₹{parseFloat(dish.price as string).toFixed(0)}
                               </span>
-                              <span className="text-[10px] text-gray-500 -mt-1" style={{ fontFamily: "Sweet Sans Pro" }}>per serve</span>
+                              <span className="text-[10px] text-gray-500" style={{ fontFamily: "Sweet Sans Pro" }}>per serve</span>
                             </div>
                             <Button
                               size="sm"
