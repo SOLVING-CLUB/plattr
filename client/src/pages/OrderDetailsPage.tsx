@@ -117,7 +117,8 @@ export default function OrderDetailsPage() {
                 month: 'short', 
                 year: 'numeric',
                 hour: '2-digit',
-                minute: '2-digit'
+                minute: '2-digit',
+                timeZone: 'Asia/Kolkata'
               })}
             </p>
           </div>
@@ -144,7 +145,8 @@ export default function OrderDetailsPage() {
                     weekday: 'long',
                     day: 'numeric',
                     month: 'long',
-                    year: 'numeric'
+                    year: 'numeric',
+                    timeZone: 'Asia/Kolkata'
                   })}
                 </p>
               </div>
