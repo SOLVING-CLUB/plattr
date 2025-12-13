@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { ArrowLeft, Loader2, Calendar, Clock, MapPin } from "lucide-react";
+import { ArrowLeft, Loader2, Calendar, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import OrderSummaryCard from "@/components/OrderSummaryCard";
+import DeliveryTimePicker from "@/components/DeliveryTimePicker";
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { getSupabaseImageUrl } from "@/lib/supabase";
@@ -32,15 +33,6 @@ const generateDeliveryDates = () => {
   return dates;
 };
 
-// Delivery time slots
-const TIME_SLOTS = [
-  '9:00 AM - 11:00 AM',
-  '11:00 AM - 1:00 PM',
-  '1:00 PM - 3:00 PM',
-  '3:00 PM - 5:00 PM',
-  '5:00 PM - 7:00 PM',
-  '7:00 PM - 9:00 PM',
-];
 
 interface CartItem {
   id: string;
@@ -323,24 +315,11 @@ export default function CheckoutPage() {
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="delivery-time" className="flex items-center gap-2">
-                <Clock className="w-4 h-4" />
-                Delivery Time
-              </Label>
-              <Select value={deliveryTime} onValueChange={setDeliveryTime}>
-                <SelectTrigger id="delivery-time" data-testid="select-delivery-time">
-                  <SelectValue placeholder="Select delivery time slot" />
-                </SelectTrigger>
-                <SelectContent>
-                  {TIME_SLOTS.map((slot) => (
-                    <SelectItem key={slot} value={slot} data-testid={`option-time-${slot}`}>
-                      {slot}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <DeliveryTimePicker
+              mealType="all"
+              value={deliveryTime}
+              onChange={setDeliveryTime}
+            />
           </div>
         </Card>
 
