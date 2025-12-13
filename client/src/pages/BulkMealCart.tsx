@@ -124,14 +124,15 @@ export default function BulkMealCart() {
               className="bg-white border-2 border-gray-200 rounded-lg p-4"
               data-testid={`cart-item-${item.id}`}
             >
-              <div className="flex gap-3 mb-3">
-                {/* Item Image */}
+              <div className="flex gap-4">
+                {/* Item Image - Larger */}
                 <img 
                   src={item.image || dishFallbackImage} 
                   alt={item.name}
-                  className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
+                  className="w-28 h-28 object-cover rounded-lg flex-shrink-0"
                 />
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 flex flex-col justify-between">
+                  {/* Top: Name, Price per serving, Delete */}
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-base mb-1 truncate" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
@@ -149,38 +150,38 @@ export default function BulkMealCart() {
                       <Trash2 className="w-5 h-5" />
                     </button>
                   </div>
-                </div>
-              </div>
 
-              {/* Quantity Controls */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => handleQuantityChange(item.id, -1)}
-                    disabled={item.quantity <= 5}
-                    className={`w-8 h-8 rounded-full border-2 flex items-center justify-center ${
-                      item.quantity <= 5 
-                        ? 'border-gray-200 text-gray-300 cursor-not-allowed' 
-                        : 'border-gray-300 hover:border-green-500'
-                    }`}
-                    data-testid={`button-decrease-${item.id}`}
-                  >
-                    <Minus className="w-4 h-4" />
-                  </button>
-                  <span className="font-semibold text-base w-8 text-center" style={{ fontFamily: "Sweet Sans Pro" }}>
-                    {item.quantity}
-                  </span>
-                  <button
-                    onClick={() => handleQuantityChange(item.id, 1)}
-                    className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center hover:border-green-500"
-                    data-testid={`button-increase-${item.id}`}
-                  >
-                    <Plus className="w-4 h-4" />
-                  </button>
+                  {/* Bottom: Total Price and Quantity Controls */}
+                  <div className="mt-2">
+                    <span className="font-bold text-lg block mb-2" style={{ fontFamily: "Sweet Sans Pro", color: "#1A9952" }}>
+                      ₹{(item.price * item.quantity).toLocaleString('en-IN')}
+                    </span>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => handleQuantityChange(item.id, -1)}
+                        disabled={item.quantity <= 5}
+                        className={`w-8 h-8 rounded-full border-2 flex items-center justify-center ${
+                          item.quantity <= 5 
+                            ? 'border-gray-200 text-gray-300 cursor-not-allowed' 
+                            : 'border-gray-300 hover:border-green-500'
+                        }`}
+                        data-testid={`button-decrease-${item.id}`}
+                      >
+                        <Minus className="w-4 h-4" />
+                      </button>
+                      <span className="font-semibold text-base w-8 text-center" style={{ fontFamily: "Sweet Sans Pro" }}>
+                        {item.quantity}
+                      </span>
+                      <button
+                        onClick={() => handleQuantityChange(item.id, 1)}
+                        className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center hover:border-green-500"
+                        data-testid={`button-increase-${item.id}`}
+                      >
+                        <Plus className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <span className="font-bold text-lg" style={{ fontFamily: "Sweet Sans Pro", color: "#1A9952" }}>
-                  ₹{(item.price * item.quantity).toLocaleString('en-IN')}
-                </span>
               </div>
             </div>
           ))}
