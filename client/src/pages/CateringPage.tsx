@@ -953,6 +953,7 @@ import hiTeaIcon from "@assets/Image (1).png";
 import breakfastIcon from "@assets/Image (2).png";
 import lunchIcon from "@assets/9.png";
 import dinnerIcon from "@assets/Rectangle 34625261.png";
+import DeliveryTimePicker from "@/components/DeliveryTimePicker";
 
 type ServiceType = "bulk-meals" | "mealbox" | "catering" | "corporate";
 
@@ -1988,47 +1989,37 @@ export default function CateringOrder() {
                 </div>
               </div>
 
-              {/* Date & Time */}
-              <div className="space-y-2">
-                <Label
-                  style={{ fontFamily: "Sweet Sans Pro", fontWeight: 600 }}
-                >
-                  Select Event Date & Time
-                </Label>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="relative">
-                    <Calendar className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                    <Input
-                      id="eventDate"
-                      type="date"
-                      data-testid="input-event-date"
-                      value={formData.eventDate}
-                      onChange={(e) =>
-                        setFormData({ ...formData, eventDate: e.target.value })
-                      }
-                      required
-                      min={minDateTime.date}
-                      className="pl-10 border-[#1A9952] focus-visible:ring-[#1A9952]"
+              {/* When - Date Selection */}
+              <div className="bg-white rounded-xl p-4 border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-5 h-5 text-gray-500" />
+                    <span 
+                      className="font-medium text-gray-800"
                       style={{ fontFamily: "Sweet Sans Pro" }}
-                      placeholder="10/05/2025"
-                    />
+                    >
+                      When
+                    </span>
                   </div>
-                  <div className="relative">
-                    <Clock className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                    <Input
-                      id="eventTime"
-                      type="time"
-                      data-testid="input-event-time"
-                      value={formData.eventTime}
-                      onChange={(e) =>
-                        setFormData({ ...formData, eventTime: e.target.value })
-                      }
-                      className="pl-10 border-[#1A9952] focus-visible:ring-[#1A9952]"
-                      style={{ fontFamily: "Sweet Sans Pro" }}
-                      placeholder="12:00"
-                    />
-                  </div>
+                  <Input
+                    type="date"
+                    value={formData.eventDate}
+                    onChange={(e) => setFormData({ ...formData, eventDate: e.target.value })}
+                    min={minDateTime.date}
+                    className="w-auto text-gray-700 bg-transparent border-0 focus-visible:ring-0 cursor-pointer"
+                    style={{ fontFamily: "Sweet Sans Pro" }}
+                    data-testid="input-event-date"
+                  />
                 </div>
+              </div>
+
+              {/* Delivery Time Selection */}
+              <div className="bg-white rounded-xl p-4 border border-gray-200">
+                <DeliveryTimePicker
+                  mealType="all"
+                  value={formData.eventTime}
+                  onChange={(time) => setFormData({ ...formData, eventTime: time })}
+                />
               </div>
 
               {/* Phone Number */}

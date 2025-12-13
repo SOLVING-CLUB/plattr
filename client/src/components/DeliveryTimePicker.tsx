@@ -174,14 +174,14 @@ export default function DeliveryTimePicker({
       </div>
 
       <div 
-        className="inline-flex bg-gray-100 rounded-full p-1"
+        className="flex w-full bg-gray-100 rounded-full p-1"
         data-testid="time-period-toggle"
       >
         {periods.map((period) => (
           <button
             key={period.id}
             onClick={() => setActivePeriod(period.id)}
-            className={`px-6 py-2 rounded-full text-sm font-medium transition-colors ${
+            className={`flex-1 px-4 py-2 rounded-full text-xs font-medium transition-colors text-center ${
               activePeriod === period.id
                 ? "bg-white text-gray-900 shadow-sm"
                 : "text-gray-600 hover:text-gray-900"
@@ -194,12 +194,12 @@ export default function DeliveryTimePicker({
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-2">
         {currentPeriod?.slots.map((slot) => (
           <button
             key={slot.value}
             onClick={() => onChange(slot.value)}
-            className={`px-4 py-3 rounded-xl text-sm font-medium border-2 transition-colors ${
+            className={`px-3 py-2.5 rounded-xl text-xs font-medium border-2 transition-colors ${
               value === slot.value
                 ? "border-orange-500 bg-orange-50 text-orange-700"
                 : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
