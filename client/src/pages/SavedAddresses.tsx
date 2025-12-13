@@ -385,7 +385,7 @@ export default function SavedAddresses() {
           <p className="text-gray-600">No addresses found. Add your first address!</p>
         </div>
       ) : (
-      <div className="px-4 space-y-3">
+      <div className="px-4 space-y-3 pb-32">
         {filteredAddresses.map((address) => (
           <div 
             key={address.id} 
