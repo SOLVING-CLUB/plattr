@@ -1,21 +1,76 @@
 import { ChevronRight } from "lucide-react";
-import heroGif from "@assets/Untitled_design_(1)_1765646935669.gif";
+import { useState, useRef, useEffect } from "react";
+import { LazyImage } from "@/components/ui/lazy-image";
+import heroBanner from "@assets/Banner - 60 mins_1763877285748.png";
+import heroVideo from "@assets/Untitled_design_(4)_1765414387896.mov";
 
 interface HeroSectionProps {
   onExploreMenu?: () => void;
 }
 
 export default function HeroSection({ onExploreMenu }: HeroSectionProps) {
+  const [videoFailed, setVideoFailed] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const attemptPlay = async () => {
+      try {
+        await video.play();
+      } catch (error) {
+        console.log("Video autoplay failed, showing fallback image");
+        setVideoFailed(true);
+      }
+    };
+
+    attemptPlay();
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && !videoFailed) {
+        video.play().catch(() => {});
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [videoFailed]);
+
   return (
-    <section className="relative w-full bg-white">
-      {/* Hero Banner - GIF starting from top */}
+    <section className="relative w-full">
+      {/* Hero Banner - Video with image fallback */}
       <div className="relative w-full">
-        <img 
-          src={heroGif}
-          alt="60-minute delivery"
-          className="w-full h-auto"
-          data-testid="image-hero-banner"
-        />
+        {!videoFailed ? (
+          <video
+            ref={videoRef}
+            src={heroVideo}
+            autoPlay
+            loop
+            muted
+            playsInline
+            onError={() => setVideoFailed(true)}
+            data-testid="video-hero-banner"
+            className="w-full h-auto"
+            style={{
+              WebkitMaskImage: 'linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%)',
+              maskImage: 'linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%)'
+            }}
+          />
+        ) : (
+          <LazyImage 
+            src={heroBanner}
+            alt="60-minute delivery"
+            containerClassName="w-full"
+            className="w-full h-auto"
+            data-testid="image-hero-banner"
+            showSkeleton={true}
+            style={{
+              WebkitMaskImage: 'linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%)',
+              maskImage: 'linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%)'
+            }}
+          />
+        )}
         
         {/* Explore Menu Button */}
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">

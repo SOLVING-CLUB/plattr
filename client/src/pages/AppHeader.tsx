@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
+import headerBg from "@assets/Hero_1763854193361.png";
 
 interface AppHeaderProps {
   onLocationClick?: () => void;
@@ -225,8 +226,15 @@ export default function AppHeader({
 
   return (
     <>
-      <header className="absolute top-0 left-0 right-0 z-20 h-40 pointer-events-none">
-        <div className="h-full px-4 flex items-end justify-between pb-4 pointer-events-auto">
+      <header 
+        className="h-40"
+        style={{
+          backgroundImage: `url(${headerBg})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center top',
+        }}
+      >
+        <div className="h-full px-4 flex items-end justify-between pb-4">
           <Button 
             variant="ghost" 
             className="gap-2 font-medium text-foreground hover:bg-black/10"
