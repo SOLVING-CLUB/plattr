@@ -3734,21 +3734,6 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                                 </div>
                               </div>
                             )}
-                            {item.type === "veg" && (
-                              <div className="absolute top-2 left-2 w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
-                                <Leaf className="w-3 h-3 text-white" />
-                              </div>
-                            )}
-                            {item.type === "egg" && (
-                              <div className="absolute top-2 left-2 w-5 h-5 rounded-full bg-yellow-500 flex items-center justify-center">
-                                <Egg className="w-3 h-3 text-white" />
-                              </div>
-                            )}
-                            {item.type === "non-veg" && (
-                              <div className="absolute top-2 left-2 w-5 h-5 rounded-full bg-red-500 flex items-center justify-center">
-                                <Drumstick className="w-3 h-3 text-white" />
-                              </div>
-                            )}
                           </div>
                           <div className="p-3 md:p-4 flex flex-col h-[140px]">
                             <h3 className="font-bold text-sm md:text-base line-clamp-2 min-h-[40px] mb-2" data-testid={`text-dish-name-${item.id}`}>
