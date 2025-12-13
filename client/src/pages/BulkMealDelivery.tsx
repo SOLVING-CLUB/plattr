@@ -102,7 +102,7 @@ export default function BulkMealsDelivery() {
       if (error.code === 1) {
         errorMessage = "Location access denied. Please allow location access in your browser settings.";
       } else if (error.code === 2) {
-        errorMessage = "Location unavailable. Please try opening the app in a new browser tab.";
+        errorMessage = "Location unavailable. Please check that Location Services is enabled in your device settings (System Settings > Privacy & Security > Location Services).";
       } else if (error.code === 3) {
         errorMessage = "Location request timed out. Please try again.";
       }
