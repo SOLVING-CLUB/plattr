@@ -159,6 +159,15 @@ export const userService = {
       await supabase.from('order_items').delete().in('order_id', orderIds);
     }
 
+    const { error: addressError } = await supabase
+      .from('addresses')
+      .delete()
+      .eq('user_id', user.id);
+    
+    if (addressError) {
+      console.error('Error deleting addresses:', addressError);
+    }
+
     const tablesToClear = [
       'cart_items',
       'orders',
@@ -167,7 +176,6 @@ export const userService = {
       'catering_orders',
       'corporate_orders',
       'concierge_preferences',
-      'addresses',
     ];
 
     for (const table of tablesToClear) {
