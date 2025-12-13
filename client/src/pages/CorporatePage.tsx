@@ -1798,13 +1798,12 @@ export default function CorporateOrder() {
               />
 
               {/* Delivery Time Selection */}
-              <div className="bg-white rounded-xl p-4 border border-gray-200">
-                <DeliveryTimePicker
-                  mealType="all"
-                  value={formData.eventTime}
-                  onChange={(time) => setFormData({ ...formData, eventTime: time })}
-                />
-              </div>
+              <DeliveryTimePicker
+                mealType="all"
+                value={formData.eventTime}
+                onChange={(time) => setFormData({ ...formData, eventTime: time })}
+                selectedDate={formData.eventDate}
+              />
 
               <div className="space-y-2">
                 <Label htmlFor="message">Additional Requests</Label>

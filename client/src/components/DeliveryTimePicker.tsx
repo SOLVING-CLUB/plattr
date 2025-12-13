@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Clock, ChevronDown } from "lucide-react";
+import { parse, addHours, isBefore, isToday, startOfDay } from "date-fns";
 
 interface TimeSlot {
   label: string;
@@ -16,6 +17,7 @@ interface DeliveryTimePickerProps {
   mealType?: "breakfast" | "lunch-dinner" | "snacks" | "all";
   value?: string;
   onChange: (time: string) => void;
+  selectedDate?: string;
 }
 
 const BREAKFAST_PERIODS: TimePeriod[] = [
@@ -134,10 +136,41 @@ function getPeriods(mealType: string): TimePeriod[] {
   }
 }
 
+function parseTimeSlot(slotValue: string): Date {
+  const startTime = slotValue.split(" - ")[0];
+  return parse(startTime, "h:mm a", new Date());
+}
+
+function isSlotDisabled(slotValue: string, selectedDate?: string): boolean {
+  if (!selectedDate) return false;
+  
+  const deliveryDate = new Date(selectedDate);
+  const today = startOfDay(new Date());
+  const deliveryDay = startOfDay(deliveryDate);
+  
+  if (isBefore(today, deliveryDay)) {
+    return false;
+  }
+  
+  if (!isToday(deliveryDate)) {
+    return false;
+  }
+  
+  const now = new Date();
+  const minDeliveryTime = addHours(now, 12);
+  
+  const slotTime = parseTimeSlot(slotValue);
+  const slotDateTime = new Date(deliveryDate);
+  slotDateTime.setHours(slotTime.getHours(), slotTime.getMinutes(), 0, 0);
+  
+  return isBefore(slotDateTime, minDeliveryTime);
+}
+
 export default function DeliveryTimePicker({ 
   mealType = "all", 
   value, 
-  onChange 
+  onChange,
+  selectedDate
 }: DeliveryTimePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const periods = getPeriods(mealType);
@@ -205,21 +238,27 @@ export default function DeliveryTimePicker({
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-            {currentPeriod?.slots.map((slot) => (
-              <button
-                key={slot.value}
-                onClick={() => onChange(slot.value)}
-                className={`px-3 py-2.5 rounded-xl text-xs font-medium border-2 transition-colors ${
-                  value === slot.value
-                    ? "border-orange-500 bg-orange-50 text-orange-700"
-                    : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
-                }`}
-                style={{ fontFamily: "Sweet Sans Pro" }}
-                data-testid={`button-time-${slot.value}`}
-              >
-                {slot.label}
-              </button>
-            ))}
+            {currentPeriod?.slots.map((slot) => {
+              const disabled = isSlotDisabled(slot.value, selectedDate);
+              return (
+                <button
+                  key={slot.value}
+                  onClick={() => !disabled && onChange(slot.value)}
+                  disabled={disabled}
+                  className={`px-3 py-2.5 rounded-xl text-xs font-medium border-2 transition-colors ${
+                    disabled
+                      ? "border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed"
+                      : value === slot.value
+                        ? "border-orange-500 bg-orange-50 text-orange-700"
+                        : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
+                  }`}
+                  style={{ fontFamily: "Sweet Sans Pro" }}
+                  data-testid={`button-time-${slot.value}`}
+                >
+                  {slot.label}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}

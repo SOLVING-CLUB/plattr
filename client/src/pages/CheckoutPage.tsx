@@ -306,6 +306,7 @@ export default function CheckoutPage() {
               mealType="all"
               value={deliveryTime}
               onChange={setDeliveryTime}
+              selectedDate={deliveryDate}
             />
           </div>
         </Card>
