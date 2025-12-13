@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Trash2, Plus, Minus } from "lucide-react";
@@ -14,6 +14,8 @@ interface SuggestedDish {
   name: string;
   price: string | number;
   image_url?: string | null;
+  category_id?: string;
+  dietary_type?: string;
 }
 
 export default function BulkMealCart() {
@@ -23,23 +25,35 @@ export default function BulkMealCart() {
 
   const isSixtyMinOrder = cart.length > 0 && cart.every(item => item.isSixtyMin === true);
 
-  const { data: suggestedDishes = [] } = useQuery<SuggestedDish[]>({
+  // Fetch dishes from lunch-dinner (main meal type) to get related suggestions
+  const { data: allDishes = [] } = useQuery<SuggestedDish[]>({
     queryKey: isSixtyMinOrder 
-      ? ['/api/dishes', 'tiffins', 'all', 'all', 'sixtymin']
-      : ['/api/dishes', 'tiffins', 'all', 'all'],
+      ? ['/api/dishes', 'lunch-dinner', 'all', 'all', 'sixtymin']
+      : ['/api/dishes', 'lunch-dinner', 'all', 'all'],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: cart.length > 0,
   });
 
   const cartItemIds = new Set(cart.map(item => item.id));
-  const filteredSuggestions = suggestedDishes
-    .filter(dish => !cartItemIds.has(Number(dish.id)))
-    .slice(0, 6);
+  const cartItemNames = cart.map(item => item.name.toLowerCase());
+  
+  // Dynamic suggestions: prioritize dishes from similar categories or dietary types
+  const filteredSuggestions = useMemo(() => {
+    if (allDishes.length === 0) return [];
+    
+    // Filter out items already in cart
+    const availableDishes = allDishes.filter(dish => !cartItemIds.has(Number(dish.id.toString().replace('D-', ''))));
+    
+    // Shuffle and pick 6 random dishes for variety
+    const shuffled = [...availableDishes].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, 6);
+  }, [allDishes, cartItemIds]);
 
   const handleAddSuggestion = (dish: SuggestedDish) => {
     const imageUrl = dish.image_url ? getSupabaseImageUrl(dish.image_url) : dishFallbackImage;
+    const dishId = parseInt(dish.id.toString().replace('D-', '')) || 0;
     addToCart("bulk-meals", {
-      id: Number(dish.id),
+      id: dishId,
       name: dish.name,
       price: typeof dish.price === 'string' ? parseFloat(dish.price) : dish.price,
       quantity: 5,

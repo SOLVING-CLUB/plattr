@@ -1830,6 +1830,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                     // Set quantity before adding
                     setQuantities(prev => ({ ...prev, [dishId]: String(qty) }));
                     
+                    const dishImageUrl = detailDish.image_url || detailDish.imageUrl;
                     const dishItem = {
                       id: dishId,
                       name: detailDish.name,
@@ -1838,7 +1839,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                       reviewCount: 0,
                       category: detailDish.dishType?.toLowerCase() || 'all',
                       type: (detailDish.dietaryType?.toLowerCase() || 'veg') as 'veg' | 'non-veg' | 'egg',
-                      image: detailDish.imageUrl ? getSupabaseImageUrl(detailDish.imageUrl) : undefined,
+                      image: dishImageUrl ? getSupabaseImageUrl(dishImageUrl) : undefined,
                     };
                     if (addedItems.has(dishId)) {
                       handleRemoveFromCart(dishId);
