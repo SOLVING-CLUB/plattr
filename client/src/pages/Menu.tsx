@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { LazyImage } from "@/components/ui/lazy-image";
+import { SearchOverlay } from "@/components/SearchOverlay";
 import biryaniImage1 from '@assets/stock_images/indian_biryani_dish__60e99e80.jpg';
 import idliImage1 from '@assets/stock_images/indian_idli_sambar_s_c6bb3ca9.jpg';
 import vadaImage1 from '@assets/stock_images/indian_vada_d82fc29e.jpg';
@@ -246,6 +247,7 @@ export default function Menu() {
   const [sortOption, setSortOption] = useState<'price-low' | 'price-high' | 'name-az' | 'name-za'>('price-low');
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
   const [sortDialogOpen, setSortDialogOpen] = useState(false);
+  const [searchOverlayOpen, setSearchOverlayOpen] = useState(false);
   const [platterPlannerOpen, setPlatterPlannerOpen] = useState(false);
   const [dishDetailOpen, setDishDetailOpen] = useState(false);
   const [detailDish, setDetailDish] = useState<Dish | null>(null);
@@ -691,19 +693,20 @@ export default function Menu() {
           boxShadow: isStuck ? "0 2px 4px rgba(0,0,0,0.1)" : "none"
         }}
       >
-        {/* Search Bar */}
+        {/* Search Bar - Clickable trigger for overlay */}
         <div className="mb-3">
-          <div className="relative">
+          <div 
+            className="relative cursor-pointer"
+            onClick={() => setSearchOverlayOpen(true)}
+          >
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-white text-base"
+            <div
+              className="w-full pl-12 pr-4 py-3 bg-white text-base text-gray-400"
               style={{ fontFamily: "Sweet Sans Pro", borderRadius: "10px" }}
               data-testid="input-search"
-            />
+            >
+              {searchQuery || "Search for dishes..."}
+            </div>
           </div>
         </div>
 
@@ -1255,6 +1258,20 @@ export default function Menu() {
           </div>
         </DrawerContent>
       </Drawer>
+
+      {/* Search Overlay */}
+      <SearchOverlay
+        isOpen={searchOverlayOpen}
+        onClose={() => setSearchOverlayOpen(false)}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        onSearch={(query) => {
+          setSearchQuery(query);
+          setSearchOverlayOpen(false);
+        }}
+        placeholder="Search for dishes..."
+        liveSearch={true}
+      />
 
       <FloatingNav activeTab={activeTab} onTabChange={handleTabChange} />
     </div>
