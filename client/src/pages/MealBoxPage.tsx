@@ -1307,6 +1307,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
   const hasInteractedRef = useRef(false);
   const isRestoringRef = useRef(false);
+  const completedTabsRef = useRef<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<"home" | "menu" | "profile">("home");
   const [selectedService, setSelectedService] = useState<ServiceType>("mealbox");
   const [scrollY, setScrollY] = useState(0);
@@ -1834,7 +1835,49 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
       // Always set dietary tab to the first active dietary preference when entering Step 4
       setCurrentDietaryTab(activeDietaryPreferences[0]);
     }
+    // Reset completedTabs when leaving step 4 (going back)
+    if (currentStep < 4) {
+      completedTabsRef.current.clear();
+    }
   }, [currentStep, activeDietaryPreferences]);
+
+  // Auto-progression: switch to next dietary tab when current tab's slots are all filled
+  useEffect(() => {
+    if (currentStep !== 4) return;
+    
+    // Skip if this tab has already been completed (prevent infinite loop)
+    if (completedTabsRef.current.has(currentDietaryTab)) return;
+    
+    // Get current selections based on dietary tab
+    const currentSelections = 
+      currentDietaryTab === "veg" ? vegPlateSelections :
+      currentDietaryTab === "egg" ? eggPlateSelections :
+      nonVegPlateSelections;
+    
+    // Check if all slots for current tab are filled
+    const allSlotsFilled = currentSelections.length > 0 && 
+      currentSelections.every(sel => sel.itemId !== null);
+    
+    if (!allSlotsFilled) return;
+    
+    // Mark this tab as completed to prevent re-triggering
+    completedTabsRef.current.add(currentDietaryTab);
+    
+    // Find the next dietary preference in the sequence
+    const currentIndex = activeDietaryPreferences.indexOf(currentDietaryTab);
+    const nextIndex = currentIndex + 1;
+    
+    // If there's a next dietary preference, switch to it
+    if (nextIndex < activeDietaryPreferences.length) {
+      const nextTab = activeDietaryPreferences[nextIndex];
+      setCurrentDietaryTab(nextTab);
+      setSelectedSlotIndex(0); // Reset to first slot of new tab
+      toast({
+        title: `${currentDietaryTab.toUpperCase()} box complete!`,
+        description: `Now select items for your ${nextTab.toUpperCase()} box.`,
+      });
+    }
+  }, [currentStep, currentDietaryTab, vegPlateSelections, eggPlateSelections, nonVegPlateSelections, activeDietaryPreferences]);
 
   // Get current plate selections based on active dietary tab
   const getCurrentPlateSelections = (): PortionSelection[] => {
