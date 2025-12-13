@@ -259,7 +259,7 @@ export default function SavedAddresses() {
               <Input
                 value={formData.label}
                 onChange={(e) => setFormData({ ...formData, label: e.target.value })}
-                placeholder="Enter Address Nickname (e.g., Home, Office)"
+                placeholder="e.g., Home, Office"
                 className="w-full border-gray-200 rounded-lg py-3 px-4"
                 data-testid="input-address-name"
               />
@@ -276,7 +276,7 @@ export default function SavedAddresses() {
             <Input
               value={formData.address}
               onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              placeholder="Door No. 32, Jaya Prakash Nagar, Near Metro Station, Bengaluru, Karnataka 560078"
+              placeholder="Enter your complete address"
               className="w-full border-[#1A9952] rounded-lg py-3 px-4"
               data-testid="input-address"
             />
@@ -291,7 +291,7 @@ export default function SavedAddresses() {
             <Input
               value={formData.landmark}
               onChange={(e) => setFormData({ ...formData, landmark: e.target.value })}
-              placeholder="Near Metro Station, JP Nagar"
+              placeholder="Enter landmark (optional)"
               className="w-full border-[#1A9952] rounded-lg py-3 px-4"
               data-testid="input-landmark"
             />
