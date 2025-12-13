@@ -2022,7 +2022,9 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
       .filter(dish => dish.isAvailable !== false) // Only show available dishes
       .map((dish) => {
         // Map dietary type from database to FoodItem type
-        const dietaryType = dish.dietaryType?.toLowerCase() || '';
+        // Handle both camelCase and snake_case from database
+        const rawDietaryType = (dish as any).dietary_type || dish.dietaryType || '';
+        const dietaryType = rawDietaryType.toLowerCase();
         const dishName = dish.name?.toLowerCase() || '';
         
         // Non-veg keywords to check in dish name (excluding egg - handled separately)
@@ -2095,21 +2097,23 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
       // Filter by category
       if (dishCategoryId !== categoryId) return false;
 
-      // Apply dietary filter based on current dietary tab (egg is client-side name matching)
+      // Apply dietary filter based on current dietary tab
+      // Handle both camelCase and snake_case from database
+      const rawDietaryType = (d as any).dietary_type || d.dietaryType || '';
+      const dietaryType = rawDietaryType.toLowerCase();
+      
       if (currentDietaryTab === 'egg') {
-        // For egg tab, filter by name containing 'egg' or dietaryType being egg/egg-veg
-        const dietaryType = d.dietaryType?.toLowerCase() || 'veg';
-        if (dietaryType !== 'egg' && dietaryType !== 'egg-veg' && !d.name.toLowerCase().includes('egg')) {
+        // For egg tab, show only veg and egg items (exclude non-veg)
+        if (dietaryType === 'non-veg' || dietaryType === 'nonveg') {
           return false;
         }
       } else if (currentDietaryTab === 'veg') {
         // For veg tab, only show veg dishes
-        const dietaryType = d.dietaryType?.toLowerCase() || 'veg';
-        if (dietaryType === 'non-veg') return false;
-      } else if (currentDietaryTab === 'non-veg') {
-        // For non-veg tab, show all (veg, egg, non-veg)
-        // No filtering needed
+        if (dietaryType === 'non-veg' || dietaryType === 'nonveg' || dietaryType === 'egg' || dietaryType === 'egg-veg') {
+          return false;
+        }
       }
+      // For non-veg tab, show all (veg, egg, non-veg) - no filtering needed
 
       return true;
     }).length;
