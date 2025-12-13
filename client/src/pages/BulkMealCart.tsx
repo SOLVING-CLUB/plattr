@@ -81,7 +81,7 @@ export default function BulkMealCart() {
 
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const packagingFee = Math.round(subtotal * 0.06);
-  const deliveryCharges = subtotal >= 2000 ? 0 : 250;
+  const deliveryCharges = 500;
   const gst = Math.round(subtotal * 0.05);
   const grandTotal = subtotal + packagingFee + deliveryCharges + gst;
 
@@ -251,7 +251,7 @@ export default function BulkMealCart() {
               Delivery Charges
             </span>
             <span className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-              {deliveryCharges === 0 ? "FREE" : `₹${deliveryCharges.toLocaleString('en-IN')}`}
+              ₹{deliveryCharges.toLocaleString('en-IN')}
             </span>
           </div>
           <div className="flex items-center justify-between">

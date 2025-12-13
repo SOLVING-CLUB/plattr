@@ -3864,10 +3864,10 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                       const nonVegTotal = nonVegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * nonVegCount;
 
                       const subtotal = vegTotal + eggTotal + nonVegTotal;
-                      const gst = Math.round(subtotal * 0.18);
-                      const platformFee = 499;
-                      const packagingFee = 399;
-                      const grandTotal = subtotal + gst + platformFee + packagingFee;
+                      const packagingFee = Math.round(subtotal * 0.06);
+                      const deliveryCharges = 500;
+                      const gst = Math.round(subtotal * 0.05);
+                      const grandTotal = subtotal + packagingFee + deliveryCharges + gst;
                       return grandTotal.toLocaleString('en-IN');
                     })()}
                   </span>
@@ -4183,18 +4183,26 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-700" style={{ fontFamily: "Sweet Sans Pro" }}>
-                    Platform Fee
+                    Packaging (6%)
                   </span>
                   <span className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                    ₹499
+                    6%
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-700" style={{ fontFamily: "Sweet Sans Pro" }}>
-                    Packaging & Handling Fee
+                    Delivery Charges
                   </span>
                   <span className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                    ₹399
+                    ₹500
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-700" style={{ fontFamily: "Sweet Sans Pro" }}>
+                    GST (5%)
+                  </span>
+                  <span className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                    5%
                   </span>
                 </div>
               </div>
@@ -4214,10 +4222,10 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                       const eggTotal = eggPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * eggCount;
                       const nonVegTotal = nonVegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * nonVegCount;
                       const subtotal = vegTotal + eggTotal + nonVegTotal;
-                      const gst = Math.round(subtotal * 0.18);
-                      const platformFee = 499;
-                      const packagingFee = 399;
-                      return (subtotal + gst + platformFee + packagingFee).toLocaleString('en-IN');
+                      const packagingFee = Math.round(subtotal * 0.06);
+                      const deliveryCharges = 500;
+                      const gst = Math.round(subtotal * 0.05);
+                      return (subtotal + packagingFee + deliveryCharges + gst).toLocaleString('en-IN');
                     })()}
                   </span>
                 </div>
@@ -4250,10 +4258,10 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                   const eggTotal = eggPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * eggCount;
                   const nonVegTotal = nonVegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * nonVegCount;
                   const subtotal = vegTotal + eggTotal + nonVegTotal;
-                  const gst = Math.round(subtotal * 0.18);
-                  const platformFee = 499;
-                  const packagingFee = 399;
-                  return (subtotal + gst + platformFee + packagingFee).toLocaleString('en-IN');
+                  const packagingFee = Math.round(subtotal * 0.06);
+                  const deliveryCharges = 500;
+                  const gst = Math.round(subtotal * 0.05);
+                  return (subtotal + packagingFee + deliveryCharges + gst).toLocaleString('en-IN');
                 })()}
                 <ChevronRight className="w-5 h-5" />
               </span>
@@ -4551,10 +4559,10 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                   const eggTotal = eggPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * eggCount;
                   const nonVegTotal = nonVegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * nonVegCount;
                   const subtotal = vegTotal + eggTotal + nonVegTotal;
-                  const gst = Math.round(subtotal * 0.18);
-                  const platformFee = 499;
-                  const packagingFee = 399;
-                  return (subtotal + gst + platformFee + packagingFee).toLocaleString('en-IN');
+                  const packagingFee = Math.round(subtotal * 0.06);
+                  const deliveryCharges = 500;
+                  const gst = Math.round(subtotal * 0.05);
+                  return (subtotal + packagingFee + deliveryCharges + gst).toLocaleString('en-IN');
                 })()}
               </span>
             </div>
@@ -4792,10 +4800,10 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                   const eggTotal = eggPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * eggCount;
                   const nonVegTotal = nonVegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * nonVegCount;
                   const subtotal = vegTotal + eggTotal + nonVegTotal;
-                  const gst = Math.round(subtotal * 0.18);
-                  const platformFee = 499;
-                  const packagingFee = 399;
-                  const total = subtotal + gst + platformFee + packagingFee;
+                  const packagingFee = Math.round(subtotal * 0.06);
+                  const deliveryCharges = 500;
+                  const gst = Math.round(subtotal * 0.05);
+                  const total = subtotal + packagingFee + deliveryCharges + gst;
 
                   // Get form values - use state variables directly
                   const deliveryDate = eventDate || null;
@@ -4940,10 +4948,10 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                   const eggTotal = eggPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * eggCount;
                   const nonVegTotal = nonVegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * nonVegCount;
                   const subtotal = vegTotal + eggTotal + nonVegTotal;
-                  const gst = Math.round(subtotal * 0.18);
-                  const platformFee = 499;
-                  const packagingFee = 399;
-                  return (subtotal + gst + platformFee + packagingFee).toLocaleString('en-IN');
+                  const packagingFee = Math.round(subtotal * 0.06);
+                  const deliveryCharges = 500;
+                  const gst = Math.round(subtotal * 0.05);
+                  return (subtotal + packagingFee + deliveryCharges + gst).toLocaleString('en-IN');
                 })()}
               </span>
             </Button>

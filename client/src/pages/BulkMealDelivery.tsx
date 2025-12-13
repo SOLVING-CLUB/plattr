@@ -169,7 +169,7 @@ export default function BulkMealsDelivery() {
 
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const packagingFee = Math.round(subtotal * 0.06);
-  const deliveryCharges = subtotal >= 2000 ? 0 : 250;
+  const deliveryCharges = 500;
   const gst = Math.round(subtotal * 0.05);
   const grandTotal = subtotal + packagingFee + deliveryCharges + gst;
 
