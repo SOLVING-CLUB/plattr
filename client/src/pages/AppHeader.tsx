@@ -62,25 +62,12 @@ export default function AppHeader({
     setShowServiceUnavailable(!isInBangalore);
   };
 
-  // Check location on app load - both saved address AND current location
+  // Check CURRENT location on app load (always fetch live GPS location first)
   useEffect(() => {
     const checkLocationServiceAvailability = async () => {
       setIsCheckingLocation(true);
 
-      // First, check if there's a saved location
-      const savedLocation = localStorage.getItem(LOCATION_STORAGE_KEY);
-      if (savedLocation) {
-        try {
-          const parsed = JSON.parse(savedLocation);
-          checkSavedLocationServiceAvailability(parsed);
-          setIsCheckingLocation(false);
-          return;
-        } catch (e) {
-          console.error("Error parsing saved location for service check:", e);
-        }
-      }
-
-      // No saved location - check current location
+      // Always try to get CURRENT location first (not saved address)
       try {
         // First try browser geolocation for accurate current location
         if (navigator.geolocation) {
