@@ -226,7 +226,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
   };
   const { toast } = useToast();
   const isInputFocused = useInputFocus();
-  const { cart, addedItems, addToCart, removeFromCart, enterCategory } = useCart();
+  const { cart, addedItems, addToCart, removeFromCart, enterCategory, setBulkMealType, bulkMealType } = useCart();
   const [activeTab, setActiveTab] = useState<"home" | "menu" | "profile">("home");
   const [selectedService, setSelectedService] = useState<ServiceType>("bulk-meals");
   const [locationLabel, setLocationLabel] = useState("Select Address");
@@ -328,7 +328,14 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
   const handleInteraction = () => {
     if (!hasInteractedRef.current) {
       hasInteractedRef.current = true;
-      enterCategory("bulk-meals");
+      enterCategory("bulk-meals", selectedMealCategory as "lunch-dinner" | "tiffins" | "hi-tea");
+    }
+  };
+
+  const handleMealCategoryChange = (newCategory: string) => {
+    if (newCategory !== selectedMealCategory) {
+      setBulkMealType(newCategory as "lunch-dinner" | "tiffins" | "hi-tea");
+      setSelectedMealCategory(newCategory);
     }
   };
 
@@ -360,7 +367,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
       quantity,
       isSixtyMin: !!onNavigate,
       image: item.image,
-    });
+    }, selectedMealCategory as "lunch-dinner" | "tiffins" | "hi-tea");
 
     // Keep the quantity value after adding
   };
@@ -1203,7 +1210,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
           }}
         >
           <button
-            onClick={() => { handleInteraction(); setSelectedMealCategory("lunch-dinner"); }}
+            onClick={() => { handleInteraction(); handleMealCategoryChange("lunch-dinner"); }}
             className="flex-1 flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 rounded-full transition-all hover-elevate active-elevate-2 whitespace-nowrap"
             style={{
               backgroundColor: selectedMealCategory === "lunch-dinner" ? "#06352A" : "#FFFFFF",
@@ -1222,7 +1229,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
           </button>
 
           <button
-            onClick={() => { handleInteraction(); setSelectedMealCategory("tiffins"); }}
+            onClick={() => { handleInteraction(); handleMealCategoryChange("tiffins"); }}
             className="flex-1 flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 rounded-full transition-all hover-elevate active-elevate-2 whitespace-nowrap"
             style={{
               backgroundColor: selectedMealCategory === "tiffins" ? "#06352A" : "#FFFFFF",
@@ -1241,7 +1248,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
           </button>
 
           <button
-            onClick={() => { handleInteraction(); setSelectedMealCategory("hi-tea"); }}
+            onClick={() => { handleInteraction(); handleMealCategoryChange("hi-tea"); }}
             className="flex-1 flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 rounded-full transition-all hover-elevate active-elevate-2 whitespace-nowrap"
             style={{
               backgroundColor: selectedMealCategory === "hi-tea" ? "#06352A" : "#FFFFFF",

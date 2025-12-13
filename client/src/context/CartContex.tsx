@@ -17,6 +17,8 @@ export interface CartItem {
   image?: string;
 }
 
+export type BulkMealType = "lunch-dinner" | "tiffins" | "hi-tea" | null;
+
 export interface StoredPortionSelection {
   slot: number;
   itemId: string | null;
@@ -49,18 +51,20 @@ export interface MealBoxProgress {
 
 interface CartContextType {
   activeCategory: ServiceType | null;
+  bulkMealType: BulkMealType;
   cart: CartItem[];
   addedItems: Set<number>;
   mealBoxProgress: MealBoxProgress | null;
-  addToCart: (category: ServiceType, item: CartItem) => void;
+  addToCart: (category: ServiceType, item: CartItem, mealType?: BulkMealType) => void;
   removeFromCart: (itemId: number) => void;
   updateQuantity: (itemId: number, quantity: number) => void;
   clearCart: () => void;
   getQuantity: (itemId: number) => number;
-  enterCategory: (category: ServiceType) => void;
+  enterCategory: (category: ServiceType, mealType?: BulkMealType) => void;
   saveMealBoxProgress: (progress: MealBoxProgress) => void;
   clearMealBoxProgress: () => void;
   hasPendingProgress: (category: ServiceType) => boolean;
+  setBulkMealType: (mealType: BulkMealType) => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -70,6 +74,7 @@ const MEALBOX_STORAGE_KEY = "mealBoxProgress";
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [activeCategory, setActiveCategory] = useState<ServiceType | null>(null);
+  const [bulkMealType, setBulkMealTypeState] = useState<BulkMealType>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [addedItems, setAddedItems] = useState<Set<number>>(new Set());
   const [mealBoxProgress, setMealBoxProgress] = useState<MealBoxProgress | null>(
@@ -82,6 +87,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       try {
         const data = JSON.parse(storedCart);
         setActiveCategory(data.activeCategory);
+        setBulkMealTypeState(data.bulkMealType || null);
         setCart(data.cart || []);
         setAddedItems(new Set(data.cart?.map((item: CartItem) => item.id) || []));
       } catch (e) {
@@ -104,12 +110,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
     if (activeCategory || cart.length > 0) {
       localStorage.setItem(
         CART_STORAGE_KEY,
-        JSON.stringify({ activeCategory, cart }),
+        JSON.stringify({ activeCategory, bulkMealType, cart }),
       );
     } else {
       localStorage.removeItem(CART_STORAGE_KEY);
     }
-  }, [activeCategory, cart]);
+  }, [activeCategory, bulkMealType, cart]);
 
   useEffect(() => {
     if (mealBoxProgress) {
@@ -119,10 +125,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [mealBoxProgress]);
 
-  const addToCart = (category: ServiceType, item: CartItem) => {
+  const addToCart = (category: ServiceType, item: CartItem, mealType?: BulkMealType) => {
     if (activeCategory && activeCategory !== category) {
       setCart([item]);
       setAddedItems(new Set([item.id]));
+      if (category === "bulk-meals" && mealType) {
+        setBulkMealTypeState(mealType);
+      } else {
+        setBulkMealTypeState(null);
+      }
     } else {
       // Prevent mixing 60-min and regular items in the same cart
       const hasExistingItems = cart.length > 0;
@@ -134,6 +145,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setCart([item]);
         setAddedItems(new Set([item.id]));
         setActiveCategory(category);
+        if (category === "bulk-meals" && mealType) {
+          setBulkMealTypeState(mealType);
+        }
+        return;
+      }
+
+      // For bulk-meals, if meal type is different, clear cart and start fresh
+      if (category === "bulk-meals" && mealType && bulkMealType && mealType !== bulkMealType) {
+        setCart([item]);
+        setAddedItems(new Set([item.id]));
+        setActiveCategory(category);
+        setBulkMealTypeState(mealType);
         return;
       }
       
@@ -149,6 +172,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
       } else {
         setCart([...cart, item]);
         setAddedItems(new Set([...Array.from(addedItems), item.id]));
+      }
+
+      // Set bulkMealType if adding to bulk-meals
+      if (category === "bulk-meals" && mealType && !bulkMealType) {
+        setBulkMealTypeState(mealType);
       }
     }
     setActiveCategory(category);
@@ -177,7 +205,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setCart([]);
     setAddedItems(new Set());
     setActiveCategory(null);
+    setBulkMealTypeState(null);
     localStorage.removeItem(CART_STORAGE_KEY);
+  };
+
+  const setBulkMealType = (mealType: BulkMealType) => {
+    // If changing to a different bulk meal type and cart has items, clear it
+    if (bulkMealType && mealType && mealType !== bulkMealType && cart.length > 0 && activeCategory === "bulk-meals") {
+      setCart([]);
+      setAddedItems(new Set());
+    }
+    setBulkMealTypeState(mealType);
   };
 
   const getQuantity = (itemId: number): number => {
@@ -204,19 +242,26 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return false;
   };
 
-  const enterCategory = (category: ServiceType) => {
+  const enterCategory = (category: ServiceType, mealType?: BulkMealType) => {
     if (activeCategory && activeCategory !== category) {
       if (activeCategory === "bulk-meals") {
         setCart([]);
         setAddedItems(new Set());
+        setBulkMealTypeState(null);
         localStorage.removeItem(CART_STORAGE_KEY);
       }
       if (activeCategory === "mealbox") {
         clearMealBoxProgress();
       }
       setActiveCategory(category);
+      if (category === "bulk-meals" && mealType) {
+        setBulkMealTypeState(mealType);
+      }
     } else if (!activeCategory) {
       setActiveCategory(category);
+      if (category === "bulk-meals" && mealType) {
+        setBulkMealTypeState(mealType);
+      }
     }
   };
 
@@ -224,6 +269,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     <CartContext.Provider
       value={{
         activeCategory,
+        bulkMealType,
         cart,
         addedItems,
         mealBoxProgress,
@@ -236,6 +282,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         saveMealBoxProgress,
         clearMealBoxProgress,
         hasPendingProgress,
+        setBulkMealType,
       }}
     >
       {children}
