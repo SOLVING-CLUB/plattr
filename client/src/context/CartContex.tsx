@@ -13,6 +13,7 @@ export interface CartItem {
   name: string;
   price: number;
   quantity: number;
+  isSixtyMin?: boolean;
 }
 
 export interface StoredPortionSelection {
@@ -122,6 +123,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setCart([item]);
       setAddedItems(new Set([item.id]));
     } else {
+      // Prevent mixing 60-min and regular items in the same cart
+      const hasExistingItems = cart.length > 0;
+      const existingIsSixtyMin = cart[0]?.isSixtyMin;
+      const newIsSixtyMin = item.isSixtyMin;
+      
+      // If mixing different order types, clear cart and start fresh
+      if (hasExistingItems && existingIsSixtyMin !== newIsSixtyMin) {
+        setCart([item]);
+        setAddedItems(new Set([item.id]));
+        setActiveCategory(category);
+        return;
+      }
+      
       const existing = cart.find((cartItem) => cartItem.id === item.id);
       if (existing) {
         setCart(

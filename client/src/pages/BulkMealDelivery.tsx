@@ -4,9 +4,11 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, MapPin } from "lucide-react";
 import { useCart } from "@/context/CartContex";
 import FloatingNav from "@/pages/FloatingNav";
-import { bulkMealOrderService, addressService } from "@/lib/supabase-service";
+import { bulkMealOrderService, sixtyMinBulkOrderService, addressService } from "@/lib/supabase-service";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
+
+const SIXTY_MIN_ORDER_FLAG = "isSixtyMinOrder";
 
 export default function BulkMealsDelivery() {
   const [, setLocation] = useLocation();
@@ -249,8 +251,12 @@ export default function BulkMealsDelivery() {
         price: item.price,
       }));
       
-      // Create order
-      await bulkMealOrderService.create({
+      // Check if this is a 60-min order by checking cart items
+      // All items must have isSixtyMin: true for it to be a 60-min order
+      const isSixtyMinOrder = cart.length > 0 && cart.every(item => item.isSixtyMin === true);
+      
+      // Create order using the appropriate service
+      const orderData = {
         items: items,
         selectedAddons: selectedAddons.length > 0 ? selectedAddons : undefined,
         subtotal: subtotal,
@@ -262,7 +268,18 @@ export default function BulkMealsDelivery() {
         deliveryTime: eventTime || undefined,
         addressId: validAddressId,
         deliveryAddress: deliveryAddressText,
-      });
+      };
+      
+      if (isSixtyMinOrder) {
+        // Save to sixty_min_bulk_orders table
+        await sixtyMinBulkOrderService.create(orderData);
+      } else {
+        // Save to bulk_meal_orders table
+        await bulkMealOrderService.create(orderData);
+      }
+      
+      // Clear the flag (no longer primary source of truth, but clean up anyway)
+      localStorage.removeItem(SIXTY_MIN_ORDER_FLAG);
       
     localStorage.removeItem("bulkMealsAddons");
     clearCart();

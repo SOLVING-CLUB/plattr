@@ -209,6 +209,7 @@ type ServiceType = "bulk-meals" | "mealbox" | "catering" | "corporate";
 type NavigateFn = (path: string, options?: { replace?: boolean }) => void;
 
 const LOCATION_STORAGE_KEY = "activeLocation";
+const SIXTY_MIN_ORDER_FLAG = "isSixtyMinOrder";
 
 interface BulkMealsProps {
   onNavigate?: NavigateFn;
@@ -229,6 +230,14 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
   const [activeTab, setActiveTab] = useState<"home" | "menu" | "profile">("home");
   const [selectedService, setSelectedService] = useState<ServiceType>("bulk-meals");
   const [locationLabel, setLocationLabel] = useState("Select Address");
+
+  // Clear the 60-min flag if accessed directly (not through ExploreMenuPage)
+  // When onNavigate is NOT provided, user is accessing /bulk-meals directly
+  useEffect(() => {
+    if (!onNavigate) {
+      localStorage.removeItem(SIXTY_MIN_ORDER_FLAG);
+    }
+  }, [onNavigate]);
 
   // Scroll to top on page load
   useEffect(() => {
@@ -348,7 +357,8 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
       id: item.id,
       name: item.name,
       price: item.price,
-      quantity
+      quantity,
+      isSixtyMin: !!onNavigate,
     });
 
     // Keep the quantity value after adding
