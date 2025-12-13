@@ -1474,71 +1474,26 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                             </div>
                           )}
                         </div>
-                        <div className="p-3 md:p-4 flex flex-col h-[160px]">
+                        <div className="p-3 md:p-4 flex flex-col h-[120px]">
                           <h3 className="font-bold text-sm md:text-base line-clamp-2 min-h-[40px] mb-2" data-testid={`text-dish-name-${dish.id}`}>
                             {dish.name}
                           </h3>
-                          <div className="flex flex-col gap-1 mb-2">
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex flex-col">
-                                <span className="text-primary font-bold text-lg" data-testid={`text-dish-price-${dish.id}`}>
-                                  ₹{parseFloat(dish.price as string).toFixed(0)}
-                                </span>
-                                <span className="text-[10px] text-gray-500 -mt-1" style={{ fontFamily: "Sweet Sans Pro" }}>per serve</span>
-                              </div>
-                              <Input
-                                type="number"
-                                min="5"
-                                placeholder=""
-                                value={quantities[dishId] || ''}
-                                onChange={(e) => {
-                                  handleInteraction();
-                                  const val = e.target.value;
-                                  const numVal = parseInt(val) || 0;
-                                  setQuantities(prev => ({ ...prev, [dishId]: val }));
-                                  
-                                  // If item is in cart and quantity goes below 5, show error and remove from cart
-                                  if (val && numVal < 5) {
-                                    setQuantityErrors(prev => ({ ...prev, [dishId]: "accepts only from 5" }));
-                                    if (addedItems.has(dishId)) {
-                                      handleRemoveFromCart(dishId);
-                                      toast({
-                                        title: "Item Removed",
-                                        description: "accepts only from 5",
-                                        variant: "destructive",
-                                      });
-                                    }
-                                  } else if (numVal >= 5) {
-                                    // Clear error when valid quantity
-                                    setQuantityErrors(prev => ({ ...prev, [dishId]: '' }));
-                                  }
-                                }}
-                                onClick={(e) => e.stopPropagation()}
-                                className={`w-[60px] h-7 text-center text-xs px-2 ${quantityErrors[dishId] ? 'border-red-500' : 'border-gray-300'}`}
-                                style={{ fontFamily: "Sweet Sans Pro" }}
-                                data-testid={`input-quantity-${dishId}`}
-                              />
-                            </div>
-                            {quantityErrors[dishId] && (
-                              <span className="text-[10px] text-red-500 text-right" style={{ fontFamily: "Sweet Sans Pro" }}>
-                                {quantityErrors[dishId]}
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <div className="flex flex-col">
+                              <span className="text-primary font-bold text-lg" data-testid={`text-dish-price-${dish.id}`}>
+                                ₹{parseFloat(dish.price as string).toFixed(0)}
                               </span>
-                            )}
-                          </div>
-                          <div className="mt-auto">
+                              <span className="text-[10px] text-gray-500 -mt-1" style={{ fontFamily: "Sweet Sans Pro" }}>per serve</span>
+                            </div>
                             <Button
                               size="sm"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleInteraction();
-                                if (addedItems.has(dishId)) {
-                                  handleRemoveFromCart(dishId);
-                                } else {
-                                  handleAddToCart(dishItem);
-                                }
+                                openDishDetail(dish);
                               }}
                               variant={addedItems.has(dishId) ? "secondary" : "default"}
-                              className="w-full rounded-full px-4"
+                              className="rounded-full px-6"
                               data-testid={`button-add-${dishId}`}
                             >
                               {addedItems.has(dishId) ? "Added" : "Add"}
@@ -1735,87 +1690,129 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                 </p>
               </div>
 
-              {/* Price, Quantity & Add Button */}
-              <div className="flex items-center justify-between gap-4 pt-4 border-t">
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Price</p>
-                  <p className="text-3xl font-bold text-primary">
-                    ₹{detailDish ? parseFloat(detailDish.price as string).toFixed(0) : '0'}
-                  </p>
+              {/* Price & Quantity Section */}
+              <div className="pt-4 border-t space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Price per serve</p>
+                    <p className="text-3xl font-bold text-primary">
+                      ₹{detailDish ? parseFloat(detailDish.price as string).toFixed(0) : '0'}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-muted-foreground mb-1">Total</p>
+                    <p className="text-2xl font-bold text-primary">
+                      ₹{detailDish ? (parseFloat(detailDish.price as string) * (parseInt(quantities[parseInt(detailDish.id.replace('D-', '')) || 0] || '5') || 5)).toFixed(0) : '0'}
+                    </p>
+                  </div>
                 </div>
 
-                <div className="flex flex-col items-end gap-1">
-                  <div className="flex items-center gap-2">
-                    <div className="relative">
-                      <Input
-                        type="number"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        placeholder=""
-                        value={detailDish ? (quantities[parseInt(detailDish.id.replace('D-', '')) || 0] || '') : ''}
-                        onChange={(e) => {
-                          if (!detailDish) return;
-                          const value = e.target.value;
-                          const numVal = parseInt(value) || 0;
-                          const dishId = parseInt(detailDish.id.replace('D-', '')) || 0;
-                          setQuantities(prev => ({ ...prev, [dishId]: value }));
-                          
-                          // If item is in cart and quantity goes below 5, show error and remove from cart
-                          if (value && numVal < 5) {
-                            setQuantityErrors(prev => ({ ...prev, [dishId]: "accepts only from 5" }));
-                            if (addedItems.has(dishId)) {
-                              handleRemoveFromCart(dishId);
-                              toast({
-                                title: "Item Removed",
-                                description: "accepts only from 5",
-                                variant: "destructive",
-                              });
-                            }
-                          } else if (numVal >= 5) {
-                            // Clear error when valid quantity
-                            setQuantityErrors(prev => ({ ...prev, [dishId]: '' }));
-                          }
-                        }}
-                        className={`w-20 h-10 text-center ${detailDish && quantityErrors[parseInt(detailDish.id.replace('D-', '')) || 0] ? 'border-red-500' : ''}`}
-                        min="5"
-                      />
-                    </div>
-                    <Button
-                      size="lg"
-                      onClick={() => {
-                        if (!detailDish) return;
-                        handleInteraction();
-                        const dishId = parseInt(detailDish.id.replace('D-', '')) || 0;
-                        const dishItem = {
-                          id: dishId,
-                          name: detailDish.name,
-                          price: parseFloat(detailDish.price as string),
-                          rating: 4.5,
-                          reviewCount: 0,
-                          category: detailDish.dishType?.toLowerCase() || 'all',
-                          type: (detailDish.dietaryType?.toLowerCase() || 'veg') as 'veg' | 'non-veg' | 'egg',
-                          image: detailDish.imageUrl ? getSupabaseImageUrl(detailDish.imageUrl) : undefined,
-                        };
-                        if (addedItems.has(dishId)) {
-                          handleRemoveFromCart(dishId);
-                        } else {
-                          handleAddToCart(dishItem);
-                        }
-                        setDishDetailOpen(false);
-                      }}
-                      variant={detailDish && addedItems.has(parseInt(detailDish.id.replace('D-', '')) || 0) ? "secondary" : "default"}
-                      className="rounded-full px-8 min-w-[140px]"
-                      data-testid="button-add-from-detail"
-                    >
-                      {detailDish && addedItems.has(parseInt(detailDish.id.replace('D-', '')) || 0) ? "Added ✓" : "Add to Cart"}
-                    </Button>
+                {/* Quantity Slider */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium">Select Quantity</Label>
+                    <span className="text-lg font-bold text-primary">
+                      {detailDish ? (quantities[parseInt(detailDish.id.replace('D-', '')) || 0] || '5') : '5'} servings
+                    </span>
                   </div>
+                  <Slider
+                    value={[parseInt(detailDish ? (quantities[parseInt(detailDish.id.replace('D-', '')) || 0] || '5') : '5') || 5]}
+                    onValueChange={(value) => {
+                      if (!detailDish) return;
+                      const dishId = parseInt(detailDish.id.replace('D-', '')) || 0;
+                      setQuantities(prev => ({ ...prev, [dishId]: String(value[0]) }));
+                      setQuantityErrors(prev => ({ ...prev, [dishId]: '' }));
+                    }}
+                    min={5}
+                    max={200}
+                    step={1}
+                    className="w-full"
+                    data-testid="slider-quantity"
+                  />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>5</span>
+                    <span>50</span>
+                    <span>100</span>
+                    <span>150</span>
+                    <span>200</span>
+                  </div>
+                </div>
+
+                {/* Manual Input Option */}
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-muted-foreground">Or enter:</span>
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    placeholder="5"
+                    value={detailDish ? (quantities[parseInt(detailDish.id.replace('D-', '')) || 0] || '') : ''}
+                    onChange={(e) => {
+                      if (!detailDish) return;
+                      const value = e.target.value;
+                      const numVal = parseInt(value) || 0;
+                      const dishId = parseInt(detailDish.id.replace('D-', '')) || 0;
+                      setQuantities(prev => ({ ...prev, [dishId]: value }));
+                      
+                      if (value && numVal < 5) {
+                        setQuantityErrors(prev => ({ ...prev, [dishId]: "Minimum 5 servings required" }));
+                      } else if (numVal > 200) {
+                        setQuantityErrors(prev => ({ ...prev, [dishId]: "Maximum 200 servings" }));
+                      } else {
+                        setQuantityErrors(prev => ({ ...prev, [dishId]: '' }));
+                      }
+                    }}
+                    className={`w-24 h-10 text-center ${detailDish && quantityErrors[parseInt(detailDish.id.replace('D-', '')) || 0] ? 'border-red-500' : ''}`}
+                    min="5"
+                    max="200"
+                  />
                   {detailDish && quantityErrors[parseInt(detailDish.id.replace('D-', '')) || 0] && (
                     <span className="text-xs text-red-500" style={{ fontFamily: "Sweet Sans Pro" }}>
                       {quantityErrors[parseInt(detailDish.id.replace('D-', '')) || 0]}
                     </span>
                   )}
                 </div>
+
+                {/* Add to Cart Button */}
+                <Button
+                  size="lg"
+                  onClick={() => {
+                    if (!detailDish) return;
+                    handleInteraction();
+                    const dishId = parseInt(detailDish.id.replace('D-', '')) || 0;
+                    const qty = parseInt(quantities[dishId] || '5') || 5;
+                    
+                    if (qty < 5) {
+                      setQuantityErrors(prev => ({ ...prev, [dishId]: "Minimum 5 servings required" }));
+                      return;
+                    }
+                    
+                    // Set quantity before adding
+                    setQuantities(prev => ({ ...prev, [dishId]: String(qty) }));
+                    
+                    const dishItem = {
+                      id: dishId,
+                      name: detailDish.name,
+                      price: parseFloat(detailDish.price as string),
+                      rating: 4.5,
+                      reviewCount: 0,
+                      category: detailDish.dishType?.toLowerCase() || 'all',
+                      type: (detailDish.dietaryType?.toLowerCase() || 'veg') as 'veg' | 'non-veg' | 'egg',
+                      image: detailDish.imageUrl ? getSupabaseImageUrl(detailDish.imageUrl) : undefined,
+                    };
+                    if (addedItems.has(dishId)) {
+                      handleRemoveFromCart(dishId);
+                    } else {
+                      handleAddToCart(dishItem);
+                    }
+                    setDishDetailOpen(false);
+                  }}
+                  variant={detailDish && addedItems.has(parseInt(detailDish.id.replace('D-', '')) || 0) ? "secondary" : "default"}
+                  className="w-full rounded-full py-6"
+                  data-testid="button-add-from-detail"
+                >
+                  {detailDish && addedItems.has(parseInt(detailDish.id.replace('D-', '')) || 0) ? "Added ✓" : "Add to Cart"}
+                </Button>
               </div>
             </div>
           </div>
