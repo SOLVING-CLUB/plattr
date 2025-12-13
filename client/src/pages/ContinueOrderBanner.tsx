@@ -49,7 +49,9 @@ export default function ContinueOrderBanner() {
       location.startsWith("/payment") ||
       location.startsWith("/profile") ||
       location.startsWith("/orders") ||
-      location.startsWith("/cart");
+      location.startsWith("/cart") ||
+      location.startsWith("/explore-menu") ||
+      location.startsWith("/menu");
     
     if (isOnOrderPage) {
       setIsVisible(false);
