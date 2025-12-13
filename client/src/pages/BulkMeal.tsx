@@ -446,13 +446,43 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
     return LUNCH_DINNER_CATEGORY_ORDER;
   };
 
+  // OPTIMIZATION: Lazy-load category counts in background after page renders
+  // This query fetches all dishes for the meal type but is non-blocking (loads after initial render)
+  // Add 'sixtymin' filter when accessed from 60-min delivery flow (onNavigate present)
+  const { data: allDishesForCounts = [] } = useQuery<Dish[]>({
+    queryKey: onNavigate 
+      ? ['/api/dishes', mealType, 'all', 'all', 'sixtymin']
+      : ['/api/dishes', mealType, 'all', 'all'],
+    enabled: !!mealType,
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes - counts don't change often
+    refetchOnWindowFocus: false,
+  });
+
   // Filter categories dynamically from database meal_type column
   // Categories are sorted by the custom category order based on meal type
+  // Also filter out categories that have no dishes (e.g., when 60-min filter is active)
   const categories = useMemo(() => {
     if (!mealType || allCategoriesFromDb.length === 0) return [];
     const filtered = filterCategoriesByMealType(allCategoriesFromDb, mealType);
     const categoryOrder = getCategoryOrder(mealType);
-    return filtered.sort((a, b) => {
+    
+    // Build a set of category IDs that have at least one available dish
+    const categoriesWithDishes = new Set<string>();
+    allDishesForCounts.forEach(dish => {
+      const categoryId = (dish as any).category_id || dish.categoryId;
+      const isAvailable = (dish as any).is_available !== false && dish.isAvailable !== false;
+      if (categoryId && isAvailable) {
+        categoriesWithDishes.add(categoryId);
+      }
+    });
+    
+    // Filter to only categories that have at least one dish
+    // (skip this filter if allDishesForCounts hasn't loaded yet to prevent flickering)
+    const withDishes = allDishesForCounts.length > 0 
+      ? filtered.filter(cat => categoriesWithDishes.has(cat.id))
+      : filtered;
+    
+    return withDishes.sort((a, b) => {
       const aIndex = categoryOrder.indexOf(a.id);
       const bIndex = categoryOrder.indexOf(b.id);
       // If both are in the custom order, sort by that order
@@ -463,7 +493,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
       // Otherwise sort by displayOrder
       return (a.displayOrder || 0) - (b.displayOrder || 0);
     }) as CategoryType[];
-  }, [allCategoriesFromDb, mealType]);
+  }, [allCategoriesFromDb, mealType, allDishesForCounts]);
 
   // Set first category as selected when categories load or when meal type changes
   // Keep 'all' as valid selection - only reset if it's an invalid category ID
@@ -478,15 +508,6 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
     }
   }, [categories, selectedCategory, mealType]);
 
-  // OPTIMIZATION: Lazy-load category counts in background after page renders
-  // This query fetches all dishes for the meal type but is non-blocking (loads after initial render)
-  const { data: allDishesForCounts = [] } = useQuery<Dish[]>({
-    queryKey: ['/api/dishes', mealType, 'all', 'all'],
-    enabled: !!mealType,
-    staleTime: 1000 * 60 * 5, // Cache for 5 minutes - counts don't change often
-    refetchOnWindowFocus: false,
-  });
-
   // Filter to available dishes only
   const allDishes = useMemo(() => {
     return allDishesForCounts.filter(dish => {
@@ -496,8 +517,11 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
   }, [allDishesForCounts]);
 
   // Fetch dishes for selected category (for display)
+  // Add 'sixtymin' filter when accessed from 60-min delivery flow (onNavigate present)
   const { data: dishes = [], isLoading: isLoadingDishes } = useQuery<Dish[]>({
-    queryKey: ['/api/dishes', mealType, selectedCategory, dietaryMode],
+    queryKey: onNavigate
+      ? ['/api/dishes', mealType, selectedCategory, dietaryMode, 'sixtymin']
+      : ['/api/dishes', mealType, selectedCategory, dietaryMode],
     enabled: !!selectedCategory,
   });
 
