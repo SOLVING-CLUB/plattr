@@ -38,9 +38,9 @@ export default function HeroSection({ onExploreMenu }: HeroSectionProps) {
   }, [videoFailed]);
 
   return (
-    <section className="relative w-full bg-white">
+    <section className="relative w-full" style={{ backgroundColor: '#FFFFFF' }}>
       {/* Hero Banner - Video with image fallback */}
-      <div className="relative w-full">
+      <div className="relative w-full" style={{ backgroundColor: '#FFFFFF' }}>
         {!videoFailed ? (
           <video
             ref={videoRef}

@@ -229,9 +229,7 @@ export default function AppHeader({
       <header 
         className="h-40"
         style={{
-          backgroundImage: `url(${headerBg})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center top',
+          backgroundColor: '#FFFFFF',
         }}
       >
         <div className="h-full px-4 flex items-end justify-between pb-4">
