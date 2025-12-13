@@ -16,8 +16,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { clearAuthState } from "@/hooks/useAuth";
@@ -196,23 +201,26 @@ export default function AboutPage() {
             >
               Please tell us why you're leaving:
             </p>
-            <RadioGroup value={selectedReason} onValueChange={setSelectedReason}>
-              {deleteReasons.map((reason) => (
-                <div 
-                  key={reason.id} 
-                  className="flex items-center space-x-3 py-2 px-3 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <RadioGroupItem value={reason.id} id={reason.id} />
-                  <Label 
-                    htmlFor={reason.id} 
-                    className="text-sm text-gray-700 cursor-pointer flex-1"
+            <Select value={selectedReason} onValueChange={setSelectedReason}>
+              <SelectTrigger 
+                className="w-full"
+                style={{ fontFamily: "Sweet Sans Pro" }}
+                data-testid="select-delete-reason"
+              >
+                <SelectValue placeholder="Select a reason" />
+              </SelectTrigger>
+              <SelectContent>
+                {deleteReasons.map((reason) => (
+                  <SelectItem 
+                    key={reason.id} 
+                    value={reason.id}
                     style={{ fontFamily: "Sweet Sans Pro" }}
                   >
                     {reason.label}
-                  </Label>
-                </div>
-              ))}
-            </RadioGroup>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <AlertDialogFooter className="flex-col gap-2 sm:flex-col">
