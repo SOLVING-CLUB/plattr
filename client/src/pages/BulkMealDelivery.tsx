@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, MapPin } from "lucide-react";
+import { ArrowLeft, MapPin, Calendar } from "lucide-react";
 import { useCart } from "@/context/CartContex";
 import FloatingNav from "@/pages/FloatingNav";
 import { bulkMealOrderService, sixtyMinBulkOrderService, addressService } from "@/lib/supabase-service";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
+import DeliveryTimePicker from "@/components/DeliveryTimePicker";
 
 const SIXTY_MIN_ORDER_FLAG = "isSixtyMinOrder";
 
@@ -338,30 +339,37 @@ export default function BulkMealsDelivery() {
 
         {/* Form */}
         <div className="space-y-4 mb-6">
-          {/* Select Event Date & Time */}
-          <div>
-            <label className="block text-sm font-semibold mb-2" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-              Select Event Date & Time
-            </label>
-            <div className="grid grid-cols-2 gap-3">
+          {/* When - Date Selection */}
+          <div className="bg-white rounded-xl p-4 border border-gray-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-gray-500" />
+                <span 
+                  className="font-medium text-gray-800"
+                  style={{ fontFamily: "Sweet Sans Pro" }}
+                >
+                  When
+                </span>
+              </div>
               <input
                 type="date"
                 value={eventDate}
                 onChange={(e) => setEventDate(e.target.value)}
                 min={minDateTime.date}
-                className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="text-gray-700 bg-transparent border-0 focus:outline-none cursor-pointer"
                 style={{ fontFamily: "Sweet Sans Pro" }}
                 data-testid="input-event-date"
               />
-              <input
-                type="time"
-                value={eventTime}
-                onChange={(e) => setEventTime(e.target.value)}
-                className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                style={{ fontFamily: "Sweet Sans Pro" }}
-                data-testid="input-event-time"
-              />
             </div>
+          </div>
+
+          {/* Delivery Time Selection */}
+          <div className="bg-white rounded-xl p-4 border border-gray-200">
+            <DeliveryTimePicker
+              mealType="lunch-dinner"
+              value={eventTime}
+              onChange={setEventTime}
+            />
           </div>
 
           {/* Phone Number */}
