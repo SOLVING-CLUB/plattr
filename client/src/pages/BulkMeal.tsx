@@ -1478,13 +1478,10 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                           <h3 className="font-bold text-sm md:text-base line-clamp-2 min-h-[40px] mb-2" data-testid={`text-dish-name-${dish.id}`}>
                             {dish.name}
                           </h3>
-                          <div className="flex items-center justify-between gap-2 mb-2">
-                            <div className="flex items-baseline gap-1">
-                              <span className="text-primary font-bold text-lg" data-testid={`text-dish-price-${dish.id}`}>
-                                ₹{parseFloat(dish.price as string).toFixed(0)}
-                              </span>
-                              <span className="text-[10px] text-gray-500" style={{ fontFamily: "Sweet Sans Pro" }}>per serve</span>
-                            </div>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-primary font-bold text-base whitespace-nowrap" data-testid={`text-dish-price-${dish.id}`}>
+                              ₹{parseFloat(dish.price as string).toFixed(0)} <span className="text-[10px] text-gray-500 font-normal">per serve</span>
+                            </span>
                             <Button
                               size="sm"
                               onClick={(e) => {
@@ -1493,7 +1490,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                                 openDishDetail(dish);
                               }}
                               variant={addedItems.has(dishId) ? "secondary" : "default"}
-                              className="rounded-full px-6"
+                              className="rounded-full px-5"
                               data-testid={`button-add-${dishId}`}
                             >
                               {addedItems.has(dishId) ? "Added" : "Add"}
