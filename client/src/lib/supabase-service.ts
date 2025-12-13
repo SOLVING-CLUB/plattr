@@ -933,19 +933,21 @@ export const sixtyMinBulkOrderService = {
     deliveryTime?: string;
     addressId?: string;
     deliveryAddress?: string;
+    customerName?: string;
+    customerPhone?: string;
+    customerEmail?: string;
   }) {
     const user = await getAuthenticatedUser();
     if (!user) throw new Error('Not authenticated');
 
-    // Generate unique order number (max 2147483647 for integer)
-    const timePart = Date.now() % 100000000;
-    const nextOrderNumber = Math.floor(timePart / 100) + Math.floor(Math.random() * 1000)
+    // Generate unique order number as TEXT
+    const orderNumber = `60M-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
     // For sixty_min_bulk_orders, we only use delivery_address text (no address_id foreign key)
     // If an addressId was passed, we need to look up the address and use it as text
-    let finalDeliveryAddress = orderData.deliveryAddress || null;
+    let finalDeliveryAddress = orderData.deliveryAddress || 'Address not provided';
     
-    if (orderData.addressId && !finalDeliveryAddress) {
+    if (orderData.addressId && orderData.deliveryAddress === undefined) {
       // Look up the saved address and use its text
       const { data: addressData } = await supabase
         .from('addresses')
@@ -961,24 +963,33 @@ export const sixtyMinBulkOrderService = {
       }
     }
 
+    // Calculate headcount from items (total quantity)
+    const headcount = orderData.items.reduce((sum, item) => sum + item.quantity, 0);
+    
+    // Get customer info from user or passed values
+    const customerName = orderData.customerName || user.phone || 'Customer';
+    const customerPhone = orderData.customerPhone || user.phone || '';
+
     const { data, error } = await supabase
       .from('sixty_min_bulk_orders')
       .insert({
         user_id: user.id,
-        order_number: nextOrderNumber,
+        order_number: orderNumber,
+        customer_name: customerName,
+        customer_phone: customerPhone,
+        customer_email: orderData.customerEmail || user.email || null,
         items: orderData.items,
-        selected_addons: orderData.selectedAddons && orderData.selectedAddons.length > 0 
-          ? orderData.selectedAddons 
-          : null,
+        headcount: headcount,
         subtotal: orderData.subtotal.toFixed(2),
-        gst: orderData.gst.toFixed(2),
-        platform_fee: orderData.platformFee.toFixed(2),
-        packaging_fee: orderData.packagingFee.toFixed(2),
-        total: orderData.total.toFixed(2),
-        delivery_date: orderData.deliveryDate || null,
-        delivery_time: orderData.deliveryTime || null,
+        tax_amount: orderData.gst.toFixed(2),
+        delivery_fee: orderData.platformFee.toFixed(2),
+        total_amount: orderData.total.toFixed(2),
+        requested_delivery_time: orderData.deliveryDate && orderData.deliveryTime 
+          ? `${orderData.deliveryDate}T${orderData.deliveryTime}:00` 
+          : null,
         delivery_address: finalDeliveryAddress,
-        status: 'pending',
+        order_status: 'pending',
+        payment_status: 'pending',
       })
       .select()
       .single();
