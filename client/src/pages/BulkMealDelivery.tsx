@@ -92,9 +92,19 @@ export default function BulkMealsDelivery() {
       }
     } catch (error: any) {
       console.error('Location error:', error);
+      let errorMessage = "Could not get your location. Please enter your address manually.";
+      
+      if (error.code === 1) {
+        errorMessage = "Location access denied. Please allow location access in your browser settings or enter address manually.";
+      } else if (error.code === 2) {
+        errorMessage = "Location unavailable. Please check your device settings or enter address manually.";
+      } else if (error.code === 3) {
+        errorMessage = "Location request timed out. Please try again or enter address manually.";
+      }
+      
       toast({ 
         title: "Location Error", 
-        description: error.code === 1 ? "Please allow location access" : "Could not get your location", 
+        description: errorMessage, 
         variant: "destructive" 
       });
     } finally {
