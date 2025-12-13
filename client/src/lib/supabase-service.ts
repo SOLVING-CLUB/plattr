@@ -914,6 +914,97 @@ export const bulkMealOrderService = {
 };
 
 /**
+ * 60-Min Bulk Meal Order Operations
+ * For orders placed through the Explore Menu (60-min delivery)
+ */
+export const sixtyMinBulkOrderService = {
+  /**
+   * Create a new 60-min Bulk Meal order
+   */
+  async create(orderData: {
+    items: Array<{ dishId: string; quantity: number; price: number }>;
+    selectedAddons?: string[];
+    subtotal: number;
+    gst: number;
+    platformFee: number;
+    packagingFee: number;
+    total: number;
+    deliveryDate?: string;
+    deliveryTime?: string;
+    addressId?: string;
+    deliveryAddress?: string;
+  }) {
+    const user = await getAuthenticatedUser();
+    if (!user) throw new Error('Not authenticated');
+
+    // Generate unique order number (max 2147483647 for integer)
+    const timePart = Date.now() % 100000000;
+    const nextOrderNumber = Math.floor(timePart / 100) + Math.floor(Math.random() * 1000)
+
+    const { data, error } = await supabase
+      .from('sixty_min_bulk_orders')
+      .insert({
+        user_id: user.id,
+        order_number: nextOrderNumber,
+        items: orderData.items,
+        selected_addons: orderData.selectedAddons && orderData.selectedAddons.length > 0 
+          ? orderData.selectedAddons 
+          : null,
+        subtotal: orderData.subtotal.toFixed(2),
+        gst: orderData.gst.toFixed(2),
+        platform_fee: orderData.platformFee.toFixed(2),
+        packaging_fee: orderData.packagingFee.toFixed(2),
+        total: orderData.total.toFixed(2),
+        delivery_date: orderData.deliveryDate || null,
+        delivery_time: orderData.deliveryTime || null,
+        address_id: orderData.addressId || null,
+        delivery_address: orderData.deliveryAddress || null,
+        status: 'pending',
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  /**
+   * Get all 60-min Bulk Meal orders for current user
+   */
+  async getAll() {
+    const user = await getAuthenticatedUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const { data, error } = await supabase
+      .from('sixty_min_bulk_orders')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data;
+  },
+
+  /**
+   * Get 60-min Bulk Meal order by ID
+   */
+  async getById(orderId: string) {
+    const user = await getAuthenticatedUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const { data, error } = await supabase
+      .from('sixty_min_bulk_orders')
+      .select('*')
+      .eq('id', orderId)
+      .eq('user_id', user.id)
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+};
+
+/**
  * Catering Order Operations
  */
 export const cateringOrderService = {
