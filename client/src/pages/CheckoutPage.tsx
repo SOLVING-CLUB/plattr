@@ -9,10 +9,11 @@ import { Input } from "@/components/ui/input";
 import OrderSummaryCard from "@/components/OrderSummaryCard";
 import DeliveryTimePicker from "@/components/DeliveryTimePicker";
 import DeliveryDatePicker from "@/components/DeliveryDatePicker";
+import CouponInput from "@/components/CouponInput";
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { getSupabaseImageUrl } from "@/lib/supabase";
-import { addressService } from "@/lib/supabase-service";
+import { addressService, couponService, CouponValidationResult } from "@/lib/supabase-service";
 import { supabaseAuth } from "@/lib/supabase-auth";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -58,7 +59,34 @@ export default function CheckoutPage() {
   const [landmark, setLandmark] = useState('');
   const [deliveryDate, setDeliveryDate] = useState('');
   const [deliveryTime, setDeliveryTime] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    id: string;
+    code: string;
+    discount: number;
+    discountType: 'percentage' | 'fixed';
+    discountValue: number;
+  } | null>(null);
   const { toast } = useToast();
+
+  const handleCouponApply = (result: CouponValidationResult) => {
+    if (result.valid && result.coupon && result.discount !== undefined) {
+      setAppliedCoupon({
+        id: result.coupon.id,
+        code: result.coupon.code,
+        discount: result.discount,
+        discountType: result.coupon.discountType,
+        discountValue: result.coupon.discountValue,
+      });
+      toast({
+        title: "Coupon Applied!",
+        description: `You saved ₹${result.discount}`,
+      });
+    }
+  };
+
+  const handleCouponRemove = () => {
+    setAppliedCoupon(null);
+  };
 
   // Fetch cart items using session authentication (merge with localStorage for guests)
   const { data: apiCartItems, isLoading } = useQuery<CartItem[] | null>({
@@ -207,7 +235,8 @@ export default function CheckoutPage() {
   }, 0);
   const deliveryFee = 40;
   const tax = Math.round(subtotal * 0.05);
-  const total = subtotal + deliveryFee + tax;
+  const discount = appliedCoupon?.discount || 0;
+  const total = subtotal + deliveryFee + tax - discount;
 
   // Group items by category
   const groupedItems = cartItems.reduce((acc, item) => {
@@ -331,10 +360,21 @@ export default function CheckoutPage() {
           </div>
         </Card>
 
+        <Card className="p-6" data-testid="card-coupon">
+          <h2 className="text-lg font-semibold mb-4">Have a Coupon?</h2>
+          <CouponInput
+            subtotal={subtotal}
+            onCouponApply={handleCouponApply}
+            onCouponRemove={handleCouponRemove}
+            appliedCoupon={appliedCoupon}
+          />
+        </Card>
+
         <OrderSummaryCard 
           subtotal={subtotal}
           deliveryFee={deliveryFee}
           tax={tax}
+          discount={discount}
         />
 
         <Button 
