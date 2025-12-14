@@ -1443,3 +1443,139 @@ export const corporateOrderService = {
   },
 };
 
+/**
+ * Coupon Service - Validate and apply coupon codes
+ */
+export interface CouponValidationResult {
+  valid: boolean;
+  coupon?: {
+    id: string;
+    code: string;
+    discountType: 'percentage' | 'fixed';
+    discountValue: number;
+    maxDiscount?: number;
+    description?: string;
+  };
+  discount?: number;
+  error?: string;
+}
+
+export const couponService = {
+  /**
+   * Validate a coupon code and calculate discount
+   */
+  async validate(code: string, orderTotal: number): Promise<CouponValidationResult> {
+    if (!code || !code.trim()) {
+      return { valid: false, error: 'Please enter a coupon code' };
+    }
+
+    const normalizedCode = code.trim().toUpperCase();
+
+    // Fetch coupon from database
+    const { data: coupon, error } = await supabase
+      .from('coupons')
+      .select('*')
+      .eq('code', normalizedCode)
+      .eq('is_active', true)
+      .single();
+
+    if (error || !coupon) {
+      return { valid: false, error: 'Invalid coupon code' };
+    }
+
+    // Check if coupon is within valid dates
+    const now = new Date();
+    if (coupon.valid_from && new Date(coupon.valid_from) > now) {
+      return { valid: false, error: 'This coupon is not yet active' };
+    }
+    if (coupon.valid_until && new Date(coupon.valid_until) < now) {
+      return { valid: false, error: 'This coupon has expired' };
+    }
+
+    // Check total usage limit
+    if (coupon.usage_limit && coupon.usage_count >= coupon.usage_limit) {
+      return { valid: false, error: 'This coupon has reached its usage limit' };
+    }
+
+    // Check minimum order amount
+    const minOrderAmount = parseFloat(coupon.min_order_amount || '0');
+    if (orderTotal < minOrderAmount) {
+      return { valid: false, error: `Minimum order of ₹${minOrderAmount} required for this coupon` };
+    }
+
+    // Check per-user limit (if user is authenticated)
+    const user = await getAuthenticatedUser();
+    if (user && coupon.per_user_limit) {
+      const { count } = await supabase
+        .from('coupon_usages')
+        .select('*', { count: 'exact', head: true })
+        .eq('coupon_id', coupon.id)
+        .eq('user_id', user.id);
+
+      if (count && count >= coupon.per_user_limit) {
+        return { valid: false, error: 'You have already used this coupon' };
+      }
+    }
+
+    // Calculate discount
+    let discount = 0;
+    const discountValue = parseFloat(coupon.discount_value);
+
+    if (coupon.discount_type === 'percentage') {
+      discount = Math.round(orderTotal * (discountValue / 100));
+      // Apply max discount cap if set
+      if (coupon.max_discount) {
+        const maxDiscount = parseFloat(coupon.max_discount);
+        discount = Math.min(discount, maxDiscount);
+      }
+    } else {
+      // Fixed discount
+      discount = Math.min(discountValue, orderTotal);
+    }
+
+    return {
+      valid: true,
+      coupon: {
+        id: coupon.id,
+        code: coupon.code,
+        discountType: coupon.discount_type as 'percentage' | 'fixed',
+        discountValue: discountValue,
+        maxDiscount: coupon.max_discount ? parseFloat(coupon.max_discount) : undefined,
+        description: coupon.description,
+      },
+      discount,
+    };
+  },
+
+  /**
+   * Record coupon usage after order is placed
+   */
+  async recordUsage(couponId: string, orderId?: string): Promise<void> {
+    const user = await getAuthenticatedUser();
+    if (!user) return;
+
+    // Insert usage record
+    await supabase
+      .from('coupon_usages')
+      .insert({
+        coupon_id: couponId,
+        user_id: user.id,
+        order_id: orderId || null,
+      });
+
+    // Increment usage count on coupon
+    const { data: coupon } = await supabase
+      .from('coupons')
+      .select('usage_count')
+      .eq('id', couponId)
+      .single();
+
+    if (coupon) {
+      await supabase
+        .from('coupons')
+        .update({ usage_count: (coupon.usage_count || 0) + 1 })
+        .eq('id', couponId);
+    }
+  },
+};
+
