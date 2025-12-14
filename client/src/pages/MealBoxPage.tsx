@@ -3923,9 +3923,11 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
 
                       const subtotal = vegTotal + eggTotal + nonVegTotal;
                       const packagingFee = Math.round(subtotal * 0.06);
-                      const deliveryCharges = 500;
+                      const baseDeliveryCharges = 500;
+                      const deliveryCharges = appliedCoupon?.isFreeDelivery ? 0 : baseDeliveryCharges;
                       const gst = Math.round(subtotal * 0.05);
-                      const grandTotal = subtotal + packagingFee + deliveryCharges + gst;
+                      const discount = appliedCoupon?.isFreeDelivery ? 0 : (appliedCoupon?.discount || 0);
+                      const grandTotal = subtotal + packagingFee + deliveryCharges + gst - discount;
                       return grandTotal.toLocaleString('en-IN');
                     })()}
                   </span>
@@ -4222,47 +4224,95 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
 
               {/* Fees Breakdown */}
               <div className="space-y-3 mb-6">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-700" style={{ fontFamily: "Sweet Sans Pro" }}>
-                    GST
-                  </span>
-                  <span className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                    ₹{(() => {
-                      const vegCount = parseInt(vegBoxes) || 0;
-                      const eggCount = parseInt(eggBoxes) || 0;
-                      const nonVegCount = parseInt(nonVegBoxes) || 0;
-                      const vegTotal = vegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * vegCount;
-                      const eggTotal = eggPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * eggCount;
-                      const nonVegTotal = nonVegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * nonVegCount;
-                      const subtotal = vegTotal + eggTotal + nonVegTotal;
-                      return Math.round(subtotal * 0.18).toLocaleString('en-IN');
-                    })()}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-700" style={{ fontFamily: "Sweet Sans Pro" }}>
-                    Packaging (6%)
-                  </span>
-                  <span className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                    6%
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-700" style={{ fontFamily: "Sweet Sans Pro" }}>
-                    Delivery Charges
-                  </span>
-                  <span className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                    ₹500
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-700" style={{ fontFamily: "Sweet Sans Pro" }}>
-                    GST (5%)
-                  </span>
-                  <span className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                    5%
-                  </span>
-                </div>
+                {(() => {
+                  const vegCount = parseInt(vegBoxes) || 0;
+                  const eggCount = parseInt(eggBoxes) || 0;
+                  const nonVegCount = parseInt(nonVegBoxes) || 0;
+                  const vegTotal = vegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * vegCount;
+                  const eggTotal = eggPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * eggCount;
+                  const nonVegTotal = nonVegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * nonVegCount;
+                  const subtotal = vegTotal + eggTotal + nonVegTotal;
+                  const gstAmount = Math.round(subtotal * 0.18);
+                  const packagingFee = Math.round(subtotal * 0.06);
+                  const baseDeliveryCharges = 500;
+                  const deliveryCharges = appliedCoupon?.isFreeDelivery ? 0 : baseDeliveryCharges;
+                  const gst = Math.round(subtotal * 0.05);
+                  const discount = appliedCoupon?.isFreeDelivery ? 0 : (appliedCoupon?.discount || 0);
+                  
+                  return (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-700" style={{ fontFamily: "Sweet Sans Pro" }}>
+                          GST
+                        </span>
+                        <span className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                          ₹{gstAmount.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-700" style={{ fontFamily: "Sweet Sans Pro" }}>
+                          Packaging (6%)
+                        </span>
+                        <span className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                          6%
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-700" style={{ fontFamily: "Sweet Sans Pro" }}>
+                          Delivery Charges
+                        </span>
+                        <span className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: appliedCoupon?.isFreeDelivery ? "#1A9952" : "#06352A" }}>
+                          {appliedCoupon?.isFreeDelivery ? (
+                            <><s className="text-gray-400 mr-1">₹{baseDeliveryCharges}</s> FREE</>
+                          ) : (
+                            `₹${deliveryCharges.toLocaleString('en-IN')}`
+                          )}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-700" style={{ fontFamily: "Sweet Sans Pro" }}>
+                          GST (5%)
+                        </span>
+                        <span className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                          5%
+                        </span>
+                      </div>
+                      {discount > 0 && (
+                        <div className="flex items-center justify-between text-green-600">
+                          <span className="text-sm" style={{ fontFamily: "Sweet Sans Pro" }}>
+                            Discount ({appliedCoupon?.code})
+                          </span>
+                          <span className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro" }}>
+                            -₹{discount.toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+
+              {/* Coupon Input */}
+              <div className="mb-6">
+                <label className="block text-sm font-semibold mb-2" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                  Have a Coupon Code?
+                </label>
+                <CouponInput
+                  subtotal={(() => {
+                    const vegCount = parseInt(vegBoxes) || 0;
+                    const eggCount = parseInt(eggBoxes) || 0;
+                    const nonVegCount = parseInt(nonVegBoxes) || 0;
+                    const vegTotal = vegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * vegCount;
+                    const eggTotal = eggPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * eggCount;
+                    const nonVegTotal = nonVegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * nonVegCount;
+                    return vegTotal + eggTotal + nonVegTotal;
+                  })()}
+                  orderType="mealbox"
+                  deliveryFee={500}
+                  onCouponApply={handleCouponApply}
+                  onCouponRemove={handleCouponRemove}
+                  appliedCoupon={appliedCoupon}
+                />
               </div>
 
               {/* Grand Total */}
@@ -4281,9 +4331,11 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                       const nonVegTotal = nonVegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * nonVegCount;
                       const subtotal = vegTotal + eggTotal + nonVegTotal;
                       const packagingFee = Math.round(subtotal * 0.06);
-                      const deliveryCharges = 500;
+                      const baseDeliveryCharges = 500;
+                      const deliveryCharges = appliedCoupon?.isFreeDelivery ? 0 : baseDeliveryCharges;
                       const gst = Math.round(subtotal * 0.05);
-                      return (subtotal + packagingFee + deliveryCharges + gst).toLocaleString('en-IN');
+                      const discount = appliedCoupon?.isFreeDelivery ? 0 : (appliedCoupon?.discount || 0);
+                      return (subtotal + packagingFee + deliveryCharges + gst - discount).toLocaleString('en-IN');
                     })()}
                   </span>
                 </div>
@@ -4843,86 +4895,6 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                     </span>
                   </label>
                 </>
-              )}
-
-              {/* Coupon Input */}
-              <div>
-                <label className="block text-sm font-semibold mb-2" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                  Have a Coupon Code?
-                </label>
-                <CouponInput
-                  subtotal={(() => {
-                    const vegCount = parseInt(vegBoxes) || 0;
-                    const eggCount = parseInt(eggBoxes) || 0;
-                    const nonVegCount = parseInt(nonVegBoxes) || 0;
-                    const vegTotal = vegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * vegCount;
-                    const eggTotal = eggPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * eggCount;
-                    const nonVegTotal = nonVegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * nonVegCount;
-                    return vegTotal + eggTotal + nonVegTotal;
-                  })()}
-                  orderType="mealbox"
-                  deliveryFee={500}
-                  onCouponApply={handleCouponApply}
-                  onCouponRemove={handleCouponRemove}
-                  appliedCoupon={appliedCoupon}
-                />
-              </div>
-
-              {/* Order Summary when coupon applied */}
-              {appliedCoupon && (
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-2">
-                  {(() => {
-                    const vegCount = parseInt(vegBoxes) || 0;
-                    const eggCount = parseInt(eggBoxes) || 0;
-                    const nonVegCount = parseInt(nonVegBoxes) || 0;
-                    const vegTotal = vegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * vegCount;
-                    const eggTotal = eggPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * eggCount;
-                    const nonVegTotal = nonVegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * nonVegCount;
-                    const subtotal = vegTotal + eggTotal + nonVegTotal;
-                    const packagingFee = Math.round(subtotal * 0.06);
-                    const baseDeliveryCharges = 500;
-                    const deliveryCharges = appliedCoupon?.isFreeDelivery ? 0 : baseDeliveryCharges;
-                    const gst = Math.round(subtotal * 0.05);
-                    const discount = appliedCoupon?.isFreeDelivery ? 0 : (appliedCoupon?.discount || 0);
-                    const grandTotal = subtotal + packagingFee + deliveryCharges + gst - discount;
-                    return (
-                      <>
-                        <div className="flex justify-between text-sm">
-                          <span style={{ fontFamily: "Sweet Sans Pro", color: "#4B5563" }}>Subtotal</span>
-                          <span style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>₹{subtotal.toLocaleString('en-IN')}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span style={{ fontFamily: "Sweet Sans Pro", color: "#4B5563" }}>Packaging Fee</span>
-                          <span style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>₹{packagingFee.toLocaleString('en-IN')}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span style={{ fontFamily: "Sweet Sans Pro", color: "#4B5563" }}>Delivery Charges</span>
-                          <span style={{ fontFamily: "Sweet Sans Pro", color: appliedCoupon?.isFreeDelivery ? "#1A9952" : "#06352A" }}>
-                            {appliedCoupon?.isFreeDelivery ? (
-                              <><s className="text-gray-400 mr-1">₹{baseDeliveryCharges}</s> FREE</>
-                            ) : (
-                              `₹${deliveryCharges.toLocaleString('en-IN')}`
-                            )}
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span style={{ fontFamily: "Sweet Sans Pro", color: "#4B5563" }}>GST</span>
-                          <span style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>₹{gst.toLocaleString('en-IN')}</span>
-                        </div>
-                        {discount > 0 && (
-                          <div className="flex justify-between text-sm text-green-600">
-                            <span style={{ fontFamily: "Sweet Sans Pro" }}>Discount ({appliedCoupon?.code})</span>
-                            <span style={{ fontFamily: "Sweet Sans Pro" }}>-₹{discount.toLocaleString('en-IN')}</span>
-                          </div>
-                        )}
-                        <div className="border-t border-gray-200 pt-2 flex justify-between font-semibold">
-                          <span style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>Total</span>
-                          <span style={{ fontFamily: "Sweet Sans Pro", color: "#1A9952" }}>₹{grandTotal.toLocaleString('en-IN')}</span>
-                        </div>
-                      </>
-                    );
-                  })()}
-                </div>
               )}
             </div>
 
