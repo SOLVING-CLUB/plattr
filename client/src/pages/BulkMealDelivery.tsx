@@ -4,12 +4,11 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, MapPin, Calendar } from "lucide-react";
 import { useCart } from "@/context/CartContex";
 import FloatingNav from "@/pages/FloatingNav";
-import { bulkMealOrderService, sixtyMinBulkOrderService, addressService, CouponValidationResult } from "@/lib/supabase-service";
+import { bulkMealOrderService, sixtyMinBulkOrderService, addressService } from "@/lib/supabase-service";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import DeliveryTimePicker from "@/components/DeliveryTimePicker";
 import DeliveryDatePicker from "@/components/DeliveryDatePicker";
-import CouponInput from "@/components/CouponInput";
 
 const SIXTY_MIN_ORDER_FLAG = "isSixtyMinOrder";
 
@@ -35,6 +34,8 @@ export default function BulkMealsDelivery() {
   const [email, setEmail] = useState(() => localStorage.getItem('email') || "");
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [saveAddressForFuture, setSaveAddressForFuture] = useState(false);
+  
+  // Read coupon from localStorage (set in BulkMealCart)
   const [appliedCoupon, setAppliedCoupon] = useState<{
     id: string;
     code: string;
@@ -42,28 +43,17 @@ export default function BulkMealsDelivery() {
     discountType: 'percentage' | 'fixed' | 'free_delivery';
     discountValue: number;
     isFreeDelivery?: boolean;
-  } | null>(null);
-
-  const handleCouponApply = (result: CouponValidationResult) => {
-    if (result.valid && result.coupon && result.discount !== undefined) {
-      setAppliedCoupon({
-        id: result.coupon.id,
-        code: result.coupon.code,
-        discount: result.discount,
-        discountType: result.coupon.discountType,
-        discountValue: result.coupon.discountValue,
-        isFreeDelivery: result.isFreeDelivery,
-      });
-      toast({
-        title: "Coupon Applied!",
-        description: result.isFreeDelivery ? "Free delivery applied!" : `You saved ₹${result.discount}`,
-      });
+  } | null>(() => {
+    const saved = localStorage.getItem('bulkMealCoupon');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return null;
+      }
     }
-  };
-
-  const handleCouponRemove = () => {
-    setAppliedCoupon(null);
-  };
+    return null;
+  });
 
   // Calculate T+12 hours for default date/time
   const getMinDateTime = () => {
@@ -321,6 +311,7 @@ export default function BulkMealsDelivery() {
       localStorage.removeItem(SIXTY_MIN_ORDER_FLAG);
       
     localStorage.removeItem("bulkMealsAddons");
+    localStorage.removeItem("bulkMealCoupon");
     clearCart();
       
       toast({
@@ -575,21 +566,6 @@ export default function BulkMealsDelivery() {
               </label>
             </>
           )}
-
-          {/* Coupon Input */}
-          <div>
-            <label className="block text-sm font-semibold mb-2" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-              Have a Coupon Code?
-            </label>
-            <CouponInput
-              subtotal={subtotal}
-              orderType="bulk_meal"
-              deliveryFee={baseDeliveryCharges}
-              onCouponApply={handleCouponApply}
-              onCouponRemove={handleCouponRemove}
-              appliedCoupon={appliedCoupon}
-            />
-          </div>
 
           {/* Order Summary */}
           {(appliedCoupon || discount > 0) && (
