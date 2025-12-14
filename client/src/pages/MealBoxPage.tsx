@@ -4941,9 +4941,11 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                   const nonVegTotal = nonVegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * nonVegCount;
                   const subtotal = vegTotal + eggTotal + nonVegTotal;
                   const packagingFee = Math.round(subtotal * 0.06);
-                  const deliveryCharges = 500;
+                  const baseDeliveryCharges = 500;
+                  const deliveryCharges = appliedCoupon?.isFreeDelivery ? 0 : baseDeliveryCharges;
                   const gst = Math.round(subtotal * 0.05);
-                  const total = subtotal + packagingFee + deliveryCharges + gst;
+                  const discount = appliedCoupon?.isFreeDelivery ? 0 : (appliedCoupon?.discount || 0);
+                  const total = subtotal + packagingFee + deliveryCharges + gst - discount;
 
                   // Get form values - use state variables directly
                   const deliveryDate = eventDate || null;
@@ -5005,6 +5007,13 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                     deliveryAddressText = [addressLine1, addressLine2, city, addressState, pincode].filter(Boolean).join(', ');
                   }
                   
+                  // Calculate delivery fee and discount for order record
+                  const baseDeliveryCharges = 500;
+                  const deliveryFeeCharged = appliedCoupon?.isFreeDelivery ? 0 : baseDeliveryCharges;
+                  const discountApplied = appliedCoupon?.isFreeDelivery 
+                    ? baseDeliveryCharges 
+                    : (appliedCoupon?.discount || 0);
+                  
                   if (isSixtyMinOrder) {
                     await sixtyMinMealboxOrderService.create({
                       portions: `${selectedPortions}-portions`,
@@ -5018,13 +5027,16 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                       nonVegPlateSelections: nonVegPlateSelections,
                       selectedAddons: selectedAddOns,
                       subtotal: subtotal,
-                      deliveryFee: 0,
+                      deliveryFee: deliveryFeeCharged,
                       tax: gst,
                       total: total,
                       deliveryDate: deliveryDate || undefined,
                       deliveryTime: deliveryTime || undefined,
                       addressId: validAddressId,
                       deliveryAddress: deliveryAddressText,
+                      couponId: appliedCoupon?.id || undefined,
+                      couponCode: appliedCoupon?.code || undefined,
+                      discountApplied: discountApplied > 0 ? discountApplied : undefined,
                     });
                   } else {
                     await mealboxOrderService.create({
@@ -5039,12 +5051,15 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                       nonVegPlateSelections: nonVegPlateSelections,
                       selectedAddons: selectedAddOns,
                       subtotal: subtotal,
-                      deliveryFee: 0,
+                      deliveryFee: deliveryFeeCharged,
                       tax: gst,
                       total: total,
                       deliveryDate: deliveryDate || undefined,
                       deliveryTime: deliveryTime || undefined,
                       addressId: validAddressId,
+                      couponId: appliedCoupon?.id || undefined,
+                      couponCode: appliedCoupon?.code || undefined,
+                      discountApplied: discountApplied > 0 ? discountApplied : undefined,
                     });
                   }
 
@@ -5089,9 +5104,11 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                   const nonVegTotal = nonVegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * nonVegCount;
                   const subtotal = vegTotal + eggTotal + nonVegTotal;
                   const packagingFee = Math.round(subtotal * 0.06);
-                  const deliveryCharges = 500;
+                  const baseDeliveryCharges = 500;
+                  const deliveryCharges = appliedCoupon?.isFreeDelivery ? 0 : baseDeliveryCharges;
                   const gst = Math.round(subtotal * 0.05);
-                  return (subtotal + packagingFee + deliveryCharges + gst).toLocaleString('en-IN');
+                  const discount = appliedCoupon?.isFreeDelivery ? 0 : (appliedCoupon?.discount || 0);
+                  return (subtotal + packagingFee + deliveryCharges + gst - discount).toLocaleString('en-IN');
                 })()}
               </span>
             </Button>

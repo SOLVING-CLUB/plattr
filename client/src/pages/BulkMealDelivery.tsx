@@ -302,6 +302,11 @@ export default function BulkMealsDelivery() {
         deliveryTime: eventTime || undefined,
         addressId: validAddressId,
         deliveryAddress: deliveryAddressText,
+        couponId: appliedCoupon?.id || undefined,
+        couponCode: appliedCoupon?.code || undefined,
+        discountApplied: appliedCoupon?.isFreeDelivery 
+          ? baseDeliveryCharges  
+          : (appliedCoupon?.discount || 0),
       };
       
       if (isSixtyMinOrder) {
