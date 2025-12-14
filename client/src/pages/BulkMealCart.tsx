@@ -269,7 +269,7 @@ export default function BulkMealCart() {
         {/* Coupon Input */}
         <div className="mb-6">
           <label className="block text-sm font-semibold mb-2" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-            Have a Coupon Code?
+            Coupons & Offers
           </label>
           <CouponInput
             subtotal={subtotal}
