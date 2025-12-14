@@ -4,11 +4,12 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, MapPin, Calendar } from "lucide-react";
 import { useCart } from "@/context/CartContex";
 import FloatingNav from "@/pages/FloatingNav";
-import { bulkMealOrderService, sixtyMinBulkOrderService, addressService } from "@/lib/supabase-service";
+import { bulkMealOrderService, sixtyMinBulkOrderService, addressService, CouponValidationResult } from "@/lib/supabase-service";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import DeliveryTimePicker from "@/components/DeliveryTimePicker";
 import DeliveryDatePicker from "@/components/DeliveryDatePicker";
+import CouponInput from "@/components/CouponInput";
 
 const SIXTY_MIN_ORDER_FLAG = "isSixtyMinOrder";
 
@@ -34,6 +35,35 @@ export default function BulkMealsDelivery() {
   const [email, setEmail] = useState(() => localStorage.getItem('email') || "");
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [saveAddressForFuture, setSaveAddressForFuture] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    id: string;
+    code: string;
+    discount: number;
+    discountType: 'percentage' | 'fixed' | 'free_delivery';
+    discountValue: number;
+    isFreeDelivery?: boolean;
+  } | null>(null);
+
+  const handleCouponApply = (result: CouponValidationResult) => {
+    if (result.valid && result.coupon && result.discount !== undefined) {
+      setAppliedCoupon({
+        id: result.coupon.id,
+        code: result.coupon.code,
+        discount: result.discount,
+        discountType: result.coupon.discountType,
+        discountValue: result.coupon.discountValue,
+        isFreeDelivery: result.isFreeDelivery,
+      });
+      toast({
+        title: "Coupon Applied!",
+        description: result.isFreeDelivery ? "Free delivery applied!" : `You saved ₹${result.discount}`,
+      });
+    }
+  };
+
+  const handleCouponRemove = () => {
+    setAppliedCoupon(null);
+  };
 
   // Calculate T+12 hours for default date/time
   const getMinDateTime = () => {
@@ -169,9 +199,11 @@ export default function BulkMealsDelivery() {
 
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const packagingFee = Math.round(subtotal * 0.06);
-  const deliveryCharges = 500;
+  const baseDeliveryCharges = 500;
+  const deliveryCharges = appliedCoupon?.isFreeDelivery ? 0 : baseDeliveryCharges;
   const gst = Math.round(subtotal * 0.05);
-  const grandTotal = subtotal + packagingFee + deliveryCharges + gst;
+  const discount = appliedCoupon?.isFreeDelivery ? 0 : (appliedCoupon?.discount || 0);
+  const grandTotal = subtotal + packagingFee + deliveryCharges + gst - discount;
 
   const handleSubmit = async () => {
     try {
@@ -537,6 +569,59 @@ export default function BulkMealsDelivery() {
                 </span>
               </label>
             </>
+          )}
+
+          {/* Coupon Input */}
+          <div>
+            <label className="block text-sm font-semibold mb-2" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+              Have a Coupon Code?
+            </label>
+            <CouponInput
+              subtotal={subtotal}
+              orderType="bulk_meal"
+              deliveryFee={baseDeliveryCharges}
+              onCouponApply={handleCouponApply}
+              onCouponRemove={handleCouponRemove}
+              appliedCoupon={appliedCoupon}
+            />
+          </div>
+
+          {/* Order Summary */}
+          {(appliedCoupon || discount > 0) && (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span style={{ fontFamily: "Sweet Sans Pro", color: "#4B5563" }}>Subtotal</span>
+                <span style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>₹{subtotal.toLocaleString('en-IN')}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span style={{ fontFamily: "Sweet Sans Pro", color: "#4B5563" }}>Packaging Fee</span>
+                <span style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>₹{packagingFee.toLocaleString('en-IN')}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span style={{ fontFamily: "Sweet Sans Pro", color: "#4B5563" }}>Delivery Charges</span>
+                <span style={{ fontFamily: "Sweet Sans Pro", color: appliedCoupon?.isFreeDelivery ? "#1A9952" : "#06352A" }}>
+                  {appliedCoupon?.isFreeDelivery ? (
+                    <><s className="text-gray-400 mr-1">₹{baseDeliveryCharges}</s> FREE</>
+                  ) : (
+                    `₹${deliveryCharges.toLocaleString('en-IN')}`
+                  )}
+                </span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span style={{ fontFamily: "Sweet Sans Pro", color: "#4B5563" }}>GST</span>
+                <span style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>₹{gst.toLocaleString('en-IN')}</span>
+              </div>
+              {discount > 0 && (
+                <div className="flex justify-between text-sm text-green-600">
+                  <span style={{ fontFamily: "Sweet Sans Pro" }}>Discount ({appliedCoupon?.code})</span>
+                  <span style={{ fontFamily: "Sweet Sans Pro" }}>-₹{discount.toLocaleString('en-IN')}</span>
+                </div>
+              )}
+              <div className="border-t border-gray-200 pt-2 flex justify-between font-semibold">
+                <span style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>Total</span>
+                <span style={{ fontFamily: "Sweet Sans Pro", color: "#1A9952" }}>₹{grandTotal.toLocaleString('en-IN')}</span>
+              </div>
+            </div>
           )}
         </div>
 
