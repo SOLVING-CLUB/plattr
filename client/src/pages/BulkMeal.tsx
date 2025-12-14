@@ -1748,18 +1748,6 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
             </div>
 
             <div className="p-4 pb-8 space-y-4 overflow-y-auto max-h-[calc(85vh-8rem)]">
-              {/* Image */}
-              {detailDish && (
-                <div className="relative h-64 rounded-lg overflow-hidden">
-                  <LazyImage
-                    src={getDishImage(detailDish.name, detailDish.imageUrl || undefined, detailDish)}
-                    alt={detailDish.name}
-                    containerClassName="w-full h-full"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                </div>
-              )}
-
               {/* Description */}
               <div>
                 <h3 className="font-bold text-lg mb-2">Description</h3>

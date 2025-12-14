@@ -1,5 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import splashVideo from "@assets/The_background_which_202512111311_m25iy (1).mp4";
+import splashFallback from "@assets/splash_background.png";
 
 interface SplashScreenProps {
   onVideoEnd?: () => void;
@@ -8,6 +9,8 @@ interface SplashScreenProps {
 export default function SplashScreen({ onVideoEnd }: SplashScreenProps) {
   const isDev = import.meta.env.DEV;
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [showFallback, setShowFallback] = useState(false);
+  const [videoLoaded, setVideoLoaded] = useState(false);
 
   useEffect(() => {
     const style = document.createElement("style");
@@ -57,12 +60,44 @@ export default function SplashScreen({ onVideoEnd }: SplashScreenProps) {
       }
     };
 
+    const handleCanPlay = () => {
+      setVideoLoaded(true);
+      video.play().catch(() => {
+        setShowFallback(true);
+        setTimeout(() => {
+          if (onVideoEnd) onVideoEnd();
+        }, 3000);
+      });
+    };
+
+    const handleError = () => {
+      setShowFallback(true);
+      setTimeout(() => {
+        if (onVideoEnd) onVideoEnd();
+      }, 3000);
+    };
+
     video.addEventListener("ended", handleEnded);
+    video.addEventListener("canplay", handleCanPlay);
+    video.addEventListener("error", handleError);
+
+    // Fallback timeout - if video doesn't load within 5 seconds, show fallback
+    const fallbackTimeout = setTimeout(() => {
+      if (!videoLoaded) {
+        setShowFallback(true);
+        setTimeout(() => {
+          if (onVideoEnd) onVideoEnd();
+        }, 3000);
+      }
+    }, 5000);
 
     return () => {
       video.removeEventListener("ended", handleEnded);
+      video.removeEventListener("canplay", handleCanPlay);
+      video.removeEventListener("error", handleError);
+      clearTimeout(fallbackTimeout);
     };
-  }, [onVideoEnd]);
+  }, [onVideoEnd, videoLoaded]);
 
   return (
     <div
@@ -82,11 +117,10 @@ export default function SplashScreen({ onVideoEnd }: SplashScreenProps) {
       }}
       data-testid="splash-screen"
     >
-      <video
-        ref={videoRef}
-        autoPlay
-        muted
-        playsInline
+      {/* Fallback image - shown immediately, video overlays when loaded */}
+      <img
+        src={splashFallback}
+        alt="Plattr"
         style={{
           position: "absolute",
           top: 0,
@@ -96,10 +130,32 @@ export default function SplashScreen({ onVideoEnd }: SplashScreenProps) {
           objectFit: "cover",
           zIndex: 1,
         }}
-        data-testid="video-splash-background"
-      >
-        <source src={splashVideo} type="video/mp4" />
-      </video>
+      />
+
+      {/* Video overlay - hidden controls, non-interactive */}
+      {!showFallback && (
+        <video
+          ref={videoRef}
+          autoPlay
+          muted
+          playsInline
+          disablePictureInPicture
+          preload="auto"
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            zIndex: 2,
+            pointerEvents: "none",
+          }}
+          data-testid="video-splash-background"
+        >
+          <source src={splashVideo} type="video/mp4" />
+        </video>
+      )}
 
       {isDev && (
         <div
