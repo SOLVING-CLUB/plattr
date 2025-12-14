@@ -1445,26 +1445,45 @@ export const corporateOrderService = {
 
 /**
  * Coupon Service - Validate and apply coupon codes
+ * Supports: order types, meal types, user targeting, time-based validity
  */
 export interface CouponValidationResult {
   valid: boolean;
   coupon?: {
     id: string;
     code: string;
-    discountType: 'percentage' | 'fixed';
+    name: string;
+    discountType: 'percentage' | 'fixed' | 'free_delivery';
     discountValue: number;
     maxDiscount?: number;
     description?: string;
   };
   discount?: number;
+  isFreeDelivery?: boolean;
   error?: string;
+}
+
+export interface CouponValidateOptions {
+  orderTotal: number;
+  orderType?: 'regular' | 'bulk_meal' | 'mealbox' | 'catering' | 'corporate';
+  mealTypes?: string[];
+  deliveryFee?: number;
 }
 
 export const couponService = {
   /**
    * Validate a coupon code and calculate discount
+   * @param code - Coupon code to validate
+   * @param options - Validation options including orderTotal, orderType, mealTypes
    */
-  async validate(code: string, orderTotal: number): Promise<CouponValidationResult> {
+  async validate(code: string, options: CouponValidateOptions | number): Promise<CouponValidationResult> {
+    // Support legacy call signature: validate(code, orderTotal)
+    const opts: CouponValidateOptions = typeof options === 'number' 
+      ? { orderTotal: options } 
+      : options;
+    
+    const { orderTotal, orderType = 'regular', mealTypes = [], deliveryFee = 40 } = opts;
+
     if (!code || !code.trim()) {
       return { valid: false, error: 'Please enter a coupon code' };
     }
@@ -1483,13 +1502,24 @@ export const couponService = {
       return { valid: false, error: 'Invalid coupon code' };
     }
 
-    // Check if coupon is within valid dates
     const now = new Date();
+
+    // Check if coupon is within valid dates
     if (coupon.valid_from && new Date(coupon.valid_from) > now) {
       return { valid: false, error: 'This coupon is not yet active' };
     }
     if (coupon.valid_until && new Date(coupon.valid_until) < now) {
       return { valid: false, error: 'This coupon has expired' };
+    }
+
+    // Check valid days of week (0=Sunday, 6=Saturday)
+    if (coupon.valid_days_of_week && coupon.valid_days_of_week.length > 0) {
+      const currentDay = now.getDay();
+      if (!coupon.valid_days_of_week.includes(currentDay)) {
+        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const validDays = coupon.valid_days_of_week.map((d: number) => dayNames[d]).join(', ');
+        return { valid: false, error: `This coupon is only valid on ${validDays}` };
+      }
     }
 
     // Check total usage limit
@@ -1500,11 +1530,38 @@ export const couponService = {
     // Check minimum order amount
     const minOrderAmount = parseFloat(coupon.min_order_amount || '0');
     if (orderTotal < minOrderAmount) {
-      return { valid: false, error: `Minimum order of ₹${minOrderAmount} required for this coupon` };
+      return { valid: false, error: `Minimum order of ₹${minOrderAmount} required` };
     }
 
-    // Check per-user limit (if user is authenticated)
+    // Check order type restrictions
+    if (coupon.applicable_order_types && coupon.applicable_order_types.length > 0) {
+      const orderTypes = coupon.applicable_order_types as string[];
+      if (!orderTypes.includes('all') && !orderTypes.includes(orderType)) {
+        const typeLabels: Record<string, string> = {
+          'bulk_meal': 'Bulk Meals',
+          'mealbox': 'Meal Box',
+          'catering': 'Catering',
+          'corporate': 'Corporate',
+          'regular': 'Regular orders'
+        };
+        const validFor = orderTypes.map(t => typeLabels[t] || t).join(', ');
+        return { valid: false, error: `This coupon is only for ${validFor}` };
+      }
+    }
+
+    // Check meal type restrictions
+    if (coupon.applicable_meal_types && coupon.applicable_meal_types.length > 0 && mealTypes.length > 0) {
+      const applicableMealTypes = coupon.applicable_meal_types as string[];
+      const hasMatch = mealTypes.some(mt => applicableMealTypes.includes(mt.toLowerCase()));
+      if (!hasMatch) {
+        return { valid: false, error: `This coupon is only for ${applicableMealTypes.join(', ')} items` };
+      }
+    }
+
+    // Get authenticated user for user-specific checks
     const user = await getAuthenticatedUser();
+
+    // Check per-user limit
     if (user && coupon.per_user_limit) {
       const { count } = await supabase
         .from('coupon_usages')
@@ -1517,13 +1574,59 @@ export const couponService = {
       }
     }
 
-    // Calculate discount
+    // Check first-time user restriction
+    if (coupon.first_time_user_only && user) {
+      // Check if user has any previous orders (across all order types)
+      const { count: orderCount } = await supabase
+        .from('orders')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id);
+      
+      const { count: bulkCount } = await supabase
+        .from('bulk_meal_orders')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id);
+
+      const totalOrders = (orderCount || 0) + (bulkCount || 0);
+      if (totalOrders > 0) {
+        return { valid: false, error: 'This coupon is for first-time customers only' };
+      }
+    }
+
+    // Check returning user restriction
+    if (coupon.returning_user_only && user) {
+      const { count: orderCount } = await supabase
+        .from('orders')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id);
+
+      if (!orderCount || orderCount === 0) {
+        return { valid: false, error: 'This coupon is for returning customers' };
+      }
+    }
+
+    // Check minimum previous orders
+    if (coupon.min_previous_orders && coupon.min_previous_orders > 0 && user) {
+      const { count: orderCount } = await supabase
+        .from('orders')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id);
+
+      if (!orderCount || orderCount < coupon.min_previous_orders) {
+        return { valid: false, error: `Complete ${coupon.min_previous_orders} orders to unlock this coupon` };
+      }
+    }
+
+    // Calculate discount based on type
     let discount = 0;
+    let isFreeDelivery = false;
     const discountValue = parseFloat(coupon.discount_value);
 
-    if (coupon.discount_type === 'percentage') {
+    if (coupon.discount_type === 'free_delivery') {
+      discount = deliveryFee;
+      isFreeDelivery = true;
+    } else if (coupon.discount_type === 'percentage') {
       discount = Math.round(orderTotal * (discountValue / 100));
-      // Apply max discount cap if set
       if (coupon.max_discount) {
         const maxDiscount = parseFloat(coupon.max_discount);
         discount = Math.min(discount, maxDiscount);
@@ -1538,19 +1641,21 @@ export const couponService = {
       coupon: {
         id: coupon.id,
         code: coupon.code,
-        discountType: coupon.discount_type as 'percentage' | 'fixed',
+        name: coupon.name,
+        discountType: coupon.discount_type as 'percentage' | 'fixed' | 'free_delivery',
         discountValue: discountValue,
         maxDiscount: coupon.max_discount ? parseFloat(coupon.max_discount) : undefined,
         description: coupon.description,
       },
       discount,
+      isFreeDelivery,
     };
   },
 
   /**
    * Record coupon usage after order is placed
    */
-  async recordUsage(couponId: string, orderId?: string): Promise<void> {
+  async recordUsage(couponId: string, orderId?: string, orderType?: string, discountApplied?: number): Promise<void> {
     const user = await getAuthenticatedUser();
     if (!user) return;
 
@@ -1561,6 +1666,8 @@ export const couponService = {
         coupon_id: couponId,
         user_id: user.id,
         order_id: orderId || null,
+        order_type: orderType || null,
+        discount_applied: discountApplied || null,
       });
 
     // Increment usage count on coupon

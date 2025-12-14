@@ -63,8 +63,9 @@ export default function CheckoutPage() {
     id: string;
     code: string;
     discount: number;
-    discountType: 'percentage' | 'fixed';
+    discountType: 'percentage' | 'fixed' | 'free_delivery';
     discountValue: number;
+    isFreeDelivery?: boolean;
   } | null>(null);
   const { toast } = useToast();
 
@@ -76,10 +77,11 @@ export default function CheckoutPage() {
         discount: result.discount,
         discountType: result.coupon.discountType,
         discountValue: result.coupon.discountValue,
+        isFreeDelivery: result.isFreeDelivery,
       });
       toast({
         title: "Coupon Applied!",
-        description: `You saved ₹${result.discount}`,
+        description: result.isFreeDelivery ? "Free delivery applied!" : `You saved ₹${result.discount}`,
       });
     }
   };
@@ -233,9 +235,10 @@ export default function CheckoutPage() {
   const subtotal = cartItems.reduce((sum, item) => {
     return sum + (parseFloat(item.dish.price) * item.quantity);
   }, 0);
-  const deliveryFee = 40;
+  const baseDeliveryFee = 40;
+  const deliveryFee = appliedCoupon?.isFreeDelivery ? 0 : baseDeliveryFee;
   const tax = Math.round(subtotal * 0.05);
-  const discount = appliedCoupon?.discount || 0;
+  const discount = appliedCoupon?.isFreeDelivery ? 0 : (appliedCoupon?.discount || 0);
   const total = subtotal + deliveryFee + tax - discount;
 
   // Group items by category
