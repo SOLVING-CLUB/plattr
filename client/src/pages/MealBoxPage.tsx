@@ -5007,8 +5007,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                     deliveryAddressText = [addressLine1, addressLine2, city, addressState, pincode].filter(Boolean).join(', ');
                   }
                   
-                  // Calculate delivery fee and discount for order record
-                  const baseDeliveryCharges = 500;
+                  // Calculate delivery fee for order record (use existing baseDeliveryCharges from line 4944)
                   const deliveryFeeCharged = appliedCoupon?.isFreeDelivery ? 0 : baseDeliveryCharges;
                   const discountApplied = appliedCoupon?.isFreeDelivery 
                     ? baseDeliveryCharges 
