@@ -2,8 +2,9 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Tag, X, Check, AlertCircle, Truck } from "lucide-react";
-import { couponService, CouponValidationResult, CouponValidateOptions } from "@/lib/supabase-service";
+import { Loader2, Tag, X, Check, AlertCircle, Truck, ChevronRight, Ticket } from "lucide-react";
+import { couponService, CouponValidationResult } from "@/lib/supabase-service";
+import { useQuery } from "@tanstack/react-query";
 
 interface CouponInputProps {
   subtotal: number;
@@ -34,9 +35,17 @@ export default function CouponInput({
   const [couponCode, setCouponCode] = useState("");
   const [isValidating, setIsValidating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showManualEntry, setShowManualEntry] = useState(false);
 
-  const handleApplyCoupon = async () => {
-    if (!couponCode.trim()) {
+  const { data: eligibleCoupons = [], isLoading: isLoadingCoupons } = useQuery({
+    queryKey: ['eligible-coupons', orderType, subtotal],
+    queryFn: () => couponService.getEligibleCoupons(orderType, subtotal),
+    staleTime: 60000,
+  });
+
+  const handleApplyCoupon = async (code?: string) => {
+    const codeToApply = code || couponCode.trim();
+    if (!codeToApply) {
       setError("Please enter a coupon code");
       return;
     }
@@ -45,7 +54,7 @@ export default function CouponInput({
     setError(null);
 
     try {
-      const result = await couponService.validate(couponCode, {
+      const result = await couponService.validate(codeToApply, {
         orderTotal: subtotal,
         orderType,
         mealTypes,
@@ -55,6 +64,7 @@ export default function CouponInput({
       if (result.valid && result.coupon && result.discount !== undefined) {
         onCouponApply(result);
         setCouponCode("");
+        setShowManualEntry(false);
       } else {
         setError(result.error || "Invalid coupon code");
       }
@@ -116,44 +126,123 @@ export default function CouponInput({
   }
 
   return (
-    <div className="space-y-2">
-      <div className="flex gap-2">
-        <div className="relative flex-1">
-          <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Enter coupon code"
-            value={couponCode}
-            onChange={(e) => {
-              setCouponCode(e.target.value.toUpperCase());
-              setError(null);
-            }}
-            className="pl-10 uppercase"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                handleApplyCoupon();
-              }
-            }}
-            data-testid="input-coupon-code"
-          />
+    <div className="space-y-3">
+      {isLoadingCoupons ? (
+        <div className="flex items-center gap-2 text-sm text-gray-500 p-3 bg-gray-50 rounded-lg">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          <span>Loading available coupons...</span>
         </div>
-        <Button
-          variant="outline"
-          onClick={handleApplyCoupon}
-          disabled={isValidating || !couponCode.trim()}
-          data-testid="button-apply-coupon"
-        >
-          {isValidating ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            "Apply"
+      ) : eligibleCoupons.length > 0 && !showManualEntry ? (
+        <div className="space-y-2">
+          {eligibleCoupons.slice(0, 2).map((coupon) => (
+            <div
+              key={coupon.id}
+              className="flex items-center justify-between p-3 bg-amber-50 border border-amber-200 rounded-lg"
+              data-testid={`coupon-suggestion-${coupon.code}`}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
+                  <Ticket className="w-4 h-4 text-amber-600" />
+                </div>
+                <div>
+                  <p className="font-medium text-gray-800 text-sm" style={{ fontFamily: "Sweet Sans Pro" }}>
+                    {coupon.savingsText} with '{coupon.code}'
+                  </p>
+                  {coupon.description && (
+                    <p className="text-xs text-gray-500" style={{ fontFamily: "Sweet Sans Pro" }}>
+                      {coupon.description}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleApplyCoupon(coupon.code)}
+                disabled={isValidating || (coupon.minOrderAmount > 0 && subtotal < coupon.minOrderAmount)}
+                className="text-amber-600 border-amber-300 hover:bg-amber-100 hover:text-amber-700 font-semibold"
+                style={{ fontFamily: "Sweet Sans Pro" }}
+                data-testid={`button-apply-${coupon.code}`}
+              >
+                {isValidating ? <Loader2 className="w-4 h-4 animate-spin" /> : "APPLY"}
+              </Button>
+            </div>
+          ))}
+          
+          {eligibleCoupons.length > 2 && (
+            <button
+              onClick={() => setShowManualEntry(true)}
+              className="flex items-center gap-1 text-sm text-amber-600 hover:text-amber-700 font-medium px-1"
+              style={{ fontFamily: "Sweet Sans Pro" }}
+              data-testid="button-view-all-coupons"
+            >
+              View all coupons
+              <ChevronRight className="w-4 h-4" />
+            </button>
           )}
-        </Button>
-      </div>
-      {error && (
-        <div className="flex items-center gap-2 text-sm text-red-600">
-          <AlertCircle className="w-4 h-4" />
-          <span data-testid="text-coupon-error">{error}</span>
+          
+          <button
+            onClick={() => setShowManualEntry(true)}
+            className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 px-1"
+            style={{ fontFamily: "Sweet Sans Pro" }}
+            data-testid="button-enter-code"
+          >
+            Have a different code?
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Enter coupon code"
+                value={couponCode}
+                onChange={(e) => {
+                  setCouponCode(e.target.value.toUpperCase());
+                  setError(null);
+                }}
+                className="pl-10 uppercase"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleApplyCoupon();
+                  }
+                }}
+                data-testid="input-coupon-code"
+              />
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => handleApplyCoupon()}
+              disabled={isValidating || !couponCode.trim()}
+              data-testid="button-apply-coupon"
+            >
+              {isValidating ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                "Apply"
+              )}
+            </Button>
+          </div>
+          
+          {eligibleCoupons.length > 0 && showManualEntry && (
+            <button
+              onClick={() => setShowManualEntry(false)}
+              className="flex items-center gap-1 text-sm text-amber-600 hover:text-amber-700 font-medium"
+              style={{ fontFamily: "Sweet Sans Pro" }}
+              data-testid="button-show-suggestions"
+            >
+              ← View available coupons
+            </button>
+          )}
+          
+          {error && (
+            <div className="flex items-center gap-2 text-sm text-red-600">
+              <AlertCircle className="w-4 h-4" />
+              <span data-testid="text-coupon-error">{error}</span>
+            </div>
+          )}
         </div>
       )}
     </div>

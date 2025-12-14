@@ -1653,6 +1653,127 @@ export const couponService = {
   },
 
   /**
+   * Get eligible coupons for a user and order type
+   * Returns coupons that could be applied to the order
+   */
+  async getEligibleCoupons(orderType: string = 'regular', orderTotal: number = 0): Promise<Array<{
+    id: string;
+    code: string;
+    description: string | null;
+    discountType: 'percentage' | 'fixed' | 'free_delivery';
+    discountValue: number;
+    minOrderAmount: number;
+    maxDiscount?: number;
+    savingsText: string;
+  }>> {
+    const now = new Date().toISOString();
+    const user = await getAuthenticatedUser();
+
+    // Fetch all active coupons
+    const { data: coupons, error } = await supabase
+      .from('coupons')
+      .select('*')
+      .eq('is_active', true)
+      .or(`valid_from.is.null,valid_from.lte.${now}`)
+      .or(`valid_until.is.null,valid_until.gte.${now}`);
+
+    if (error || !coupons) {
+      console.error('Error fetching coupons:', error);
+      return [];
+    }
+
+    const eligibleCoupons: Array<{
+      id: string;
+      code: string;
+      description: string | null;
+      discountType: 'percentage' | 'fixed' | 'free_delivery';
+      discountValue: number;
+      minOrderAmount: number;
+      maxDiscount?: number;
+      savingsText: string;
+    }> = [];
+
+    for (const coupon of coupons) {
+      // Check usage limit
+      if (coupon.usage_limit && coupon.usage_count >= coupon.usage_limit) {
+        continue;
+      }
+
+      // Check order type
+      if (coupon.applicable_order_types && coupon.applicable_order_types.length > 0) {
+        const orderTypes = coupon.applicable_order_types as string[];
+        if (!orderTypes.includes('all') && !orderTypes.includes(orderType)) {
+          continue;
+        }
+      }
+
+      // Check per-user limit
+      if (user && coupon.per_user_limit) {
+        const { count } = await supabase
+          .from('coupon_usages')
+          .select('*', { count: 'exact', head: true })
+          .eq('coupon_id', coupon.id)
+          .eq('user_id', user.id);
+
+        if (count && count >= coupon.per_user_limit) {
+          continue;
+        }
+      }
+
+      // Check first-time user only
+      if (coupon.first_time_user_only && user) {
+        const { count: orderCount } = await supabase
+          .from('orders')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id);
+        
+        const { count: bulkCount } = await supabase
+          .from('bulk_meal_orders')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id);
+
+        if ((orderCount || 0) + (bulkCount || 0) > 0) {
+          continue;
+        }
+      }
+
+      const discountValue = parseFloat(coupon.discount_value);
+      const minOrderAmount = parseFloat(coupon.min_order_amount || '0');
+      const maxDiscount = coupon.max_discount ? parseFloat(coupon.max_discount) : undefined;
+
+      // Generate savings text
+      let savingsText = '';
+      if (coupon.discount_type === 'free_delivery') {
+        savingsText = 'Free Delivery';
+      } else if (coupon.discount_type === 'percentage') {
+        savingsText = `${discountValue}% off`;
+        if (maxDiscount) {
+          savingsText += ` upto ₹${maxDiscount}`;
+        }
+      } else {
+        savingsText = `₹${discountValue} off`;
+      }
+
+      if (minOrderAmount > 0) {
+        savingsText += ` on orders above ₹${minOrderAmount}`;
+      }
+
+      eligibleCoupons.push({
+        id: coupon.id,
+        code: coupon.code,
+        description: coupon.description,
+        discountType: coupon.discount_type as 'percentage' | 'fixed' | 'free_delivery',
+        discountValue,
+        minOrderAmount,
+        maxDiscount,
+        savingsText,
+      });
+    }
+
+    return eligibleCoupons;
+  },
+
+  /**
    * Record coupon usage after order is placed
    */
   async recordUsage(couponId: string, orderId?: string, orderType?: string, discountApplied?: number): Promise<void> {
