@@ -36,6 +36,7 @@ export default function CouponInput({
   const [isValidating, setIsValidating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showManualEntry, setShowManualEntry] = useState(false);
+  const [showAllCoupons, setShowAllCoupons] = useState(false);
 
   const { data: eligibleCoupons = [], isLoading: isLoadingCoupons } = useQuery({
     queryKey: ['eligible-coupons', orderType, subtotal],
@@ -134,7 +135,7 @@ export default function CouponInput({
         </div>
       ) : eligibleCoupons.length > 0 && !showManualEntry ? (
         <div className="space-y-2">
-          {eligibleCoupons.slice(0, 2).map((coupon) => (
+          {(showAllCoupons ? eligibleCoupons : eligibleCoupons.slice(0, 2)).map((coupon) => (
             <div
               key={coupon.id}
               className="flex items-center justify-between p-3 bg-amber-50 border border-amber-200 rounded-lg"
@@ -169,15 +170,26 @@ export default function CouponInput({
             </div>
           ))}
           
-          {eligibleCoupons.length > 2 && (
+          {eligibleCoupons.length > 2 && !showAllCoupons && (
             <button
-              onClick={() => setShowManualEntry(true)}
+              onClick={() => setShowAllCoupons(true)}
               className="flex items-center gap-1 text-sm text-amber-600 hover:text-amber-700 font-medium px-1"
               style={{ fontFamily: "Sweet Sans Pro" }}
               data-testid="button-view-all-coupons"
             >
-              View all coupons
+              View all {eligibleCoupons.length} coupons
               <ChevronRight className="w-4 h-4" />
+            </button>
+          )}
+          
+          {showAllCoupons && eligibleCoupons.length > 2 && (
+            <button
+              onClick={() => setShowAllCoupons(false)}
+              className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 px-1"
+              style={{ fontFamily: "Sweet Sans Pro" }}
+              data-testid="button-show-less"
+            >
+              ← Show less
             </button>
           )}
           
