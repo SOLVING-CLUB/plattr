@@ -4,7 +4,8 @@ import { OdooClient } from "./odoo-client.ts";
 import {
   handleUserInsert,
   handleUserUpdate,
-} from "./handlers/user-handler.ts";
+} from "./h
+  andlers/user-handler.ts";
 import {
   handleCateringOrder,
   handleCorporateOrder,
