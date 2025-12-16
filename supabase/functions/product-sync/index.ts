@@ -4,7 +4,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// ==================== ENVIRONMENT VARIABLES ====================
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ODOO_URL = Deno.env.get("ODOO_URL")!;
@@ -12,262 +11,203 @@ const ODOO_DB = Deno.env.get("ODOO_DB")!;
 const ODOO_USERNAME = Deno.env.get("ODOO_USERNAME")!;
 const ODOO_API_KEY = Deno.env.get("ODOO_API_KEY")!;
 
-// ==================== TYPES ====================
+// Matches your dishes table schema
 interface Dish {
-  id: string | number;
-  name: string;
-  description?: string;
-  price?: number;
-  category?: string;
-  category_id?: string | number;
-  is_available?: boolean;
-  is_veg?: boolean;
-  is_egg?: boolean;
-  spice_level?: string;
-  image_url?: string;
-  // Add more fields as needed
+  id: string;
+  name: string | null;
+  description: string | null;
+  price: number | null;
+  image_url: string | null;
+  category_id: string | null;
+  is_available: boolean | null;
+  spice_level: string | null;
+  dietary_type: string | null; // veg, non-veg, egg
+  cuisine: string | null;
+  dish_type: string | null;
+  meal_type: string[] | null; // jsonb array
+  least_price: number | null;
+  sixty_min_price: number | null;
+  is_sixty_min: boolean | null;
+  snack_box_price: number | null;
 }
 
-// ==================== ODOO CLIENT ====================
 let cachedUid: number | null = null;
 let cacheExpiry: number = 0;
-const CACHE_TTL = 3600000; // 1 hour
 
-async function odooAuthenticate(): Promise<number> {
-  const now = Date.now();
-  if (cachedUid && cacheExpiry > now) return cachedUid;
-
-  console.log("Authenticating with Odoo...");
-  const response = await fetch(`${ODOO_URL}/jsonrpc`, {
+async function odooAuth(): Promise<number> {
+  if (cachedUid && cacheExpiry > Date.now()) return cachedUid;
+  const res = await fetch(`${ODOO_URL}/jsonrpc`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       jsonrpc: "2.0",
       method: "call",
-      params: {
-        service: "common",
-        method: "authenticate",
-        args: [ODOO_DB, ODOO_USERNAME, ODOO_API_KEY, {}],
-      },
-      id: Math.floor(Math.random() * 1000000),
+      params: { service: "common", method: "authenticate", args: [ODOO_DB, ODOO_USERNAME, ODOO_API_KEY, {}] },
+      id: Math.random() * 1000000 | 0,
     }),
   });
-
-  const result = await response.json();
-  if (result.error) throw new Error(`Odoo auth error: ${JSON.stringify(result.error)}`);
-
-  cachedUid = result.result;
-  cacheExpiry = now + CACHE_TTL;
-  console.log("Odoo auth successful, uid:", cachedUid);
+  const data = await res.json();
+  if (data.error) throw new Error(JSON.stringify(data.error));
+  cachedUid = data.result;
+  cacheExpiry = Date.now() + 3600000;
+  console.log("Odoo authenticated, uid:", cachedUid);
   return cachedUid!;
 }
 
-async function odooExecute(model: string, method: string, args: any[] = [], kwargs: any = {}): Promise<any> {
-  const uid = await odooAuthenticate();
-  const response = await fetch(`${ODOO_URL}/jsonrpc`, {
+async function odooExec(model: string, method: string, args: any[] = [], kwargs: any = {}): Promise<any> {
+  const uid = await odooAuth();
+  const res = await fetch(`${ODOO_URL}/jsonrpc`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       jsonrpc: "2.0",
       method: "call",
-      params: {
-        service: "object",
-        method: "execute_kw",
-        args: [ODOO_DB, uid, ODOO_API_KEY, model, method, args, kwargs],
-      },
-      id: Math.floor(Math.random() * 1000000),
+      params: { service: "object", method: "execute_kw", args: [ODOO_DB, uid, ODOO_API_KEY, model, method, args, kwargs] },
+      id: Math.random() * 1000000 | 0,
     }),
   });
-
-  const result = await response.json();
-  if (result.error) throw new Error(`Odoo API error: ${JSON.stringify(result.error)}`);
-  return result.result;
+  const data = await res.json();
+  if (data.error) throw new Error(JSON.stringify(data.error));
+  return data.result;
 }
 
-// ==================== PRODUCT OPERATIONS ====================
-async function findProductByName(name: string): Promise<number | null> {
-  const productIds = await odooExecute("product.template", "search", [[["name", "=", name]]], { limit: 1 });
-  return productIds.length > 0 ? productIds[0] : null;
+async function findProduct(externalId: string): Promise<number | null> {
+  const ids = await odooExec("product.template", "search", [[["default_code", "=", externalId]]], { limit: 1 });
+  return ids.length > 0 ? ids[0] : null;
 }
 
-async function findProductByExternalId(externalId: string): Promise<number | null> {
-  // Search by external reference if stored
-  const productIds = await odooExecute("product.template", "search", [[["default_code", "=", externalId]]], { limit: 1 });
-  return productIds.length > 0 ? productIds[0] : null;
+function buildProductData(dish: Dish) {
+  // Build internal notes with Plattr metadata
+  const notes: string[] = [];
+  if (dish.dietary_type) notes.push(`Dietary: ${dish.dietary_type}`);
+  if (dish.spice_level) notes.push(`Spice Level: ${dish.spice_level}`);
+  if (dish.cuisine) notes.push(`Cuisine: ${dish.cuisine}`);
+  if (dish.dish_type) notes.push(`Dish Type: ${dish.dish_type}`);
+  if (dish.category_id) notes.push(`Category ID: ${dish.category_id}`);
+  if (dish.meal_type && Array.isArray(dish.meal_type)) {
+    notes.push(`Meal Types: ${dish.meal_type.join(", ")}`);
+  }
+  if (dish.is_sixty_min) notes.push("60-Min Delivery: Yes");
+  
+  // Price breakdown
+  const prices: string[] = [];
+  if (dish.price) prices.push(`Regular: ₹${dish.price}`);
+  if (dish.least_price) prices.push(`Least: ₹${dish.least_price}`);
+  if (dish.sixty_min_price) prices.push(`60-Min: ₹${dish.sixty_min_price}`);
+  if (dish.snack_box_price) prices.push(`Snack Box: ₹${dish.snack_box_price}`);
+  if (prices.length > 0) notes.push(`Prices: ${prices.join(", ")}`);
+
+  return {
+    name: dish.name || `Dish ${dish.id}`,
+    default_code: `PLATTR-${dish.id}`,
+    type: "consu", // Consumable
+    sale_ok: true,
+    purchase_ok: false,
+    list_price: dish.price || dish.least_price || 0,
+    description_sale: dish.description || "",
+    description: notes.join("\n"),
+    active: dish.is_available !== false,
+  };
 }
 
 async function createProduct(dish: Dish): Promise<number> {
-  const productData: any = {
-    name: dish.name,
-    default_code: `PLATTR-${dish.id}`, // External reference
-    type: "consu", // Consumable product (or "service" for services)
-    sale_ok: true,
-    purchase_ok: false,
-    list_price: dish.price || 0,
-  };
-
-  // Add optional fields
-  if (dish.description) {
-    productData.description_sale = dish.description;
-  }
-
-  // Build internal notes with Plattr metadata
-  const notes: string[] = [];
-  if (dish.is_veg !== undefined) notes.push(`Veg: ${dish.is_veg ? "Yes" : "No"}`);
-  if (dish.is_egg !== undefined) notes.push(`Egg: ${dish.is_egg ? "Yes" : "No"}`);
-  if (dish.spice_level) notes.push(`Spice Level: ${dish.spice_level}`);
-  if (dish.category) notes.push(`Category: ${dish.category}`);
-  if (notes.length > 0) {
-    productData.description = notes.join("\n");
-  }
-
-  // Set active status based on availability
-  if (dish.is_available !== undefined) {
-    productData.active = dish.is_available;
-  }
-
-  console.log("Creating Odoo product:", productData);
-  const productId = await odooExecute("product.template", "create", [productData]);
+  const productData = buildProductData(dish);
+  console.log("Creating product:", productData.name);
+  const productId = await odooExec("product.template", "create", [productData]);
   console.log("Created product:", productId);
   return productId;
 }
 
-async function updateProduct(productId: number, dish: Dish): Promise<boolean> {
-  const productData: any = {
-    name: dish.name,
-    list_price: dish.price || 0,
-  };
-
-  // Add optional fields
-  if (dish.description) {
-    productData.description_sale = dish.description;
-  }
-
-  // Build internal notes with Plattr metadata
-  const notes: string[] = [];
-  if (dish.is_veg !== undefined) notes.push(`Veg: ${dish.is_veg ? "Yes" : "No"}`);
-  if (dish.is_egg !== undefined) notes.push(`Egg: ${dish.is_egg ? "Yes" : "No"}`);
-  if (dish.spice_level) notes.push(`Spice Level: ${dish.spice_level}`);
-  if (dish.category) notes.push(`Category: ${dish.category}`);
-  if (notes.length > 0) {
-    productData.description = notes.join("\n");
-  }
-
-  // Set active status based on availability
-  if (dish.is_available !== undefined) {
-    productData.active = dish.is_available;
-  }
-
-  console.log("Updating Odoo product:", productId, productData);
-  await odooExecute("product.template", "write", [[productId], productData]);
+async function updateProduct(productId: number, dish: Dish): Promise<void> {
+  const productData = buildProductData(dish);
+  // Remove default_code from update (shouldn't change)
+  delete (productData as any).default_code;
+  delete (productData as any).type;
+  delete (productData as any).sale_ok;
+  delete (productData as any).purchase_ok;
+  
+  console.log("Updating product:", productId, productData.name);
+  await odooExec("product.template", "write", [[productId], productData]);
   console.log("Updated product:", productId);
-  return true;
 }
 
-// ==================== CORS ====================
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// ==================== MAIN HANDLER ====================
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
-
-  if (req.method !== "POST") {
-    return new Response("Method Not Allowed", { status: 405, headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
 
   try {
-    const payload = await req.json();
-    console.log("Product sync webhook received:", JSON.stringify(payload, null, 2));
+    const { type, table, record } = await req.json();
+    console.log("Product sync webhook:", type, table, record?.id);
 
-    const { type, table, record, old_record } = payload;
-
-    if (!type || !table || !record) {
+    if (!type || !record || table !== "dishes") {
       return new Response(
-        JSON.stringify({ error: "Invalid webhook payload" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Validate this is for dishes table
-    if (table !== "dishes") {
-      return new Response(
-        JSON.stringify({ success: true, message: `Ignoring table: ${table}` }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ success: true, message: "Ignored - not dishes table" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const dish = record as Dish;
-    let result: any = { success: true, message: "No action taken" };
-
-    // Check if we already have a mapping for this dish
     const externalId = `PLATTR-${dish.id}`;
-    let existingProductId = await findProductByExternalId(externalId);
+    let productId = await findProduct(externalId);
 
-    if (type === "INSERT") {
-      if (existingProductId) {
-        // Product already exists, just update
-        await updateProduct(existingProductId, dish);
-        result = { success: true, productId: existingProductId, message: `Updated existing product ${existingProductId}` };
-      } else {
-        // Create new product
-        const productId = await createProduct(dish);
+    if (type === "INSERT" || type === "UPDATE") {
+      if (productId) {
+        await updateProduct(productId, dish);
         
-        // Track the mapping
-        await supabase.from("integration_odoo_entities").insert({
-          source_table: "dishes",
-          source_id: String(dish.id),
-          entity_type: "product",
-          odoo_id: productId,
-          last_synced_at: new Date().toISOString(),
-        });
-        
-        result = { success: true, productId, message: `Created product ${productId}` };
-      }
-    } else if (type === "UPDATE") {
-      if (existingProductId) {
-        await updateProduct(existingProductId, dish);
-        result = { success: true, productId: existingProductId, message: `Updated product ${existingProductId}` };
-      } else {
-        // Product doesn't exist yet, create it
-        const productId = await createProduct(dish);
-        
-        // Track the mapping
-        await supabase.from("integration_odoo_entities").insert({
-          source_table: "dishes",
-          source_id: String(dish.id),
-          entity_type: "product",
-          odoo_id: productId,
-          last_synced_at: new Date().toISOString(),
-        });
-        
-        result = { success: true, productId, message: `Created product ${productId} (was missing)` };
-      }
-    } else if (type === "DELETE") {
-      // Optionally archive the product in Odoo instead of deleting
-      if (existingProductId) {
-        await odooExecute("product.template", "write", [[existingProductId], { active: false }]);
-        
-        // Remove mapping
+        // Update last synced timestamp
         await supabase.from("integration_odoo_entities")
-          .delete()
+          .update({ last_synced_at: new Date().toISOString() })
           .eq("source_table", "dishes")
-          .eq("source_id", String(dish.id))
-          .eq("entity_type", "product");
+          .eq("source_id", dish.id);
+          
+        return new Response(
+          JSON.stringify({ success: true, action: "updated", productId }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      } else {
+        productId = await createProduct(dish);
         
-        result = { success: true, productId: existingProductId, message: `Archived product ${existingProductId}` };
+        // Track the mapping
+        await supabase.from("integration_odoo_entities").insert({
+          source_table: "dishes",
+          source_id: dish.id,
+          entity_type: "product",
+          odoo_id: productId,
+          last_synced_at: new Date().toISOString(),
+        });
+        
+        return new Response(
+          JSON.stringify({ success: true, action: "created", productId }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
     }
 
-    console.log("Product sync result:", JSON.stringify(result, null, 2));
+    if (type === "DELETE" && productId) {
+      // Archive the product in Odoo (soft delete)
+      await odooExec("product.template", "write", [[productId], { active: false }]);
+      
+      // Remove mapping
+      await supabase.from("integration_odoo_entities")
+        .delete()
+        .eq("source_table", "dishes")
+        .eq("source_id", dish.id);
+      
+      return new Response(
+        JSON.stringify({ success: true, action: "archived", productId }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     return new Response(
-      JSON.stringify(result),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ success: true, message: "No action needed" }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
   } catch (error) {
