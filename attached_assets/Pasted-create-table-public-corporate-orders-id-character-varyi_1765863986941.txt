@@ -1,0 +1,293 @@
+create table public.corporate_orders (
+
+  id character varying not null default gen_random_uuid (),
+
+  user_id character varying null,
+
+  order_number integer not null,
+
+  company_name text not null,
+
+  contact_person text not null,
+
+  email text null,
+
+  phone text not null,
+
+  number_of_people integer not null,
+
+  veg_count integer null default 0,
+
+  non_veg_count integer null default 0,
+
+  egg_count integer null default 0,
+
+  event_type text not null,
+
+  budget_min numeric(10, 2) null,
+
+  budget_max numeric(10, 2) null,
+
+  event_date text not null,
+
+  event_time text null,
+
+  additional_services text null,
+
+  message text null,
+
+  address_id character varying null,
+
+  status text not null default 'pending'::text,
+
+  created_at timestamp without time zone not null default now(),
+
+  constraint corporate_orders_pkey primary key (id),
+
+  constraint corporate_orders_order_number_key unique (order_number),
+
+  constraint corporate_orders_address_id_fkey foreign KEY (address_id) references addresses (id),
+
+  constraint corporate_orders_user_id_fkey foreign KEY (user_id) references users (id) on delete set null
+
+) TABLESPACE pg_default;
+
+create index IF not exists idx_corporate_orders_user_id on public.corporate_orders using btree (user_id) TABLESPACE pg_default;
+
+create index IF not exists idx_corporate_orders_order_number on public.corporate_orders using btree (order_number) TABLESPACE pg_default;
+
+
+
+create table public.catering_orders (
+
+  id character varying not null default gen_random_uuid (),
+
+  user_id character varying null,
+
+  order_number integer not null,
+
+  event_type text not null,
+
+  guest_count integer not null,
+
+  veg_count integer null default 0,
+
+  non_veg_count integer null default 0,
+
+  egg_count integer null default 0,
+
+  event_date text not null,
+
+  event_time text null,
+
+  meal_times text null,
+
+  dietary_types text null,
+
+  cuisines text null,
+
+  cuisine_preferences text null,
+
+  budget_min numeric(10, 2) null,
+
+  budget_max numeric(10, 2) null,
+
+  add_on_ids text null,
+
+  name text not null,
+
+  email text null,
+
+  phone text not null,
+
+  message text null,
+
+  address_id character varying null,
+
+  status text not null default 'pending'::text,
+
+  created_at timestamp without time zone not null default now(),
+
+  constraint catering_orders_pkey primary key (id),
+
+  constraint catering_orders_order_number_key unique (order_number),
+
+  constraint catering_orders_address_id_fkey foreign KEY (address_id) references addresses (id),
+
+  constraint catering_orders_user_id_fkey foreign KEY (user_id) references users (id) on delete set null
+
+) TABLESPACE pg_default;
+
+create index IF not exists idx_catering_orders_user_id on public.catering_orders using btree (user_id) TABLESPACE pg_default;
+
+create index IF not exists idx_catering_orders_order_number on public.catering_orders using btree (order_number) TABLESPACE pg_default;
+
+
+
+create table public.bulk_meal_orders (
+
+  id character varying not null default gen_random_uuid (),
+
+  user_id character varying not null,
+
+  order_number integer not null,
+
+  items text not null,
+
+  subtotal numeric(10, 2) not null,
+
+  gst numeric(10, 2) not null default 0,
+
+  platform_fee numeric(10, 2) not null default 0,
+
+  packaging_fee numeric(10, 2) not null default 0,
+
+  total numeric(10, 2) not null,
+
+  delivery_date text null,
+
+  delivery_time text null,
+
+  address_id character varying null,
+
+  status text not null default 'pending'::text,
+
+  created_at timestamp without time zone not null default now(),
+
+  selected_addons text null,
+
+  constraint bulk_meal_orders_pkey primary key (id),
+
+  constraint bulk_meal_orders_order_number_key unique (order_number),
+
+  constraint bulk_meal_orders_address_id_fkey foreign KEY (address_id) references addresses (id),
+
+  constraint bulk_meal_orders_user_id_fkey foreign KEY (user_id) references users (id) on delete CASCADE
+
+) TABLESPACE pg_default;
+
+create index IF not exists idx_bulk_meal_orders_user_id on public.bulk_meal_orders using btree (user_id) TABLESPACE pg_default;
+
+create index IF not exists idx_bulk_meal_orders_order_number on public.bulk_meal_orders using btree (order_number) TABLESPACE pg_default;
+
+create trigger bulk_meal_new_order
+
+after INSERT on bulk_meal_orders for EACH row
+
+execute FUNCTION supabase_functions.http_request (
+
+  'https://plattr.app.n8n.cloud/webhook/supabase-new-row-bulk-meal',
+
+  'POST',
+
+  '{"Content-type":"application/json"}',
+
+  '{}',
+
+  '5000'
+
+);
+
+
+
+create table public.mealbox_orders (
+
+  id character varying not null default gen_random_uuid (),
+
+  user_id character varying not null,
+
+  order_number integer not null,
+
+  portions text not null,
+
+  meal_preference text not null,
+
+  selected_meal_type text null,
+
+  veg_boxes integer not null default 0,
+
+  egg_boxes integer not null default 0,
+
+  non_veg_boxes integer not null default 0,
+
+  veg_plate_selections text null,
+
+  egg_plate_selections text null,
+
+  non_veg_plate_selections text null,
+
+  selected_addons text null,
+
+  subtotal numeric(10, 2) not null,
+
+  delivery_fee numeric(10, 2) not null default 0,
+
+  tax numeric(10, 2) not null default 0,
+
+  total numeric(10, 2) not null,
+
+  delivery_date text null,
+
+  delivery_time text null,
+
+  address_id character varying null,
+
+  status text not null default 'pending'::text,
+
+  created_at timestamp without time zone not null default now(),
+
+  constraint mealbox_orders_pkey primary key (id),
+
+  constraint mealbox_orders_order_number_key unique (order_number),
+
+  constraint mealbox_orders_address_id_fkey foreign KEY (address_id) references addresses (id),
+
+  constraint mealbox_orders_user_id_fkey foreign KEY (user_id) references users (id) on delete CASCADE
+
+) TABLESPACE pg_default;
+
+create index IF not exists idx_mealbox_orders_user_id on public.mealbox_orders using btree (user_id) TABLESPACE pg_default;
+
+create index IF not exists idx_mealbox_orders_order_number on public.mealbox_orders using btree (order_number) TABLESPACE pg_default;
+
+
+
+create table public.users (
+
+  id character varying not null default gen_random_uuid (),
+
+  username text not null,
+
+  password text not null,
+
+  email text null,
+
+  phone text null,
+
+  is_verified boolean not null default false,
+
+  created_time timestamp with time zone null,
+
+  constraint users_pkey primary key (id),
+
+  constraint users_username_unique unique (username)
+
+) TABLESPACE pg_default;
+
+create trigger new_lead
+
+after INSERT on users for EACH row
+
+execute FUNCTION supabase_functions.http_request (
+
+  'https://plattr.app.n8n.cloud/webhook/new-lead',
+
+  'POST',
+
+  '{"Content-type":"application/json"}',
+
+  '{}',
+
+  '5000'
+
+);
