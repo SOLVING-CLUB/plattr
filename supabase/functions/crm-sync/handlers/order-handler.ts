@@ -313,6 +313,33 @@ async function createOpportunityAndQuotation(
     orderLines: OrderLineItem[];
   }
 ): Promise<OrderResult> {
+  // Idempotency check - return existing if already processed
+  const { data: existingOpp } = await supabase
+    .from("integration_odoo_entities")
+    .select("odoo_id")
+    .eq("source_table", params.sourceTable)
+    .eq("source_id", params.sourceId)
+    .eq("entity_type", "opportunity")
+    .single();
+
+  if (existingOpp) {
+    const { data: existingQuote } = await supabase
+      .from("integration_odoo_entities")
+      .select("odoo_id")
+      .eq("source_table", params.sourceTable)
+      .eq("source_id", params.sourceId)
+      .eq("entity_type", "quotation")
+      .single();
+
+    console.log("Idempotency: Already processed, returning existing IDs");
+    return {
+      success: true,
+      opportunityId: existingOpp.odoo_id,
+      quotationId: existingQuote?.odoo_id,
+      message: `Already processed: opportunity ${existingOpp.odoo_id} for order #${params.orderNumber}`,
+    };
+  }
+
   // Check if user has an existing lead to convert
   let opportunityId: number;
   const { data: userMapping } = await supabase
@@ -384,12 +411,56 @@ async function createSalesOrderAndInvoice(
     notes: string;
   }
 ): Promise<OrderResult> {
-  // Create quotation/sales order
-  const salesOrderId = await odoo.createQuotation({
-    partnerId: params.partnerId,
-    orderLines: params.orderLines,
-    notes: params.notes,
-  });
+  // Idempotency check - return existing if already processed
+  const { data: existingSO } = await supabase
+    .from("integration_odoo_entities")
+    .select("odoo_id")
+    .eq("source_table", params.sourceTable)
+    .eq("source_id", params.sourceId)
+    .eq("entity_type", "sales_order")
+    .single();
+
+  if (existingSO) {
+    const { data: existingInv } = await supabase
+      .from("integration_odoo_entities")
+      .select("odoo_id")
+      .eq("source_table", params.sourceTable)
+      .eq("source_id", params.sourceId)
+      .eq("entity_type", "invoice")
+      .single();
+
+    console.log("Idempotency: Already processed, returning existing IDs");
+    return {
+      success: true,
+      salesOrderId: existingSO.odoo_id,
+      invoiceId: existingInv?.odoo_id,
+      message: `Already processed: sales order ${existingSO.odoo_id} for order #${params.orderNumber}`,
+    };
+  }
+
+  // Check if there's an existing quotation we can confirm instead of creating new
+  const { data: existingQuotation } = await supabase
+    .from("integration_odoo_entities")
+    .select("odoo_id")
+    .eq("source_table", params.sourceTable)
+    .eq("source_id", params.sourceId)
+    .eq("entity_type", "quotation")
+    .single();
+
+  let salesOrderId: number;
+
+  if (existingQuotation) {
+    // Use existing quotation and confirm it
+    salesOrderId = existingQuotation.odoo_id;
+    console.log("Reusing existing quotation:", salesOrderId);
+  } else {
+    // Create new quotation/sales order
+    salesOrderId = await odoo.createQuotation({
+      partnerId: params.partnerId,
+      orderLines: params.orderLines,
+      notes: params.notes,
+    });
+  }
 
   // Confirm the sales order
   await odoo.confirmSalesOrder(salesOrderId);

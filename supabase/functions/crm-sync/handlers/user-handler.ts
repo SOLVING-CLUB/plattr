@@ -17,6 +17,24 @@ export async function handleUserInsert(
   console.log("Processing user INSERT:", record.id);
 
   try {
+    // Idempotency check - return existing if already processed
+    const { data: existingLead } = await supabase
+      .from("integration_odoo_entities")
+      .select("odoo_id")
+      .eq("source_table", "users")
+      .eq("source_id", record.id)
+      .eq("entity_type", "lead")
+      .single();
+
+    if (existingLead) {
+      console.log("Idempotency: Lead already exists for user", record.id);
+      return {
+        success: true,
+        leadId: existingLead.odoo_id,
+        message: `Already processed: lead ${existingLead.odoo_id} for user ${record.id}`,
+      };
+    }
+
     // Create lead in Odoo
     const leadName = record.username || record.phone || record.email || "New User";
     const leadId = await odoo.createLead({

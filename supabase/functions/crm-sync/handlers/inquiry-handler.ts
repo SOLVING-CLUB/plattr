@@ -18,6 +18,33 @@ export async function handleCateringOrder(
   console.log("Processing catering order:", record.order_number);
 
   try {
+    // Idempotency check - return existing if already processed
+    const { data: existingOpp } = await supabase
+      .from("integration_odoo_entities")
+      .select("odoo_id")
+      .eq("source_table", "catering_orders")
+      .eq("source_id", record.id)
+      .eq("entity_type", "opportunity")
+      .single();
+
+    if (existingOpp) {
+      const { data: existingQuote } = await supabase
+        .from("integration_odoo_entities")
+        .select("odoo_id")
+        .eq("source_table", "catering_orders")
+        .eq("source_id", record.id)
+        .eq("entity_type", "quotation")
+        .single();
+
+      console.log("Idempotency: Already processed catering order", record.order_number);
+      return {
+        success: true,
+        opportunityId: existingOpp.odoo_id,
+        quotationId: existingQuote?.odoo_id,
+        message: `Already processed: opportunity ${existingOpp.odoo_id} for catering order ${record.order_number}`,
+      };
+    }
+
     // Find or get the user's lead
     let leadId: number | null = null;
     if (record.user_id) {
@@ -122,6 +149,33 @@ export async function handleCorporateOrder(
   console.log("Processing corporate order:", record.order_number);
 
   try {
+    // Idempotency check - return existing if already processed
+    const { data: existingOpp } = await supabase
+      .from("integration_odoo_entities")
+      .select("odoo_id")
+      .eq("source_table", "corporate_orders")
+      .eq("source_id", record.id)
+      .eq("entity_type", "opportunity")
+      .single();
+
+    if (existingOpp) {
+      const { data: existingQuote } = await supabase
+        .from("integration_odoo_entities")
+        .select("odoo_id")
+        .eq("source_table", "corporate_orders")
+        .eq("source_id", record.id)
+        .eq("entity_type", "quotation")
+        .single();
+
+      console.log("Idempotency: Already processed corporate order", record.order_number);
+      return {
+        success: true,
+        opportunityId: existingOpp.odoo_id,
+        quotationId: existingQuote?.odoo_id,
+        message: `Already processed: opportunity ${existingOpp.odoo_id} for corporate order ${record.order_number}`,
+      };
+    }
+
     // Find or get the user's lead
     let leadId: number | null = null;
     if (record.user_id) {
