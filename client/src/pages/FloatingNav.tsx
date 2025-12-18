@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Home, Grid3x3, User } from "lucide-react";
 
 interface FloatingNavProps {
@@ -9,11 +10,41 @@ export default function FloatingNav({
   activeTab = "home",
   onTabChange 
 }: FloatingNavProps) {
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+
+  // Detect keyboard visibility using visualViewport API
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.visualViewport) {
+        const heightDiff = window.innerHeight - window.visualViewport.height;
+        // Keyboard is likely open if viewport is significantly smaller (>150px diff)
+        setIsKeyboardOpen(heightDiff > 150);
+      }
+    };
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleResize);
+      window.visualViewport.addEventListener('scroll', handleResize);
+      handleResize(); // Initial check
+    }
+
+    return () => {
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', handleResize);
+        window.visualViewport.removeEventListener('scroll', handleResize);
+      }
+    };
+  }, []);
   const tabs = [
     { id: "home" as const, icon: Home, label: "Home" },
     { id: "menu" as const, icon: Grid3x3, label: "Menu" },
     { id: "profile" as const, icon: User, label: "Profile" },
   ];
+
+  // Hide nav when keyboard is open
+  if (isKeyboardOpen) {
+    return null;
+  }
 
   return (
     <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-md">

@@ -1213,12 +1213,15 @@ export default function CorporateOrder() {
   const minDateTime = getMinDateTime();
 
   const [formData, setFormData] = useState(() => {
+    // Prefill phone and email from localStorage (logged in user)
+    const savedPhone = localStorage.getItem("phone");
+    const savedEmail = localStorage.getItem("email");
     const minDT = getMinDateTime();
     return {
       companyName: "",
       contactPerson: "",
-      email: "",
-      phone: "",
+      email: savedEmail || "",
+      phone: savedPhone ? `+91 ${savedPhone}` : "",
       veg: "",
       nonVeg: "",
       egg: "",

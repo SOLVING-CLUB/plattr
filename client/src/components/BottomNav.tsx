@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Home, Grid3x3, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -8,11 +9,42 @@ interface BottomNavProps {
 }
 
 export default function BottomNav({ activeTab, onTabChange, cartItemCount = 0 }: BottomNavProps) {
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+
+  // Detect keyboard visibility using visualViewport API
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.visualViewport) {
+        const heightDiff = window.innerHeight - window.visualViewport.height;
+        // Keyboard is likely open if viewport is significantly smaller (>150px diff)
+        setIsKeyboardOpen(heightDiff > 150);
+      }
+    };
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleResize);
+      window.visualViewport.addEventListener('scroll', handleResize);
+      handleResize(); // Initial check
+    }
+
+    return () => {
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', handleResize);
+        window.visualViewport.removeEventListener('scroll', handleResize);
+      }
+    };
+  }, []);
+
   const tabs = [
     { id: 'home', label: 'Home', icon: Home },
     { id: 'categories', label: 'Menu', icon: Grid3x3 },
     { id: 'profile', label: 'Profile', icon: User },
   ];
+
+  // Hide nav when keyboard is open
+  if (isKeyboardOpen) {
+    return null;
+  }
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 md:hidden" data-testid="nav-bottom">

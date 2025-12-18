@@ -105,6 +105,7 @@ export default function DeliveryDatePicker({
 
                     return (
                       <button
+                        type="button"
                         key={day.toISOString()}
                         onClick={() => handleDateClick(day)}
                         disabled={isPast}

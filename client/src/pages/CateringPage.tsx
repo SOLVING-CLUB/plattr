@@ -1058,7 +1058,6 @@ export default function CateringOrder() {
     const minDT = getMinDateTime();
     return {
       eventType: "",
-      numberOfPeople: "",
       veg: "",
       nonVeg: "",
       egg: "",
@@ -1174,6 +1173,16 @@ export default function CateringOrder() {
       return;
     }
 
+    // Ensure at least one guest count is provided
+    if (totalPeople < 1) {
+      toast({
+        title: "Guest Count Required",
+        description: "Please enter the number of guests (Veg, Non-Veg, or Egg).",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Validate Bangalore address from saved location
     const savedLocation = localStorage.getItem(LOCATION_STORAGE_KEY);
     if (savedLocation) {
@@ -1215,7 +1224,7 @@ export default function CateringOrder() {
       // Create catering order
       await cateringOrderService.create({
         eventType: formData.eventType,
-        guestCount: parseInt(formData.numberOfPeople) || totalPeople || 0,
+        guestCount: totalPeople,
         vegCount: parseInt(formData.veg) || 0,
         nonVegCount: parseInt(formData.nonVeg) || 0,
         eggCount: parseInt(formData.egg) || 0,
@@ -1556,30 +1565,12 @@ export default function CateringOrder() {
                 />
               </div>
 
-              {/* Number of People */}
-              <div className="space-y-2">
-                <Label htmlFor="numberOfPeople">Number of People</Label>
-                <Input
-                  id="numberOfPeople"
-                  type="number"
-                  data-testid="input-number-of-people"
-                  value={formData.numberOfPeople}
-                  onChange={(e) =>
-                    setFormData({ ...formData, numberOfPeople: e.target.value })
-                  }
-                  placeholder="Ex: 100"
-                  min="0"
-                  className="border-[#1A9952] focus-visible:ring-[#1A9952]"
-                  style={{ fontFamily: "Sweet Sans Pro" }}
-                />
-              </div>
-
               {/* Dietary Preferences */}
               <div className="space-y-3">
                 <Label
                   style={{ fontFamily: "Sweet Sans Pro", fontWeight: 600 }}
                 >
-                  Number of People & Dietary Preferences
+                  Number of People & Dietary Preferences *
                 </Label>
 
                 <div className="flex items-center gap-3">
