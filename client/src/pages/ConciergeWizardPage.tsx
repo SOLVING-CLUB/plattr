@@ -797,7 +797,6 @@ export default function ConciergeWizardPage() {
                   })}
                 </div>
               )}
-            </div>
           </div>
         )}
       </div>
