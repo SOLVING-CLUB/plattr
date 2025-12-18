@@ -1598,7 +1598,12 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
   const isAddressFieldsDisabled = !!selectedAddressId;
 
   // Restore MealBox progress on mount (only once)
+  // Skip restoration when entering from 60-min flow (onNavigate is truthy) to start fresh
   useEffect(() => {
+    if (onNavigate) {
+      // In 60-min flow, don't restore - start fresh
+      return;
+    }
     if (mealBoxProgress && !isRestoringRef.current && currentStep === 1) {
       isRestoringRef.current = true;
       // Only restore step if it's less than 7 (don't restore if already on payment step)
@@ -1633,7 +1638,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
       setCurrentDietaryTab(mealBoxProgress.currentDietaryTab || "veg");
       hasInteractedRef.current = true;
     }
-  }, [mealBoxProgress]);
+  }, [mealBoxProgress, onNavigate]);
 
   // Debug: Log step changes
   useEffect(() => {
