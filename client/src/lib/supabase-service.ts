@@ -1653,19 +1653,32 @@ export const couponService = {
   },
 
   /**
-   * Get eligible coupons for a user and order type
-   * Returns coupons that could be applied to the order
+   * Get all coupons with eligibility status for a user and order type
+   * Returns both eligible and non-eligible coupons with reasons
    */
-  async getEligibleCoupons(orderType: string = 'regular', orderTotal: number = 0): Promise<Array<{
-    id: string;
-    code: string;
-    description: string | null;
-    discountType: 'percentage' | 'fixed' | 'free_delivery';
-    discountValue: number;
-    minOrderAmount: number;
-    maxDiscount?: number;
-    savingsText: string;
-  }>> {
+  async getAllCouponsWithEligibility(orderType: string = 'regular', orderTotal: number = 0): Promise<{
+    eligible: Array<{
+      id: string;
+      code: string;
+      description: string | null;
+      discountType: 'percentage' | 'fixed' | 'free_delivery';
+      discountValue: number;
+      minOrderAmount: number;
+      maxDiscount?: number;
+      savingsText: string;
+    }>;
+    ineligible: Array<{
+      id: string;
+      code: string;
+      description: string | null;
+      discountType: 'percentage' | 'fixed' | 'free_delivery';
+      discountValue: number;
+      minOrderAmount: number;
+      maxDiscount?: number;
+      savingsText: string;
+      reason: string;
+    }>;
+  }> {
     const now = new Date().toISOString();
     const user = await getAuthenticatedUser();
 
@@ -1679,10 +1692,10 @@ export const couponService = {
 
     if (error || !coupons) {
       console.error('Error fetching coupons:', error);
-      return [];
+      return { eligible: [], ineligible: [] };
     }
 
-    const eligibleCoupons: Array<{
+    const eligible: Array<{
       id: string;
       code: string;
       description: string | null;
@@ -1693,87 +1706,24 @@ export const couponService = {
       savingsText: string;
     }> = [];
 
-    for (const coupon of coupons) {
-      // Check usage limit
-      if (coupon.usage_limit && coupon.usage_count >= coupon.usage_limit) {
-        continue;
-      }
+    const ineligible: Array<{
+      id: string;
+      code: string;
+      description: string | null;
+      discountType: 'percentage' | 'fixed' | 'free_delivery';
+      discountValue: number;
+      minOrderAmount: number;
+      maxDiscount?: number;
+      savingsText: string;
+      reason: string;
+    }> = [];
 
-      // Check valid days of week (0=Sunday, 6=Saturday)
-      if (coupon.valid_days_of_week && coupon.valid_days_of_week.length > 0) {
-        const currentDay = new Date().getDay();
-        if (!coupon.valid_days_of_week.includes(currentDay)) {
-          continue; // Skip coupons not valid today
-        }
-      }
-
-      // Check order type
-      if (coupon.applicable_order_types && coupon.applicable_order_types.length > 0) {
-        const orderTypes = coupon.applicable_order_types as string[];
-        if (!orderTypes.includes('all') && !orderTypes.includes(orderType)) {
-          continue;
-        }
-      }
-
-      // Check per-user limit
-      if (user && coupon.per_user_limit) {
-        const { count } = await supabase
-          .from('coupon_usages')
-          .select('*', { count: 'exact', head: true })
-          .eq('coupon_id', coupon.id)
-          .eq('user_id', user.id);
-
-        if (count && count >= coupon.per_user_limit) {
-          continue;
-        }
-      }
-
-      // Check first-time user only
-      if (coupon.first_time_user_only && user) {
-        const { count: orderCount } = await supabase
-          .from('orders')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', user.id);
-        
-        const { count: bulkCount } = await supabase
-          .from('bulk_meal_orders')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', user.id);
-
-        if ((orderCount || 0) + (bulkCount || 0) > 0) {
-          continue;
-        }
-      }
-
-      // Check returning user only restriction
-      if (coupon.returning_user_only && user) {
-        const { count: orderCount } = await supabase
-          .from('orders')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', user.id);
-
-        if (!orderCount || orderCount === 0) {
-          continue; // Skip - user has no previous orders
-        }
-      }
-
-      // Check minimum previous orders requirement
-      if (coupon.min_previous_orders && coupon.min_previous_orders > 0 && user) {
-        const { count: orderCount } = await supabase
-          .from('orders')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', user.id);
-
-        if (!orderCount || orderCount < coupon.min_previous_orders) {
-          continue; // Skip - user doesn't have enough orders
-        }
-      }
-
+    // Helper to build coupon object
+    const buildCouponObj = (coupon: any) => {
       const discountValue = parseFloat(coupon.discount_value);
       const minOrderAmount = parseFloat(coupon.min_order_amount || '0');
       const maxDiscount = coupon.max_discount ? parseFloat(coupon.max_discount) : undefined;
 
-      // Generate savings text
       let savingsText = '';
       if (coupon.discount_type === 'free_delivery') {
         savingsText = 'Free Delivery';
@@ -1790,7 +1740,7 @@ export const couponService = {
         savingsText += ` on orders above ₹${minOrderAmount}`;
       }
 
-      eligibleCoupons.push({
+      return {
         id: coupon.id,
         code: coupon.code,
         description: coupon.description,
@@ -1799,10 +1749,124 @@ export const couponService = {
         minOrderAmount,
         maxDiscount,
         savingsText,
-      });
+      };
+    };
+
+    for (const coupon of coupons) {
+      let ineligibleReason: string | null = null;
+
+      // Check usage limit
+      if (coupon.usage_limit && coupon.usage_count >= coupon.usage_limit) {
+        ineligibleReason = 'Coupon limit reached';
+      }
+
+      // Check valid days of week (0=Sunday, 6=Saturday)
+      if (!ineligibleReason && coupon.valid_days_of_week && coupon.valid_days_of_week.length > 0) {
+        const currentDay = new Date().getDay();
+        if (!coupon.valid_days_of_week.includes(currentDay)) {
+          const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+          const validDays = coupon.valid_days_of_week.map((d: number) => dayNames[d]).join(', ');
+          ineligibleReason = `Only valid on ${validDays}`;
+        }
+      }
+
+      // Check order type
+      if (!ineligibleReason && coupon.applicable_order_types && coupon.applicable_order_types.length > 0) {
+        const orderTypes = coupon.applicable_order_types as string[];
+        if (!orderTypes.includes('all') && !orderTypes.includes(orderType)) {
+          const typeLabels: Record<string, string> = {
+            'bulk_meal': 'Bulk Meals',
+            'mealbox': 'Meal Box',
+            'catering': 'Catering',
+            'corporate': 'Corporate',
+          };
+          const validFor = orderTypes.map(t => typeLabels[t] || t).join(', ');
+          ineligibleReason = `Only for ${validFor}`;
+        }
+      }
+
+      // Check per-user limit
+      if (!ineligibleReason && user && coupon.per_user_limit) {
+        const { count } = await supabase
+          .from('coupon_usages')
+          .select('*', { count: 'exact', head: true })
+          .eq('coupon_id', coupon.id)
+          .eq('user_id', user.id);
+
+        if (count && count >= coupon.per_user_limit) {
+          ineligibleReason = 'Already used';
+        }
+      }
+
+      // Check first-time user only
+      if (!ineligibleReason && coupon.first_time_user_only && user) {
+        const { count: orderCount } = await supabase
+          .from('orders')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id);
+        
+        const { count: bulkCount } = await supabase
+          .from('bulk_meal_orders')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id);
+
+        if ((orderCount || 0) + (bulkCount || 0) > 0) {
+          ineligibleReason = 'For first-time users only';
+        }
+      }
+
+      // Check returning user only restriction
+      if (!ineligibleReason && coupon.returning_user_only && user) {
+        const { count: orderCount } = await supabase
+          .from('orders')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id);
+
+        if (!orderCount || orderCount === 0) {
+          ineligibleReason = 'For returning customers';
+        }
+      }
+
+      // Check minimum previous orders requirement
+      if (!ineligibleReason && coupon.min_previous_orders && coupon.min_previous_orders > 0 && user) {
+        const { count: orderCount } = await supabase
+          .from('orders')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id);
+
+        if (!orderCount || orderCount < coupon.min_previous_orders) {
+          ineligibleReason = `Need ${coupon.min_previous_orders}+ orders`;
+        }
+      }
+
+      const couponObj = buildCouponObj(coupon);
+
+      if (ineligibleReason) {
+        ineligible.push({ ...couponObj, reason: ineligibleReason });
+      } else {
+        eligible.push(couponObj);
+      }
     }
 
-    return eligibleCoupons;
+    return { eligible, ineligible };
+  },
+
+  /**
+   * Get eligible coupons for a user and order type (backwards compatible)
+   * Returns coupons that could be applied to the order
+   */
+  async getEligibleCoupons(orderType: string = 'regular', orderTotal: number = 0): Promise<Array<{
+    id: string;
+    code: string;
+    description: string | null;
+    discountType: 'percentage' | 'fixed' | 'free_delivery';
+    discountValue: number;
+    minOrderAmount: number;
+    maxDiscount?: number;
+    savingsText: string;
+  }>> {
+    const result = await this.getAllCouponsWithEligibility(orderType, orderTotal);
+    return result.eligible;
   },
 
   /**

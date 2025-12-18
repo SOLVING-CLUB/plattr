@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Tag, X, Check, AlertCircle, Truck, ChevronRight, Ticket } from "lucide-react";
+import { Loader2, Tag, X, Check, AlertCircle, Truck, ChevronRight, Ticket, Lock } from "lucide-react";
 import { couponService, CouponValidationResult } from "@/lib/supabase-service";
 import { useQuery } from "@tanstack/react-query";
 
@@ -38,11 +38,15 @@ export default function CouponInput({
   const [showManualEntry, setShowManualEntry] = useState(false);
   const [showAllCoupons, setShowAllCoupons] = useState(false);
 
-  const { data: eligibleCoupons = [], isLoading: isLoadingCoupons } = useQuery({
-    queryKey: ['eligible-coupons', orderType, subtotal],
-    queryFn: () => couponService.getEligibleCoupons(orderType, subtotal),
+  const { data: couponsData, isLoading: isLoadingCoupons } = useQuery({
+    queryKey: ['all-coupons-with-eligibility', orderType, subtotal],
+    queryFn: () => couponService.getAllCouponsWithEligibility(orderType, subtotal),
     staleTime: 60000,
   });
+
+  const eligibleCoupons = couponsData?.eligible || [];
+  const ineligibleCoupons = couponsData?.ineligible || [];
+  const totalCoupons = eligibleCoupons.length + ineligibleCoupons.length;
 
   const handleApplyCoupon = async (code?: string) => {
     const codeToApply = code || couponCode.trim();
@@ -133,7 +137,7 @@ export default function CouponInput({
           <Loader2 className="w-4 h-4 animate-spin" />
           <span>Loading available coupons...</span>
         </div>
-      ) : eligibleCoupons.length > 0 && !showManualEntry ? (
+      ) : (eligibleCoupons.length > 0 || ineligibleCoupons.length > 0) && !showManualEntry ? (
         <div className="space-y-2">
           {(showAllCoupons ? eligibleCoupons : eligibleCoupons.slice(0, 2)).map((coupon) => (
             <div
@@ -170,19 +174,51 @@ export default function CouponInput({
             </div>
           ))}
           
-          {eligibleCoupons.length > 2 && !showAllCoupons && (
+          {showAllCoupons && ineligibleCoupons.map((coupon) => (
+            <div
+              key={coupon.id}
+              className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg opacity-60"
+              data-testid={`coupon-ineligible-${coupon.code}`}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                  <Lock className="w-4 h-4 text-gray-400" />
+                </div>
+                <div>
+                  <p className="font-medium text-gray-500 text-sm" style={{ fontFamily: "Sweet Sans Pro" }}>
+                    {coupon.savingsText} with '{coupon.code}'
+                  </p>
+                  <p className="text-xs text-red-500" style={{ fontFamily: "Sweet Sans Pro" }}>
+                    {coupon.reason}
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled
+                className="text-gray-400 border-gray-200 cursor-not-allowed font-semibold"
+                style={{ fontFamily: "Sweet Sans Pro" }}
+                data-testid={`button-apply-${coupon.code}-disabled`}
+              >
+                APPLY
+              </Button>
+            </div>
+          ))}
+          
+          {totalCoupons > 2 && !showAllCoupons && (
             <button
               onClick={() => setShowAllCoupons(true)}
               className="flex items-center gap-1 text-sm text-amber-600 hover:text-amber-700 font-medium px-1"
               style={{ fontFamily: "Sweet Sans Pro" }}
               data-testid="button-view-all-coupons"
             >
-              View all {eligibleCoupons.length} coupons
+              View all {totalCoupons} coupons
               <ChevronRight className="w-4 h-4" />
             </button>
           )}
           
-          {showAllCoupons && eligibleCoupons.length > 2 && (
+          {showAllCoupons && totalCoupons > 2 && (
             <button
               onClick={() => setShowAllCoupons(false)}
               className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 px-1"
@@ -238,7 +274,7 @@ export default function CouponInput({
             </Button>
           </div>
           
-          {eligibleCoupons.length > 0 && showManualEntry && (
+          {(eligibleCoupons.length > 0 || ineligibleCoupons.length > 0) && showManualEntry && (
             <button
               onClick={() => setShowManualEntry(false)}
               className="flex items-center gap-1 text-sm text-amber-600 hover:text-amber-700 font-medium"
