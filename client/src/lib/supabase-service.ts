@@ -1752,15 +1752,6 @@ export const couponService = {
       };
     };
 
-    console.log('All coupons from DB:', coupons.map(c => ({
-      code: c.code,
-      first_time_user_only: c.first_time_user_only,
-      returning_user_only: c.returning_user_only,
-      valid_days_of_week: c.valid_days_of_week,
-      min_previous_orders: c.min_previous_orders,
-      applicable_order_types: c.applicable_order_types
-    })));
-
     for (const coupon of coupons) {
       let ineligibleReason: string | null = null;
 

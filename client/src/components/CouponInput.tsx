@@ -41,14 +41,12 @@ export default function CouponInput({
   const { data: couponsData, isLoading: isLoadingCoupons } = useQuery({
     queryKey: ['all-coupons-with-eligibility', orderType, subtotal],
     queryFn: () => couponService.getAllCouponsWithEligibility(orderType, subtotal),
-    staleTime: 0, // No cache for debugging
+    staleTime: 60000,
   });
 
   const eligibleCoupons = couponsData?.eligible || [];
   const ineligibleCoupons = couponsData?.ineligible || [];
   const totalCoupons = eligibleCoupons.length + ineligibleCoupons.length;
-  
-  console.log('Coupon eligibility data:', { eligibleCoupons, ineligibleCoupons, orderType });
 
   const handleApplyCoupon = async (code?: string) => {
     const codeToApply = code || couponCode.trim();
