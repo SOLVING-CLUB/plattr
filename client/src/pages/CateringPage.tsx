@@ -1390,12 +1390,12 @@ export default function CateringOrder() {
         {/* Location and Cart */}
         <div className="flex items-center justify-between mb-6">
           <button
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 max-w-[180px]"
             onClick={() => setLocation("/location")}
           >
-            <MapPin className="w-5 h-5 text-white" />
+            <MapPin className="w-5 h-5 text-white flex-shrink-0" />
             <span
-              className="text-white font-semibold text-[18px]"
+              className="text-white font-semibold text-[18px] truncate max-w-[120px]"
               style={{ fontFamily: "Sweet Sans Pro" }}
             >
               {locationLabel}

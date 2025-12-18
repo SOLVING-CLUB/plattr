@@ -656,9 +656,9 @@ export default function Menu() {
       <div className="relative z-10 px-4 pt-4 pb-6">
         {/* Location and Cart */}
         <div className="flex items-center justify-between mb-6">
-          <button className="flex items-center gap-2" onClick={() => setLocation("/location")}>
-            <MapPin className="w-5 h-5 text-[#06352A]" />
-            <span className="text-[#06352A] font-semibold text-[18px]" style={{ fontFamily: "Sweet Sans Pro" }}>
+          <button className="flex items-center gap-2 max-w-[180px]" onClick={() => setLocation("/location")}>
+            <MapPin className="w-5 h-5 text-[#06352A] flex-shrink-0" />
+            <span className="text-[#06352A] font-semibold text-[18px] truncate max-w-[120px]" style={{ fontFamily: "Sweet Sans Pro" }}>
               {locationLabel}
             </span>
           </button>
