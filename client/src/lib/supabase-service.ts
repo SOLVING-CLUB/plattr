@@ -9,6 +9,37 @@ import { supabaseAuth } from './supabase-auth';
 const supabase = supabaseAuth;
 
 /**
+ * Convert time slot (e.g., "9:00 AM - 10:00 AM") to 24-hour format (e.g., "09:00")
+ * Returns the START time of the slot
+ */
+function parseTimeSlotTo24Hour(timeSlot: string): string {
+  if (!timeSlot) return '12:00';
+  
+  // If already in 24-hour format (HH:MM), return as-is
+  if (/^\d{1,2}:\d{2}$/.test(timeSlot)) {
+    const [hours, mins] = timeSlot.split(':');
+    return `${hours.padStart(2, '0')}:${mins}`;
+  }
+  
+  // Extract the first time from a slot like "9:00 AM - 10:00 AM"
+  const timeMatch = timeSlot.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+  if (!timeMatch) return '12:00';
+  
+  let hours = parseInt(timeMatch[1]);
+  const mins = timeMatch[2];
+  const period = timeMatch[3].toUpperCase();
+  
+  // Convert to 24-hour format
+  if (period === 'PM' && hours !== 12) {
+    hours += 12;
+  } else if (period === 'AM' && hours === 12) {
+    hours = 0;
+  }
+  
+  return `${hours.toString().padStart(2, '0')}:${mins}`;
+}
+
+/**
  * Ensure user exists in public.users table (auto-create if missing)
  * This handles the case where Supabase Auth user exists but no corresponding DB record
  */
@@ -1074,7 +1105,7 @@ export const sixtyMinBulkOrderService = {
         delivery_fee: orderData.platformFee.toFixed(2),
         total_amount: orderData.total.toFixed(2),
         requested_delivery_time: orderData.deliveryDate && orderData.deliveryTime 
-          ? `${orderData.deliveryDate}T${orderData.deliveryTime}:00` 
+          ? `${orderData.deliveryDate}T${parseTimeSlotTo24Hour(orderData.deliveryTime)}:00` 
           : null,
         delivery_address: finalDeliveryAddress,
         order_status: 'pending',
@@ -1228,7 +1259,7 @@ export const sixtyMinMealboxOrderService = {
         delivery_fee: orderData.deliveryFee.toFixed(2),
         total_amount: orderData.total.toFixed(2),
         requested_delivery_time: orderData.deliveryDate && orderData.deliveryTime 
-          ? `${orderData.deliveryDate}T${orderData.deliveryTime}:00` 
+          ? `${orderData.deliveryDate}T${parseTimeSlotTo24Hour(orderData.deliveryTime)}:00` 
           : null,
         delivery_address: finalDeliveryAddress,
         order_status: 'pending',
