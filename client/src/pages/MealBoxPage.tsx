@@ -1874,7 +1874,13 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
   }, [vegBoxes, eggBoxes, nonVegBoxes]);
 
   // Clear box counts for inactive preferences when meal preference changes
+  // Skip during restoration to preserve saved non-veg selections
   useEffect(() => {
+    // Don't clear boxes during restoration - we're loading saved state
+    if (isRestoringRef.current) {
+      return;
+    }
+    
     if (mealPreference === "veg") {
       // If VEG selected, clear egg and non-veg boxes
       setEggBoxes("");
