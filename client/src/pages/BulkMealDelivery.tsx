@@ -221,22 +221,49 @@ export default function BulkMealsDelivery() {
       let validAddressId: string | undefined = undefined;
       let deliveryAddressText: string | undefined = undefined;
       
-      if (selectedAddressId && selectedAddressId.trim() !== "" && selectedAddressId !== "home" && selectedAddressId !== "office") {
-        // Check if it's a valid UUID format (existing saved address)
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-        if (uuidRegex.test(selectedAddressId)) {
-          validAddressId = selectedAddressId;
+      // Check if a saved address is selected (valid UUID format)
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const hasSavedAddress = selectedAddressId && selectedAddressId.trim() !== "" && 
+                              selectedAddressId !== "home" && selectedAddressId !== "office" &&
+                              uuidRegex.test(selectedAddressId);
+      
+      if (hasSavedAddress) {
+        validAddressId = selectedAddressId;
+      } else {
+        // No saved address - validate manual address fields
+        // Required fields: Address Line 1, City, Pincode
+        if (!addressLine1 || !addressLine1.trim()) {
+          toast({
+            title: "Address Required",
+            description: "Please enter Address Line 1.",
+            variant: "destructive",
+          });
+          setIsCreatingOrder(false);
+          return;
         }
-      } else if (addressLine1 && city) {
-        // No saved address selected but manual address fields are filled
-        const fullAddress = [addressLine1, addressLine2, city, state, pincode].filter(Boolean).join(", ");
         
-        // Validate Bangalore address - check pincode first (most reliable), then full address
-        const isPincodeValid = pincode ? validateBangalorePincode(pincode) : true;
-        const isAddressValid = validateBangaloreAddress(fullAddress);
+        if (!city || !city.trim()) {
+          toast({
+            title: "City Required",
+            description: "Please enter the city.",
+            variant: "destructive",
+          });
+          setIsCreatingOrder(false);
+          return;
+        }
         
-        // If pincode is provided, it MUST be a Bangalore pincode (560xxx)
-        if (pincode && !isPincodeValid) {
+        if (!pincode || !pincode.trim()) {
+          toast({
+            title: "Pincode Required",
+            description: "Please enter the pincode.",
+            variant: "destructive",
+          });
+          setIsCreatingOrder(false);
+          return;
+        }
+        
+        // Validate Bangalore pincode (must start with 560)
+        if (!validateBangalorePincode(pincode)) {
           toast({
             title: BANGALORE_VALIDATION_ERROR.title,
             description: "Please enter a valid Bangalore pincode (starting with 560).",
@@ -246,16 +273,7 @@ export default function BulkMealsDelivery() {
           return;
         }
         
-        // If no pincode provided, validate the address text
-        if (!pincode && !isAddressValid) {
-          toast({
-            title: BANGALORE_VALIDATION_ERROR.title,
-            description: BANGALORE_VALIDATION_ERROR.description,
-            variant: "destructive",
-          });
-          setIsCreatingOrder(false);
-          return;
-        }
+        const fullAddress = [addressLine1, addressLine2, city, state, pincode].filter(Boolean).join(", ");
         
         if (saveAddressForFuture) {
           // Only save to addresses table when user opts in

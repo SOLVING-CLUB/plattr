@@ -4942,38 +4942,54 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                     }
                   }
 
-                  // Validate addressId - only use if it's a valid UUID (not empty string or invalid value)
+                  // Check if a saved address is selected (valid UUID format)
+                  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+                  const hasSavedAddress = selectedAddressId && selectedAddressId.trim() !== "" && 
+                                          selectedAddressId !== "home" && selectedAddressId !== "office" &&
+                                          uuidRegex.test(selectedAddressId);
+                  
                   let validAddressId: string | undefined = undefined;
-                  if (selectedAddressId && selectedAddressId.trim() !== "" && selectedAddressId !== "home" && selectedAddressId !== "office") {
-                    // Check if it's a valid UUID format
-                    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-                    if (uuidRegex.test(selectedAddressId)) {
-                      validAddressId = selectedAddressId;
-                    }
-                  }
-
-                  // Validate Bangalore address for manual entry - check pincode first (most reliable)
-                  if (!validAddressId && addressLine1) {
-                    const fullAddress = [addressLine1, addressLine2, city, addressState, pincode].filter(Boolean).join(', ');
-                    const isPincodeValid = pincode ? validateBangalorePincode(pincode) : true;
-                    const isAddressValid = validateBangaloreAddress(fullAddress);
-                    
-                    // If pincode is provided, it MUST be a Bangalore pincode (560xxx)
-                    if (pincode && !isPincodeValid) {
+                  
+                  if (hasSavedAddress) {
+                    validAddressId = selectedAddressId;
+                  } else {
+                    // No saved address - validate manual address fields
+                    // Required fields: Address Line 1, City, Pincode
+                    if (!addressLine1 || !addressLine1.trim()) {
                       toast({
-                        title: BANGALORE_VALIDATION_ERROR.title,
-                        description: "Please enter a valid Bangalore pincode (starting with 560).",
+                        title: "Address Required",
+                        description: "Please enter Address Line 1.",
                         variant: "destructive",
                       });
                       setIsCreatingOrder(false);
                       return;
                     }
                     
-                    // If no pincode provided, validate the address text
-                    if (!pincode && !isAddressValid) {
+                    if (!city || !city.trim()) {
+                      toast({
+                        title: "City Required",
+                        description: "Please enter the city.",
+                        variant: "destructive",
+                      });
+                      setIsCreatingOrder(false);
+                      return;
+                    }
+                    
+                    if (!pincode || !pincode.trim()) {
+                      toast({
+                        title: "Pincode Required",
+                        description: "Please enter the pincode.",
+                        variant: "destructive",
+                      });
+                      setIsCreatingOrder(false);
+                      return;
+                    }
+                    
+                    // Validate Bangalore pincode (must start with 560)
+                    if (!validateBangalorePincode(pincode)) {
                       toast({
                         title: BANGALORE_VALIDATION_ERROR.title,
-                        description: BANGALORE_VALIDATION_ERROR.description,
+                        description: "Please enter a valid Bangalore pincode (starting with 560).",
                         variant: "destructive",
                       });
                       setIsCreatingOrder(false);
