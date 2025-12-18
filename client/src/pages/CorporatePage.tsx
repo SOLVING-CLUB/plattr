@@ -1265,10 +1265,77 @@ export default function CorporateOrder() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.companyName || !formData.contactPerson || !formData.phone || !formData.eventDate) {
+    // Validate all mandatory fields
+    if (!formData.companyName || !formData.companyName.trim()) {
       toast({
-        title: "Missing Information",
-        description: "Please fill in all required fields.",
+        title: "Company Name Required",
+        description: "Please enter your company name.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.contactPerson || !formData.contactPerson.trim()) {
+      toast({
+        title: "Contact Person Required",
+        description: "Please enter the contact person's name or email.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.phone || !formData.phone.trim()) {
+      toast({
+        title: "Phone Required",
+        description: "Please enter your phone number.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.eventDate) {
+      toast({
+        title: "Event Date Required",
+        description: "Please select an event date.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.eventTime) {
+      toast({
+        title: "Event Time Required",
+        description: "Please select an event time.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Ensure at least one guest count is provided
+    if (totalPeople < 1) {
+      toast({
+        title: "Guest Count Required",
+        description: "Please enter the number of guests (Veg, Non-Veg, or Egg).",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate event type
+    if (!formData.eventType || !formData.eventType.trim()) {
+      toast({
+        title: "Event Type Required",
+        description: "Please enter or select an event type.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate budget
+    if (!formData.budgetMin || !formData.budgetMax) {
+      toast({
+        title: "Budget Required",
+        description: "Please enter your budget range (min and max per person).",
         variant: "destructive",
       });
       return;

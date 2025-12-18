@@ -1164,10 +1164,38 @@ export default function CateringOrder() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.eventType || !formData.phone || !formData.eventDate) {
+    // Validate all mandatory fields
+    if (!formData.eventType) {
       toast({
-        title: "Missing Information",
-        description: "Please fill in all required fields.",
+        title: "Event Type Required",
+        description: "Please select an event type.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.phone || !formData.phone.trim()) {
+      toast({
+        title: "Phone Required",
+        description: "Please enter your phone number.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.eventDate) {
+      toast({
+        title: "Event Date Required",
+        description: "Please select an event date.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.eventTime) {
+      toast({
+        title: "Event Time Required",
+        description: "Please select an event time.",
         variant: "destructive",
       });
       return;
@@ -1178,6 +1206,36 @@ export default function CateringOrder() {
       toast({
         title: "Guest Count Required",
         description: "Please enter the number of guests (Veg, Non-Veg, or Egg).",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate meal times
+    if (formData.mealTimes.length === 0) {
+      toast({
+        title: "Meal Time Required",
+        description: "Please select at least one meal time.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate cuisine preferences
+    if (formData.cuisinePreferences.length === 0) {
+      toast({
+        title: "Cuisine Required",
+        description: "Please select at least one cuisine preference.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate budget
+    if (!formData.budgetMin || !formData.budgetMax) {
+      toast({
+        title: "Budget Required",
+        description: "Please enter your budget range (min and max per person).",
         variant: "destructive",
       });
       return;
