@@ -3,6 +3,7 @@ import { useLocation } from 'wouter';
 import plattrLogoImage from "@assets/plattr_logo.png";
 import { useToast } from "@/hooks/use-toast";
 import { refreshAuthState } from "@/hooks/useAuth";
+import { userService } from "@/lib/supabase-service";
 
 export default function NameScreen() {
   const [fullName, setFullName] = useState('');
@@ -16,26 +17,49 @@ export default function NameScreen() {
 
   const isValid = fullName.trim().length >= 2;
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (isValid && !isSubmitting) {
       setIsSubmitting(true);
       
-      // Store username locally
-      localStorage.setItem("username", fullName.trim());
-      sessionStorage.removeItem('needsName');
-      
-      // Refresh auth state with new username
-      refreshAuthState();
-      
-      toast({
-        title: "Welcome!",
-        description: `Welcome to Plattr, ${fullName.trim()}!`,
-      });
-      
-      // Navigate to home page
-      setTimeout(() => {
-        setLocation('/', { replace: true });
-      }, 300);
+      try {
+        // Save username to the database
+        await userService.updateProfile({ username: fullName.trim() });
+        
+        // Store username locally for quick access
+        localStorage.setItem("username", fullName.trim());
+        sessionStorage.removeItem('needsName');
+        
+        // Refresh auth state with new username
+        refreshAuthState();
+        
+        toast({
+          title: "Welcome!",
+          description: `Welcome to Plattr, ${fullName.trim()}!`,
+        });
+        
+        // Navigate to home page
+        setTimeout(() => {
+          setLocation('/', { replace: true });
+        }, 300);
+      } catch (error: any) {
+        console.error('Error saving name:', error);
+        setIsSubmitting(false);
+        
+        // Handle duplicate username error
+        if (error.message?.includes('Username already taken')) {
+          toast({
+            variant: "destructive",
+            title: "Name Already Used",
+            description: "This name is already taken. Please try a different one.",
+          });
+        } else {
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Failed to save your name. Please try again.",
+          });
+        }
+      }
     }
   };
 
