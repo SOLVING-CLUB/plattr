@@ -237,13 +237,13 @@ export default function AppHeader({
         <div className="h-full px-4 flex items-end justify-between pb-4">
           <Button 
             variant="ghost" 
-            className="gap-2 font-medium text-foreground hover:bg-black/10"
+            className="gap-2 font-medium text-foreground hover:bg-black/10 max-w-[180px]"
             onClick={onLocationClick}
             data-testid="button-location"
           >
-            <MapPin className="w-5 h-5" />
+            <MapPin className="w-5 h-5 flex-shrink-0" />
             <span
-              className="ml-[0px] mr-[0px] pl-[0px] pr-[0px] text-left pt-[0px] pb-[0px] font-semibold text-[18px]"
+              className="text-left font-semibold text-[18px] truncate max-w-[120px]"
               style={{ fontFamily: "Sweet Sans Pro" }}>{locationLabel}</span>
           </Button>
 
