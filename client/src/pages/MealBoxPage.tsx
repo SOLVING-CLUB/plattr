@@ -1951,11 +1951,11 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
 
   // Get allowed item types for current dietary tab
   // Veg: only veg dishes
-  // Egg: egg AND non-veg dishes (not veg)
+  // Egg: veg AND egg dishes (no non-veg)
   // Non-veg: all dishes (veg, egg, non-veg)
   const getAllowedItemTypes = (): ("veg" | "egg" | "non-veg")[] => {
     if (currentDietaryTab === "veg") return ["veg"];
-    if (currentDietaryTab === "egg") return ["egg", "non-veg"];
+    if (currentDietaryTab === "egg") return ["veg", "egg"];
     return ["veg", "egg", "non-veg"];
   };
 
@@ -2198,8 +2198,8 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
           return false;
         }
       } else if (currentDietaryTab === 'egg') {
-        // For egg tab, show egg AND non-veg items (exclude veg)
-        if (dietaryType === 'veg' || dietaryType === 'vegetarian') {
+        // For egg tab, show veg AND egg items (exclude non-veg)
+        if (dietaryType === 'non-veg' || dietaryType === 'nonveg') {
           return false;
         }
       }
