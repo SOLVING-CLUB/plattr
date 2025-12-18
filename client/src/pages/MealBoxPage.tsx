@@ -1063,6 +1063,7 @@ export type CategoryType = Category;
 import FloatingNav from "@/pages/FloatingNav";
 import ContinueOrderBanner from "@/pages/ContinueOrderBanner";
 import { SearchOverlay } from "@/components/SearchOverlay";
+import { validateBangaloreAddress, BANGALORE_VALIDATION_ERROR } from "@/lib/addressValidation";
 import mealBoxHeroPattern from "@assets/Hero_MealBox.png";
 import mealBoxImage from "@assets/mockup8_1763889604975.png";
 import hiTeaIcon from "@assets/Image2322_1763882700309.png";
@@ -4948,6 +4949,20 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
                     if (uuidRegex.test(selectedAddressId)) {
                       validAddressId = selectedAddressId;
+                    }
+                  }
+
+                  // Validate Bangalore address for manual entry
+                  if (!validAddressId && addressLine1) {
+                    const fullAddress = [addressLine1, addressLine2, city, addressState, pincode].filter(Boolean).join(', ');
+                    if (!validateBangaloreAddress(fullAddress)) {
+                      toast({
+                        title: BANGALORE_VALIDATION_ERROR.title,
+                        description: BANGALORE_VALIDATION_ERROR.description,
+                        variant: "destructive",
+                      });
+                      setIsCreatingOrder(false);
+                      return;
                     }
                   }
 

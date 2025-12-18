@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import DeliveryTimePicker from "@/components/DeliveryTimePicker";
 import DeliveryDatePicker from "@/components/DeliveryDatePicker";
+import { validateBangaloreAddress, BANGALORE_VALIDATION_ERROR } from "@/lib/addressValidation";
 
 const SIXTY_MIN_ORDER_FLAG = "isSixtyMinOrder";
 
@@ -229,6 +230,17 @@ export default function BulkMealsDelivery() {
       } else if (addressLine1 && city) {
         // No saved address selected but manual address fields are filled
         const fullAddress = [addressLine1, addressLine2, city, state, pincode].filter(Boolean).join(", ");
+        
+        // Validate Bangalore address
+        if (!validateBangaloreAddress(fullAddress)) {
+          toast({
+            title: BANGALORE_VALIDATION_ERROR.title,
+            description: BANGALORE_VALIDATION_ERROR.description,
+            variant: "destructive",
+          });
+          setIsCreatingOrder(false);
+          return;
+        }
         
         if (saveAddressForFuture) {
           // Only save to addresses table when user opts in

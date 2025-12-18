@@ -17,6 +17,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { addressService } from "@/lib/supabase-service";
 import { useToast } from "@/hooks/use-toast";
 import FloatingNav from "@/pages/FloatingNav";
+import { validateBangaloreAddress, BANGALORE_VALIDATION_ERROR } from "@/lib/addressValidation";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -122,6 +123,16 @@ export default function LocationPage() {
   };
 
   const saveLocationAndNavigate = (location: LocationData) => {
+    // Validate Bangalore address
+    if (!validateBangaloreAddress(location.addressLine)) {
+      toast({
+        title: BANGALORE_VALIDATION_ERROR.title,
+        description: BANGALORE_VALIDATION_ERROR.description,
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Save to localStorage
     localStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify(location));
     
