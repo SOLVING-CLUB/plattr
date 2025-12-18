@@ -1063,7 +1063,7 @@ export type CategoryType = Category;
 import FloatingNav from "@/pages/FloatingNav";
 import ContinueOrderBanner from "@/pages/ContinueOrderBanner";
 import { SearchOverlay } from "@/components/SearchOverlay";
-import { validateBangaloreAddress, BANGALORE_VALIDATION_ERROR } from "@/lib/addressValidation";
+import { validateBangaloreAddress, validateBangalorePincode, BANGALORE_VALIDATION_ERROR } from "@/lib/addressValidation";
 import mealBoxHeroPattern from "@assets/Hero_MealBox.png";
 import mealBoxImage from "@assets/mockup8_1763889604975.png";
 import hiTeaIcon from "@assets/Image2322_1763882700309.png";
@@ -4952,10 +4952,25 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                     }
                   }
 
-                  // Validate Bangalore address for manual entry
+                  // Validate Bangalore address for manual entry - check pincode first (most reliable)
                   if (!validAddressId && addressLine1) {
                     const fullAddress = [addressLine1, addressLine2, city, addressState, pincode].filter(Boolean).join(', ');
-                    if (!validateBangaloreAddress(fullAddress)) {
+                    const isPincodeValid = pincode ? validateBangalorePincode(pincode) : true;
+                    const isAddressValid = validateBangaloreAddress(fullAddress);
+                    
+                    // If pincode is provided, it MUST be a Bangalore pincode (560xxx)
+                    if (pincode && !isPincodeValid) {
+                      toast({
+                        title: BANGALORE_VALIDATION_ERROR.title,
+                        description: "Please enter a valid Bangalore pincode (starting with 560).",
+                        variant: "destructive",
+                      });
+                      setIsCreatingOrder(false);
+                      return;
+                    }
+                    
+                    // If no pincode provided, validate the address text
+                    if (!pincode && !isAddressValid) {
                       toast({
                         title: BANGALORE_VALIDATION_ERROR.title,
                         description: BANGALORE_VALIDATION_ERROR.description,

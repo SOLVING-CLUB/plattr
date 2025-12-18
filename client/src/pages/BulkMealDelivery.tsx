@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import DeliveryTimePicker from "@/components/DeliveryTimePicker";
 import DeliveryDatePicker from "@/components/DeliveryDatePicker";
-import { validateBangaloreAddress, BANGALORE_VALIDATION_ERROR } from "@/lib/addressValidation";
+import { validateBangaloreAddress, validateBangalorePincode, BANGALORE_VALIDATION_ERROR } from "@/lib/addressValidation";
 
 const SIXTY_MIN_ORDER_FLAG = "isSixtyMinOrder";
 
@@ -231,8 +231,23 @@ export default function BulkMealsDelivery() {
         // No saved address selected but manual address fields are filled
         const fullAddress = [addressLine1, addressLine2, city, state, pincode].filter(Boolean).join(", ");
         
-        // Validate Bangalore address
-        if (!validateBangaloreAddress(fullAddress)) {
+        // Validate Bangalore address - check pincode first (most reliable), then full address
+        const isPincodeValid = pincode ? validateBangalorePincode(pincode) : true;
+        const isAddressValid = validateBangaloreAddress(fullAddress);
+        
+        // If pincode is provided, it MUST be a Bangalore pincode (560xxx)
+        if (pincode && !isPincodeValid) {
+          toast({
+            title: BANGALORE_VALIDATION_ERROR.title,
+            description: "Please enter a valid Bangalore pincode (starting with 560).",
+            variant: "destructive",
+          });
+          setIsCreatingOrder(false);
+          return;
+        }
+        
+        // If no pincode provided, validate the address text
+        if (!pincode && !isAddressValid) {
           toast({
             title: BANGALORE_VALIDATION_ERROR.title,
             description: BANGALORE_VALIDATION_ERROR.description,

@@ -1,4 +1,19 @@
 /**
+ * Validates if a pincode is within Bangalore service area
+ * Bangalore pincodes start with 560
+ * @param pincode - The pincode to validate
+ * @returns true if the pincode is in Bangalore, false otherwise
+ */
+export function validateBangalorePincode(pincode: string): boolean {
+  if (!pincode || typeof pincode !== 'string') {
+    return false;
+  }
+  const cleanPincode = pincode.trim();
+  // Bangalore pincodes start with 560
+  return /^560\d{3}$/.test(cleanPincode);
+}
+
+/**
  * Validates if an address is within Bangalore service area
  * @param address - The address string to validate
  * @returns true if the address is in Bangalore, false otherwise
