@@ -1394,6 +1394,14 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
     window.scrollTo(0, 0);
   }, []);
 
+  // Clear mealbox progress when entering from 60-min flow (onNavigate is truthy)
+  // This ensures a fresh start when coming from ExploreMenuPage
+  useEffect(() => {
+    if (onNavigate) {
+      clearMealBoxProgress();
+    }
+  }, [onNavigate, clearMealBoxProgress]);
+
   // Track scroll position for sticky header
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY);
