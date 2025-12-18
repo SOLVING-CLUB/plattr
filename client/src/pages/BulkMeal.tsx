@@ -973,9 +973,9 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
         {/* Loading Skeleton Content */}
         <div className="relative z-10 px-4 pt-4 pb-6">
           <div className="flex items-center justify-between mb-6">
-            <button className="flex items-center gap-2" onClick={() => navigate("/location")}>
-              <MapPin className="w-5 h-5 text-white" />
-              <span className="text-white font-semibold text-[18px]" style={{ fontFamily: "Sweet Sans Pro" }}>
+            <button className="flex items-center gap-2 max-w-[180px]" onClick={() => navigate("/location")}>
+              <MapPin className="w-5 h-5 text-white flex-shrink-0" />
+              <span className="text-white font-semibold text-[18px] truncate max-w-[120px]" style={{ fontFamily: "Sweet Sans Pro" }}>
                 {locationLabel}
               </span>
             </button>
@@ -1072,9 +1072,9 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
       <div className="relative z-10 px-4 pt-4 pb-6">
         {/* Location and AI Menu Planner */}
         <div className="flex items-center justify-between mb-6">
-          <button className="flex items-center gap-2" onClick={() => navigate("/location")}>
-            <MapPin className="w-5 h-5 text-white" />
-            <span className="text-white font-semibold text-[18px]" style={{ fontFamily: "Sweet Sans Pro" }}>
+          <button className="flex items-center gap-2 max-w-[180px]" onClick={() => navigate("/location")}>
+            <MapPin className="w-5 h-5 text-white flex-shrink-0" />
+            <span className="text-white font-semibold text-[18px] truncate max-w-[120px]" style={{ fontFamily: "Sweet Sans Pro" }}>
               {locationLabel}
             </span>
           </button>
