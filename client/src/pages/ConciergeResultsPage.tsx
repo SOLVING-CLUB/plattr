@@ -1,7 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useLocation } from "wouter";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -61,6 +60,7 @@ export default function ConciergeResultsPage() {
   const abortControllerRef = useRef<AbortController | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
   
   // Order mode: "bulkMeal" or "mealbox"
   const [orderMode, setOrderMode] = useState<"bulkMeal" | "mealbox">("bulkMeal");
@@ -68,10 +68,15 @@ export default function ConciergeResultsPage() {
   // Bulk Meal mode: quantity per dish
   const [dishQuantities, setDishQuantities] = useState<Record<string, number>>({});
   
-  // MealBox mode: portion counts for veg and non-veg plates
+  // MealBox mode: portion counts for veg, egg, and non-veg plates
   const [vegPortions, setVegPortions] = useState(1);
+  const [eggPortions, setEggPortions] = useState(0);
   const [nonVegPortions, setNonVegPortions] = useState(0);
   const [mealboxDishes, setMealboxDishes] = useState<{ vegDishes: string[], nonVegDishes: string[] }>({ vegDishes: [], nonVegDishes: [] });
+  
+  // MealBox portion size (3, 5, 6, 8 items per plate)
+  const [mealboxPortionSize, setMealboxPortionSize] = useState<number>(5);
+  const PORTION_OPTIONS = [3, 5, 6, 8];
   
   // Use cart context for bulk meals
   const { cart, addToCart, getQuantity, clearCart } = useCart();
@@ -440,39 +445,41 @@ export default function ConciergeResultsPage() {
     };
   }, [retryCount]);
 
-  // Add to cart mutation
-  const addToCartMutation = useMutation({
-    mutationFn: async (dishId: string) => {
-      return apiRequest("POST", "/api/cart", { dishId, quantity: 1 });
-    },
-    onSuccess: (_, dishId) => {
-      setAddedItems(prev => new Set(prev).add(dishId));
-      queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
-      toast({
-        title: "Added to cart",
-        description: "Item has been added to your platter",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to add item to cart",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleAddToCart = (dishId: string) => {
-    addToCartMutation.mutate(dishId);
-  };
-
   const handleAddAllToCart = () => {
-    if (!recommendations) return;
-    recommendations.recommendations.forEach(dish => {
-      if (!addedItems.has(dish.id)) {
-        addToCartMutation.mutate(dish.id);
+    if (!recommendations || isAddingToCart) return;
+    
+    setIsAddingToCart(true);
+    let addedCount = 0;
+    
+    try {
+      recommendations.recommendations.forEach(dish => {
+        if (!addedItems.has(dish.id)) {
+          const quantity = dishQuantities[dish.id] ?? 5; // Default to 5 per dish
+          if (quantity > 0) {
+            const numericId = parseInt(dish.id.replace(/\D/g, '')) || Date.now() + addedCount;
+            addToCart("bulk-meals", {
+              id: numericId,
+              name: dish.name,
+              price: parseFloat(dish.price),
+              quantity: quantity,
+            });
+            setAddedItems(prev => new Set(prev).add(dish.id));
+            addedCount++;
+          }
+        }
+      });
+      
+      if (addedCount > 0) {
+        toast({
+          title: "Added to cart",
+          description: `${addedCount} dishes added to your bulk meal cart`,
+        });
+        // Navigate to bulk meals cart
+        setLocation("/bulk-meals-cart");
       }
-    });
+    } finally {
+      setIsAddingToCart(false);
+    }
   };
   
   // Bulk Meal mode: update dish quantity
@@ -699,14 +706,32 @@ export default function ConciergeResultsPage() {
       <div className="container max-w-6xl mx-auto pt-12 pb-8 px-4">
         {/* Header - Start Over button with extra top spacing for mobile status bar */}
         <div className="mb-6">
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-2 mb-4 flex-wrap">
             <Button
               variant="ghost"
-              onClick={() => setLocation("/concierge")}
+              onClick={() => {
+                // Clear all concierge session data and start fresh
+                Object.keys(sessionStorage).forEach(key => {
+                  if (key.startsWith('concierge-')) sessionStorage.removeItem(key);
+                });
+                setLocation("/concierge");
+              }}
               data-testid="button-back"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Start Over
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                // Save current preferences to sessionStorage and navigate back to wizard
+                sessionStorage.setItem('concierge-preferences', JSON.stringify(preferences));
+                sessionStorage.setItem('concierge-step', '6'); // Go to last step to review
+                setLocation("/concierge");
+              }}
+              data-testid="button-change-preferences"
+            >
+              Change Preferences
             </Button>
             <Button
               variant="outline"
@@ -753,7 +778,7 @@ export default function ConciergeResultsPage() {
             
             <Card className="flex-shrink-0 min-w-[160px]">
               <CardContent className="p-3 flex items-center gap-2">
-                <DollarSign className="w-6 h-6 text-primary" />
+                <TrendingUp className="w-6 h-6 text-primary" />
                 <div>
                   <p className="text-xs text-muted-foreground">Est. Total</p>
                   <p className="text-lg font-bold" data-testid="text-total-cost">
@@ -765,6 +790,52 @@ export default function ConciergeResultsPage() {
                 </div>
               </CardContent>
             </Card>
+            
+            {/* User Preferences */}
+            {preferences.eventType && (
+              <Card className="flex-shrink-0 min-w-[120px]">
+                <CardContent className="p-3">
+                  <p className="text-xs text-muted-foreground">Event</p>
+                  <p className="text-sm font-semibold capitalize">{preferences.eventType.replace(/-/g, ' ')}</p>
+                </CardContent>
+              </Card>
+            )}
+            
+            {preferences.mealType && (
+              <Card className="flex-shrink-0 min-w-[100px]">
+                <CardContent className="p-3">
+                  <p className="text-xs text-muted-foreground">Meal</p>
+                  <p className="text-sm font-semibold capitalize">{preferences.mealType}</p>
+                </CardContent>
+              </Card>
+            )}
+            
+            {preferences.dietaryPreference && (
+              <Card className="flex-shrink-0 min-w-[100px]">
+                <CardContent className="p-3">
+                  <p className="text-xs text-muted-foreground">Diet</p>
+                  <p className="text-sm font-semibold capitalize">{preferences.dietaryPreference}</p>
+                </CardContent>
+              </Card>
+            )}
+            
+            {preferences.cuisinePreferences && preferences.cuisinePreferences.length > 0 && (
+              <Card className="flex-shrink-0 min-w-[140px]">
+                <CardContent className="p-3">
+                  <p className="text-xs text-muted-foreground">Cuisines</p>
+                  <p className="text-sm font-semibold">{preferences.cuisinePreferences.slice(0, 2).join(', ')}{preferences.cuisinePreferences.length > 2 ? ` +${preferences.cuisinePreferences.length - 2}` : ''}</p>
+                </CardContent>
+              </Card>
+            )}
+            
+            {preferences.budget && (
+              <Card className="flex-shrink-0 min-w-[120px]">
+                <CardContent className="p-3">
+                  <p className="text-xs text-muted-foreground">Budget</p>
+                  <p className="text-sm font-semibold">₹{preferences.budget.toLocaleString()}</p>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Order Mode Toggle */}
@@ -804,18 +875,42 @@ export default function ConciergeResultsPage() {
             </div>
           </div>
 
-          {/* MealBox Mode: Plate Selection based on dietary preference */}
+          {/* MealBox Mode: Portion Selection */}
           {orderMode === "mealbox" && (
             <div className="bg-white rounded-lg border border-gray-200 p-4 mb-4">
               <h3 className="text-base font-semibold mb-3" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                Select Your Meal Plates
+                Select Number of Items Per Plate
               </h3>
               <p className="text-xs text-gray-500 mb-4" style={{ fontFamily: "Sweet Sans Pro" }}>
-                Based on your dietary preference: <strong>{preferences.dietaryPreference || 'all'}</strong>
+                How many items would you like in each meal plate?
               </p>
               
-              <div className="space-y-4">
-                {/* Veg Plate - Always show for veg, egg, all, non-veg, or undefined preference */}
+              {/* Portion Size Options */}
+              <div className="flex gap-2 mb-4">
+                {PORTION_OPTIONS.map((size) => (
+                  <button
+                    key={size}
+                    onClick={() => setMealboxPortionSize(size)}
+                    className="flex-1 py-3 px-4 rounded-lg border-2 transition-all text-center"
+                    style={{
+                      borderColor: mealboxPortionSize === size ? "#1A9952" : "#E5E7EB",
+                      backgroundColor: mealboxPortionSize === size ? "#F0F9F4" : "white",
+                    }}
+                    data-testid={`button-portion-${size}`}
+                  >
+                    <span className="text-lg font-bold" style={{ color: mealboxPortionSize === size ? "#1A9952" : "#06352A" }}>{size}</span>
+                    <p className="text-xs text-gray-500">items</p>
+                  </button>
+                ))}
+              </div>
+              
+              {/* Plate Type Selection */}
+              <div className="space-y-3 mt-4">
+                <p className="text-sm font-medium" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                  Select plate types:
+                </p>
+                
+                {/* Veg Plate */}
                 {(preferences.dietaryPreference === 'veg' || preferences.dietaryPreference === 'egg' || preferences.dietaryPreference === 'all' || preferences.dietaryPreference === 'non-veg' || !preferences.dietaryPreference) && (
                   <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
                     <div className="flex items-center gap-3">
@@ -824,7 +919,7 @@ export default function ConciergeResultsPage() {
                       </div>
                       <div>
                         <p className="font-medium text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>Veg Plate</p>
-                        <p className="text-xs text-gray-500">Vegetarian dishes only</p>
+                        <p className="text-xs text-gray-500">{mealboxPortionSize} items per plate</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -847,7 +942,39 @@ export default function ConciergeResultsPage() {
                   </div>
                 )}
                 
-                {/* Non-Veg Plate - Only show if dietary preference is non-veg or all */}
+                {/* Egg Plate - Show if egg preference */}
+                {(preferences.dietaryPreference === 'egg' || preferences.dietaryPreference === 'all' || !preferences.dietaryPreference) && (
+                  <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-yellow-500 flex items-center justify-center">
+                        <span className="text-white text-sm font-bold">E</span>
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>Egg Plate</p>
+                        <p className="text-xs text-gray-500">{mealboxPortionSize} items per plate</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setEggPortions(Math.max(0, eggPortions - 1))}
+                        className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100"
+                        data-testid="button-egg-minus"
+                      >
+                        <Minus className="w-4 h-4" />
+                      </button>
+                      <span className="w-8 text-center font-semibold">{eggPortions}</span>
+                      <button
+                        onClick={() => setEggPortions(eggPortions + 1)}
+                        className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100"
+                        data-testid="button-egg-plus"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Non-Veg Plate */}
                 {(preferences.dietaryPreference === 'non-veg' || preferences.dietaryPreference === 'all' || !preferences.dietaryPreference) && (
                   <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
                     <div className="flex items-center gap-3">
@@ -856,7 +983,7 @@ export default function ConciergeResultsPage() {
                       </div>
                       <div>
                         <p className="font-medium text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>Non-Veg Plate</p>
-                        <p className="text-xs text-gray-500">Includes meat dishes</p>
+                        <p className="text-xs text-gray-500">{mealboxPortionSize} items per plate</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -880,10 +1007,25 @@ export default function ConciergeResultsPage() {
                 )}
               </div>
               
-              {(vegPortions > 0 || nonVegPortions > 0) && (
-                <p className="text-xs text-gray-500 mt-3" style={{ fontFamily: "Sweet Sans Pro" }}>
-                  Now select dishes below to add to your plates
-                </p>
+              {/* Proceed to MealBox button */}
+              {(vegPortions > 0 || nonVegPortions > 0 || eggPortions > 0) && (
+                <Button
+                  onClick={() => {
+                    // Save MealBox preferences to sessionStorage and navigate
+                    sessionStorage.setItem('mealbox-from-concierge', JSON.stringify({
+                      portionSize: mealboxPortionSize,
+                      vegPlates: vegPortions,
+                      eggPlates: eggPortions,
+                      nonVegPlates: nonVegPortions,
+                    }));
+                    setLocation("/mealbox");
+                  }}
+                  className="w-full mt-4"
+                  style={{ backgroundColor: "#1A9952" }}
+                  data-testid="button-proceed-mealbox"
+                >
+                  Proceed to MealBox Selection
+                </Button>
               )}
             </div>
           )}
@@ -924,21 +1066,6 @@ export default function ConciergeResultsPage() {
                           className="transition-transform duration-500 group-hover:scale-110"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                        {isVeg && (
-                          <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
-                            <Leaf className="w-3 h-3 text-white" />
-                          </div>
-                        )}
-                        {isEgg && (
-                          <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-yellow-500 flex items-center justify-center">
-                            <span className="text-white text-xs font-bold">E</span>
-                          </div>
-                        )}
-                        {isNonVeg && (
-                          <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-red-500 flex items-center justify-center">
-                            <Drumstick className="w-3 h-3 text-white" />
-                          </div>
-                        )}
                       </div>
                       
                       {/* Dish Content */}
@@ -1087,7 +1214,7 @@ export default function ConciergeResultsPage() {
               <Button
                 size="sm"
                 onClick={handleAddAllToCart}
-                disabled={addToCartMutation.isPending}
+                disabled={isAddingToCart}
                 data-testid="button-add-all-bottom"
               >
                 Add All & Continue

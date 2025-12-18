@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -79,6 +79,38 @@ export default function ConciergeWizardPage() {
     mealType: "lunch",
     categoryCounts: [],
   });
+
+  // Restore preferences and step from sessionStorage when returning from results page
+  useEffect(() => {
+    const savedPreferences = sessionStorage.getItem('concierge-preferences');
+    const savedStep = sessionStorage.getItem('concierge-step');
+    
+    if (savedPreferences) {
+      try {
+        const parsed = JSON.parse(savedPreferences);
+        setPreferences(prev => ({ ...prev, ...parsed }));
+      } catch (e) {
+        console.error('Failed to restore concierge preferences', e);
+      }
+    }
+    
+    if (savedStep) {
+      const step = parseInt(savedStep);
+      if (step >= 1 && step <= STEPS.length) {
+        setCurrentStep(step);
+      }
+    }
+  }, []);
+
+  // Save current step to sessionStorage when it changes
+  useEffect(() => {
+    sessionStorage.setItem('concierge-step', String(currentStep));
+  }, [currentStep]);
+
+  // Save preferences to sessionStorage when they change
+  useEffect(() => {
+    sessionStorage.setItem('concierge-preferences', JSON.stringify(preferences));
+  }, [preferences]);
 
   const handleTabChange = (tab: "home" | "menu" | "profile") => {
     setActiveTab(tab);
@@ -253,7 +285,7 @@ export default function ConciergeWizardPage() {
             </span>
           </button>
 
-          <div className="flex gap-1">
+          <div className="flex gap-1 mb-4">
             {STEPS.map((step) => (
               <div
                 key={step.id}
@@ -264,10 +296,9 @@ export default function ConciergeWizardPage() {
               />
             ))}
           </div>
-        </div>
 
-        {/* Sticky header section for all steps */}
-        <div className="sticky top-0 z-10 bg-white px-4 py-4 border-b border-gray-100">
+          {/* Step headers inline with progress bar */}
+          <div className="pb-2 border-b border-gray-100">
           {currentStep === 1 && (
             <>
               <div className="flex items-center justify-between mb-2">
@@ -438,6 +469,7 @@ export default function ConciergeWizardPage() {
               </Button>
             </div>
           )}
+        </div>
         </div>
       </div>
 
