@@ -1699,6 +1699,14 @@ export const couponService = {
         continue;
       }
 
+      // Check valid days of week (0=Sunday, 6=Saturday)
+      if (coupon.valid_days_of_week && coupon.valid_days_of_week.length > 0) {
+        const currentDay = new Date().getDay();
+        if (!coupon.valid_days_of_week.includes(currentDay)) {
+          continue; // Skip coupons not valid today
+        }
+      }
+
       // Check order type
       if (coupon.applicable_order_types && coupon.applicable_order_types.length > 0) {
         const orderTypes = coupon.applicable_order_types as string[];
@@ -1734,6 +1742,30 @@ export const couponService = {
 
         if ((orderCount || 0) + (bulkCount || 0) > 0) {
           continue;
+        }
+      }
+
+      // Check returning user only restriction
+      if (coupon.returning_user_only && user) {
+        const { count: orderCount } = await supabase
+          .from('orders')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id);
+
+        if (!orderCount || orderCount === 0) {
+          continue; // Skip - user has no previous orders
+        }
+      }
+
+      // Check minimum previous orders requirement
+      if (coupon.min_previous_orders && coupon.min_previous_orders > 0 && user) {
+        const { count: orderCount } = await supabase
+          .from('orders')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id);
+
+        if (!orderCount || orderCount < coupon.min_previous_orders) {
+          continue; // Skip - user doesn't have enough orders
         }
       }
 
