@@ -1950,9 +1950,12 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
   };
 
   // Get allowed item types for current dietary tab
+  // Veg: only veg dishes
+  // Egg: egg AND non-veg dishes (not veg)
+  // Non-veg: all dishes (veg, egg, non-veg)
   const getAllowedItemTypes = (): ("veg" | "egg" | "non-veg")[] => {
     if (currentDietaryTab === "veg") return ["veg"];
-    if (currentDietaryTab === "egg") return ["veg", "egg"];
+    if (currentDietaryTab === "egg") return ["egg", "non-veg"];
     return ["veg", "egg", "non-veg"];
   };
 
@@ -2189,14 +2192,14 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
       const rawDietaryType = (d as any).dietary_type || d.dietaryType || '';
       const dietaryType = rawDietaryType.toLowerCase();
       
-      if (currentDietaryTab === 'egg') {
-        // For egg tab, show only veg and egg items (exclude non-veg)
-        if (dietaryType === 'non-veg' || dietaryType === 'nonveg') {
-          return false;
-        }
-      } else if (currentDietaryTab === 'veg') {
+      if (currentDietaryTab === 'veg') {
         // For veg tab, only show veg dishes
         if (dietaryType === 'non-veg' || dietaryType === 'nonveg' || dietaryType === 'egg' || dietaryType === 'egg-veg') {
+          return false;
+        }
+      } else if (currentDietaryTab === 'egg') {
+        // For egg tab, show egg AND non-veg items (exclude veg)
+        if (dietaryType === 'veg' || dietaryType === 'vegetarian') {
           return false;
         }
       }
