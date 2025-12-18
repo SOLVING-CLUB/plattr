@@ -266,15 +266,80 @@ export default function ConciergeWizardPage() {
           </div>
         </div>
 
-        {currentStep === 1 && (
-          <div className="px-4 py-4">
-            <div className="flex items-center justify-between mb-2">
+        {/* Sticky header section for all steps */}
+        <div className="sticky top-0 z-10 bg-white px-4 py-4 border-b border-gray-100">
+          {currentStep === 1 && (
+            <>
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <h2 className="text-xl font-bold" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                    Event Details
+                  </h2>
+                  <p className="text-sm text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
+                    Tell Us About Your Event
+                  </p>
+                </div>
+                <Button
+                  onClick={handleNext}
+                  disabled={!canProceed()}
+                  className="px-5 py-2 text-sm font-semibold disabled:opacity-50"
+                  style={{
+                    fontFamily: "Sweet Sans Pro",
+                    backgroundColor: "#1A9952",
+                    color: "white",
+                    borderRadius: "8px",
+                  }}
+                  data-testid="button-next"
+                >
+                  Next <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+              <p className="text-sm font-medium mt-2" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                What Type of Event are you planning?
+              </p>
+            </>
+          )}
+
+          {currentStep === 2 && (
+            <>
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <h2 className="text-xl font-bold" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                    Cuisine Preferences
+                  </h2>
+                  <p className="text-sm text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
+                    Select your preferred cuisines
+                  </p>
+                </div>
+                <Button
+                  onClick={handleNext}
+                  disabled={!canProceed()}
+                  className="px-5 py-2 text-sm font-semibold disabled:opacity-50"
+                  style={{
+                    fontFamily: "Sweet Sans Pro",
+                    backgroundColor: "#1A9952",
+                    color: "white",
+                    borderRadius: "8px",
+                  }}
+                  data-testid="button-next"
+                >
+                  Next <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+              <p className="text-xs text-gray-500" style={{ fontFamily: "Sweet Sans Pro" }}>
+                Choose all the cuisines that you'd like to include in your menu
+              </p>
+            </>
+          )}
+
+          {currentStep === 3 && (
+            <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-bold" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                  Event Details
+                  Guest Count & Meals
                 </h2>
                 <p className="text-sm text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
-                  Tell Us About Your Event
+                  Guests & Meal Type
                 </p>
               </div>
               <Button
@@ -292,17 +357,93 @@ export default function ConciergeWizardPage() {
                 Next <ChevronRight className="w-4 h-4 ml-1" />
               </Button>
             </div>
+          )}
 
-            <p className="text-sm font-medium mt-4" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-              What Type of Event are you planning?
-            </p>
-          </div>
-        )}
+          {currentStep === 4 && (
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                  Dietary & Allergies
+                </h2>
+                <p className="text-sm text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
+                  Special Requirements
+                </p>
+              </div>
+              <Button
+                onClick={handleNext}
+                disabled={!canProceed()}
+                className="px-5 py-2 text-sm font-semibold disabled:opacity-50"
+                style={{
+                  fontFamily: "Sweet Sans Pro",
+                  backgroundColor: "#1A9952",
+                  color: "white",
+                  borderRadius: "8px",
+                }}
+                data-testid="button-next"
+              >
+                Next <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
+          )}
+
+          {currentStep === 5 && (
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                  Total Budget
+                </h2>
+                <p className="text-sm text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
+                  Your total budget for catering
+                </p>
+              </div>
+              <Button
+                onClick={handleNext}
+                disabled={!canProceed()}
+                className="px-5 py-2 text-sm font-semibold disabled:opacity-50"
+                style={{
+                  fontFamily: "Sweet Sans Pro",
+                  backgroundColor: "#1A9952",
+                  color: "white",
+                  borderRadius: "8px",
+                }}
+                data-testid="button-next"
+              >
+                Next <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
+          )}
+
+          {currentStep === 6 && (
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                  Course Details
+                </h2>
+                <p className="text-sm text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
+                  Customize your courses (optional)
+                </p>
+              </div>
+              <Button
+                onClick={handleNext}
+                className="px-5 py-2 text-sm font-semibold"
+                style={{
+                  fontFamily: "Sweet Sans Pro",
+                  backgroundColor: "#1A9952",
+                  color: "white",
+                  borderRadius: "8px",
+                }}
+                data-testid="button-get-recommendations"
+              >
+                Get Menu <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4">
         {currentStep === 1 && (
-          <div className="grid grid-cols-2 gap-3 pb-4">
+          <div className="grid grid-cols-2 gap-3 pb-4 pt-4">
                 {EVENT_TYPES.map(({ value, label, Icon }) => (
                   <button
                     key={value}
@@ -338,36 +479,7 @@ export default function ConciergeWizardPage() {
         )}
 
         {currentStep === 2 && (
-          <div className="mt-6">
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <h2 className="text-xl font-bold" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                  Cuisine Preferences
-                </h2>
-                <p className="text-sm text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
-                  Select your preferred cuisines
-                </p>
-              </div>
-              <Button
-                onClick={handleNext}
-                disabled={!canProceed()}
-                className="px-5 py-2 text-sm font-semibold disabled:opacity-50"
-                style={{
-                  fontFamily: "Sweet Sans Pro",
-                  backgroundColor: "#1A9952",
-                  color: "white",
-                  borderRadius: "8px",
-                }}
-                data-testid="button-next"
-              >
-                Next <ChevronRight className="w-4 h-4 ml-1" />
-              </Button>
-            </div>
-
-            <p className="text-xs text-gray-500 mb-6" style={{ fontFamily: "Sweet Sans Pro" }}>
-              Choose all the cuisines that you'd like to include in your menu
-            </p>
-
+          <div className="pt-4">
             <div className="relative mb-6">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
@@ -429,33 +541,8 @@ export default function ConciergeWizardPage() {
         )}
 
         {currentStep === 3 && (
-          <div className="mt-6">
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <h2 className="text-xl font-bold" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                  Guest Count & Meals
-                </h2>
-                <p className="text-sm text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
-                  Guests & Meal Type
-                </p>
-              </div>
-              <Button
-                onClick={handleNext}
-                disabled={!canProceed()}
-                className="px-5 py-2 text-sm font-semibold disabled:opacity-50"
-                style={{
-                  fontFamily: "Sweet Sans Pro",
-                  backgroundColor: "#1A9952",
-                  color: "white",
-                  borderRadius: "8px",
-                }}
-                data-testid="button-next"
-              >
-                Next <ChevronRight className="w-4 h-4 ml-1" />
-              </Button>
-            </div>
-
-            <div className="mt-8 space-y-8">
+          <div className="pt-4">
+            <div className="space-y-8">
               <div>
                 <p className="text-sm font-medium mb-4" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
                   Enter Number of Guests
@@ -517,33 +604,8 @@ export default function ConciergeWizardPage() {
         )}
 
         {currentStep === 4 && (
-          <div className="mt-6">
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <h2 className="text-xl font-bold" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                  Dietary & Allergies
-                </h2>
-                <p className="text-sm text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
-                  Special Requirements
-                </p>
-              </div>
-              <Button
-                onClick={handleNext}
-                disabled={!canProceed()}
-                className="px-5 py-2 text-sm font-semibold disabled:opacity-50"
-                style={{
-                  fontFamily: "Sweet Sans Pro",
-                  backgroundColor: "#1A9952",
-                  color: "white",
-                  borderRadius: "8px",
-                }}
-                data-testid="button-next"
-              >
-                Next <ChevronRight className="w-4 h-4 ml-1" />
-              </Button>
-            </div>
-
-            <div className="mt-6 space-y-6">
+          <div className="pt-4">
+            <div className="space-y-6">
               <div>
                 <p className="text-sm text-gray-600 mb-4" style={{ fontFamily: "Sweet Sans Pro" }}>
                   Select your dietary preferences to filter dishes accordingly
@@ -631,33 +693,8 @@ export default function ConciergeWizardPage() {
         )}
 
         {currentStep === 5 && (
-          <div className="mt-6">
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <h2 className="text-xl font-bold" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                  Total Budget
-                </h2>
-                <p className="text-sm text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
-                  Your total budget for catering
-                </p>
-              </div>
-              <Button
-                onClick={handleNext}
-                disabled={!canProceed()}
-                className="px-5 py-2 text-sm font-semibold disabled:opacity-50"
-                style={{
-                  fontFamily: "Sweet Sans Pro",
-                  backgroundColor: "#1A9952",
-                  color: "white",
-                  borderRadius: "8px",
-                }}
-                data-testid="button-next"
-              >
-                Next <ChevronRight className="w-4 h-4 ml-1" />
-              </Button>
-            </div>
-
-            <div className="mt-6 space-y-6">
+          <div className="pt-4">
+            <div className="space-y-6">
               <div>
                 <p className="text-sm font-medium mb-2" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
                   Enter your total budget
@@ -697,32 +734,7 @@ export default function ConciergeWizardPage() {
         )}
 
         {currentStep === 6 && (
-          <div className="mt-6">
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <h2 className="text-xl font-bold" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                  Course Details
-                </h2>
-                <p className="text-sm text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
-                  Customize your courses (optional)
-                </p>
-              </div>
-              <Button
-                onClick={handleNext}
-                className="px-5 py-2 text-sm font-semibold"
-                style={{
-                  fontFamily: "Sweet Sans Pro",
-                  backgroundColor: "#1A9952",
-                  color: "white",
-                  borderRadius: "8px",
-                }}
-                data-testid="button-get-recommendations"
-              >
-                Get Menu <ChevronRight className="w-4 h-4 ml-1" />
-              </Button>
-            </div>
-
-            <div className="mt-6">
+          <div className="pt-4">
               <p className="text-xs text-gray-500 mb-4" style={{ fontFamily: "Sweet Sans Pro" }}>
                 Specify how many items you'd like in each category. Leave blank for AI to decide.
               </p>
