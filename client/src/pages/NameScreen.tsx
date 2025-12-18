@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useLocation } from 'wouter';
+import { useQueryClient } from "@tanstack/react-query";
 import plattrLogoImage from "@assets/plattr_logo.png";
 import { useToast } from "@/hooks/use-toast";
 import { refreshAuthState } from "@/hooks/useAuth";
@@ -10,6 +11,7 @@ export default function NameScreen() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const queryClient = useQueryClient();
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFullName(e.target.value);
@@ -28,6 +30,9 @@ export default function NameScreen() {
         // Store username locally for quick access
         localStorage.setItem("username", fullName.trim());
         sessionStorage.removeItem('needsName');
+        
+        // Invalidate profile cache so Profile page shows updated name immediately
+        queryClient.invalidateQueries({ queryKey: ["user-profile"] });
         
         // Refresh auth state with new username
         refreshAuthState();
