@@ -5,6 +5,10 @@
  */
 import { supabaseAuth } from './supabase-auth';
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://leltckltotobsibixhqo.supabase.co';
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxlbHRja2x0b3RvYnNpYml4aHFvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2NzQ4ODUsImV4cCI6MjA3ODI1MDg4NX0.dWl2qdTuQujNwi6X0UJOcbwP9GaP-HRfYgsmBnJzLsY';
+
 function generateEventId(): string {
   return `${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
 }
@@ -85,12 +89,12 @@ async function sendToCapiEdgeFunction(options: TrackOptions): Promise<void> {
     };
 
     const response = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/facebook-capi`,
+      `${SUPABASE_URL}/functions/v1/facebook-capi`,
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
         },
         body: JSON.stringify(payload),
       }
