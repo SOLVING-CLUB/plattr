@@ -1649,42 +1649,6 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
     console.log("Current step changed to:", currentStep);
   }, [currentStep]);
 
-  // Hydrate plate selections with full FoodItem data (including images) when dishes are loaded
-  // This ensures restored selections from localStorage have their item images populated
-  useEffect(() => {
-    if (allFoodItems.length === 0) return;
-    
-    // Create a lookup map for quick access
-    const foodItemsMap = new Map<string, FoodItem>();
-    allFoodItems.forEach(item => foodItemsMap.set(item.id, item));
-
-    // Hydrate selections with full item data
-    const hydrateSelections = (selections: PortionSelection[]): PortionSelection[] => {
-      return selections.map(sel => {
-        if (sel.itemId && (!sel.item || !sel.item.image)) {
-          const fullItem = foodItemsMap.get(sel.itemId);
-          if (fullItem) {
-            return { ...sel, item: fullItem };
-          }
-        }
-        return sel;
-      });
-    };
-
-    // Only hydrate if there are selections without images
-    const needsHydration = (selections: PortionSelection[]) => 
-      selections.some(sel => sel.itemId && (!sel.item || !sel.item.image));
-
-    if (needsHydration(vegPlateSelections)) {
-      setVegPlateSelections(hydrateSelections(vegPlateSelections));
-    }
-    if (needsHydration(eggPlateSelections)) {
-      setEggPlateSelections(hydrateSelections(eggPlateSelections));
-    }
-    if (needsHydration(nonVegPlateSelections)) {
-      setNonVegPlateSelections(hydrateSelections(nonVegPlateSelections));
-    }
-  }, [allFoodItems]);
 
   // Save MealBox progress when key state changes
   // Use JSON.stringify to create stable dependencies and prevent infinite loops
@@ -2218,6 +2182,43 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
         };
       });
   }, [dishes]);
+
+  // Hydrate plate selections with full FoodItem data (including images) when dishes are loaded
+  // This ensures restored selections from localStorage have their item images populated
+  useEffect(() => {
+    if (foodItems.length === 0) return;
+    
+    // Create a lookup map for quick access
+    const foodItemsMap = new Map<string, FoodItem>();
+    foodItems.forEach(item => foodItemsMap.set(item.id, item));
+
+    // Hydrate selections with full item data
+    const hydrateSelections = (selections: PortionSelection[]): PortionSelection[] => {
+      return selections.map(sel => {
+        if (sel.itemId && (!sel.item || !sel.item.image)) {
+          const fullItem = foodItemsMap.get(sel.itemId);
+          if (fullItem) {
+            return { ...sel, item: fullItem };
+          }
+        }
+        return sel;
+      });
+    };
+
+    // Only hydrate if there are selections without images
+    const needsHydration = (selections: PortionSelection[]) => 
+      selections.some(sel => sel.itemId && (!sel.item || !sel.item.image));
+
+    if (needsHydration(vegPlateSelections)) {
+      setVegPlateSelections(hydrateSelections(vegPlateSelections));
+    }
+    if (needsHydration(eggPlateSelections)) {
+      setEggPlateSelections(hydrateSelections(eggPlateSelections));
+    }
+    if (needsHydration(nonVegPlateSelections)) {
+      setNonVegPlateSelections(hydrateSelections(nonVegPlateSelections));
+    }
+  }, [foodItems]);
 
   // Get dish count for a category (from all dishes, respecting filters)
   const getDishCountForCategory = (categoryId: string): number => {

@@ -132,15 +132,20 @@ export default function SplashScreen({ onVideoEnd }: SplashScreenProps) {
         }}
       />
 
-      {/* Video overlay - hidden controls, non-interactive */}
+      {/* Video overlay - hidden controls, non-interactive, autoplay like animation */}
       {!showFallback && (
         <video
           ref={videoRef}
           autoPlay
           muted
           playsInline
+          loop={false}
+          controls={false}
           disablePictureInPicture
+          disableRemotePlayback
           preload="auto"
+          webkit-playsinline="true"
+          x-webkit-airplay="deny"
           style={{
             position: "absolute",
             top: 0,
@@ -156,6 +161,27 @@ export default function SplashScreen({ onVideoEnd }: SplashScreenProps) {
           <source src={splashVideo} type="video/mp4" />
         </video>
       )}
+
+      {/* CSS to hide any native video controls */}
+      <style>{`
+        video::-webkit-media-controls,
+        video::-webkit-media-controls-panel,
+        video::-webkit-media-controls-play-button,
+        video::-webkit-media-controls-start-playback-button,
+        video::-webkit-media-controls-overlay-play-button {
+          display: none !important;
+          -webkit-appearance: none;
+          opacity: 0 !important;
+          pointer-events: none !important;
+        }
+        video::--webkit-media-controls {
+          display: none !important;
+        }
+        video::-moz-controls,
+        video::-moz-range-track {
+          display: none !important;
+        }
+      `}</style>
 
       {isDev && (
         <div
