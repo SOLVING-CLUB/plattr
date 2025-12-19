@@ -10,6 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import DeliveryTimePicker from "@/components/DeliveryTimePicker";
 import DeliveryDatePicker from "@/components/DeliveryDatePicker";
 import { validateBangaloreAddress, validateBangalorePincode, BANGALORE_VALIDATION_ERROR } from "@/lib/addressValidation";
+import { analytics } from "@/lib/analytics";
 
 const SIXTY_MIN_ORDER_FLAG = "isSixtyMinOrder";
 
@@ -359,6 +360,14 @@ export default function BulkMealsDelivery() {
     localStorage.removeItem("bulkMealCoupon");
     clearCart();
       
+      // Track order completed
+      analytics.trackOrderCompleted(
+        `bulk-meal-${Date.now()}`,
+        grandTotal,
+        cart.length,
+        'pending'
+      ).catch(() => {});
+
       toast({
         title: "Order Created!",
         description: "Your bulk meal order has been placed successfully.",

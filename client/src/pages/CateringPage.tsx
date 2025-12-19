@@ -966,6 +966,7 @@ import corporateIconInactive from "@assets/Vector34567_1765649076929.png";
 import DeliveryTimePicker from "@/components/DeliveryTimePicker";
 import DeliveryDatePicker from "@/components/DeliveryDatePicker";
 import { validateBangaloreAddress, BANGALORE_VALIDATION_ERROR } from "@/lib/addressValidation";
+import { analytics } from "@/lib/analytics";
 
 type ServiceType = "bulk-meals" | "mealbox" | "catering" | "corporate";
 
@@ -981,6 +982,7 @@ export default function CateringOrder() {
     useState<ServiceType>("catering");
   const [scrollY, setScrollY] = useState(0);
   const [locationLabel, setLocationLabel] = useState("Select Address");
+  const [formStartTracked, setFormStartTracked] = useState(false);
 
   // Track scroll position for sticky header
   useEffect(() => {
@@ -1161,6 +1163,14 @@ export default function CateringOrder() {
     { value: "multi-cuisine", label: "Multi-Cuisine" },
   ];
 
+  // Track form started when user interacts with first field
+  const trackFormStart = () => {
+    if (!formStartTracked) {
+      setFormStartTracked(true);
+      analytics.track('catering_form_started', { form_type: 'catering' }).catch(() => {});
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -1309,6 +1319,15 @@ export default function CateringOrder() {
         message: undefined, // Not in form
         addressId: undefined, // Not in form
       });
+
+      // Track form submitted
+      analytics.track('catering_form_submitted', {
+        form_type: 'catering',
+        guest_count: totalPeople,
+        event_type: formData.eventType,
+        budget_min: formData.budgetMin,
+        budget_max: formData.budgetMax,
+      }).catch(() => {});
 
       toast({
         title: "Order Created!",
@@ -1616,6 +1635,7 @@ export default function CateringOrder() {
                   onChange={(e) =>
                     setFormData({ ...formData, eventType: e.target.value })
                   }
+                  onFocus={trackFormStart}
                   placeholder="Ex: Marriage, Engagement, Reception..."
                   required
                   className="border-[#1A9952] focus-visible:ring-[#1A9952]"

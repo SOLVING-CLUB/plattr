@@ -1130,6 +1130,7 @@ import priorityServiceImg from "@assets/Priority Service (1).png";
 import DeliveryTimePicker from "@/components/DeliveryTimePicker";
 import DeliveryDatePicker from "@/components/DeliveryDatePicker";
 import { validateBangaloreAddress, BANGALORE_VALIDATION_ERROR } from "@/lib/addressValidation";
+import { analytics } from "@/lib/analytics";
 
 type ServiceType = "bulk-meals" | "mealbox" | "catering" | "corporate";
 
@@ -1142,6 +1143,7 @@ export default function CorporateOrder() {
   const [selectedService, setSelectedService] = useState<ServiceType>("corporate");
   const [scrollY, setScrollY] = useState(0);
   const [locationLabel, setLocationLabel] = useState("Select Address");
+  const [formStartTracked, setFormStartTracked] = useState(false);
 
   // Track scroll position for sticky header
   useEffect(() => {
@@ -1259,6 +1261,14 @@ export default function CorporateOrder() {
       setLocation("/menu");
     } else if (tab === "profile") {
       setLocation("/profile");
+    }
+  };
+
+  // Track form started when user interacts with first field
+  const trackFormStart = () => {
+    if (!formStartTracked) {
+      setFormStartTracked(true);
+      analytics.track('corporate_form_started', { form_type: 'corporate' }).catch(() => {});
     }
   };
 
@@ -1395,6 +1405,16 @@ export default function CorporateOrder() {
         addressId: undefined, // Not in form
       });
       
+      // Track form submitted
+      analytics.track('corporate_form_submitted', {
+        form_type: 'corporate',
+        company_name: formData.companyName,
+        guest_count: totalPeople,
+        event_type: formData.eventType,
+        budget_min: formData.budgetMin,
+        budget_max: formData.budgetMax,
+      }).catch(() => {});
+
       toast({
         title: "Order Created!",
         description: "Your corporate order has been submitted successfully.",
@@ -1710,6 +1730,7 @@ export default function CorporateOrder() {
                   onChange={(e) =>
                     setFormData({ ...formData, companyName: e.target.value })
                   }
+                  onFocus={trackFormStart}
                   placeholder="Enter your company name"
                   required
                   className="border-[#1A9952] focus-visible:ring-[#1A9952]"

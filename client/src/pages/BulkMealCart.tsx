@@ -11,6 +11,7 @@ import dishFallbackImage from "@assets/stock_images/biryani_rice_dish_fo_8445bdd
 import CouponInput from "@/components/CouponInput";
 import { CouponValidationResult } from "@/lib/supabase-service";
 import { useToast } from "@/hooks/use-toast";
+import { analytics } from "@/lib/analytics";
 
 interface SuggestedDish {
   id: string;
@@ -453,7 +454,10 @@ export default function BulkMealCart() {
 
         {/* Proceed to Add-Ons Button */}
         <Button
-          onClick={() => setLocation("/bulk-meals-addons")}
+          onClick={() => {
+            analytics.trackCheckoutStarted(grandTotal, cart.length, 'bulk_meal').catch(() => {});
+            setLocation("/bulk-meals-addons");
+          }}
           className="w-full py-6 text-lg font-semibold border-0"
           style={{ 
             fontFamily: "Sweet Sans Pro",
