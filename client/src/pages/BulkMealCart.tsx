@@ -155,75 +155,93 @@ export default function BulkMealCart() {
           Your Cart
         </h2>
 
-        {/* Cart Items */}
-        <div className="space-y-4 mb-6">
-          {cart.map((item) => (
-            <div
-              key={item.id}
-              className="bg-white border-2 border-gray-200 rounded-lg p-4"
-              data-testid={`cart-item-${item.id}`}
-            >
-              <div className="flex gap-4">
-                {/* Item Image - Larger */}
-                <img 
-                  src={item.image || dishFallbackImage} 
-                  alt={item.name}
-                  className="w-28 h-28 object-cover rounded-lg flex-shrink-0"
-                />
-                <div className="flex-1 min-w-0 flex flex-col justify-between">
-                  {/* Top: Name, Price per serving, Delete */}
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-base mb-1 truncate" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                        {item.name}
-                      </h3>
-                      <p className="text-sm text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
-                        ₹{item.price.toLocaleString('en-IN')} per serving
-                      </p>
-                    </div>
+        {/* Cart Items - Receipt Style */}
+        <div 
+          className="relative bg-white rounded-lg p-4 sm:p-6 mb-6"
+          style={{
+            backgroundImage: `
+              repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 20px,
+                rgba(0,0,0,0.03) 20px,
+                rgba(0,0,0,0.03) 21px
+              )
+            `,
+            boxShadow: "0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06)"
+          }}
+        >
+          <div className="space-y-3">
+            {cart.map((item) => (
+              <div 
+                key={item.id} 
+                className="flex items-center gap-3"
+                data-testid={`cart-item-${item.id}`}
+              >
+                <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
+                  <img 
+                    src={item.image || dishFallbackImage} 
+                    alt={item.name}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-xs sm:text-sm truncate" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                    {item.name}
+                  </p>
+                  <p className="text-[10px] sm:text-xs text-gray-500" style={{ fontFamily: "Sweet Sans Pro" }}>
+                    ₹{item.price.toLocaleString('en-IN')} × {item.quantity} servings
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className="flex items-center gap-1">
                     <button
-                      onClick={() => removeFromCart(item.id)}
-                      className="text-red-500 hover:text-red-700 p-1 flex-shrink-0"
-                      data-testid={`button-remove-${item.id}`}
+                      onClick={() => handleQuantityChange(item.id, -1)}
+                      disabled={item.quantity <= 5}
+                      className={`w-6 h-6 rounded-full border flex items-center justify-center ${
+                        item.quantity <= 5 
+                          ? 'border-gray-200 text-gray-300 cursor-not-allowed' 
+                          : 'border-gray-300 hover:border-green-500'
+                      }`}
+                      data-testid={`button-decrease-${item.id}`}
                     >
-                      <Trash2 className="w-5 h-5" />
+                      <Minus className="w-3 h-3" />
+                    </button>
+                    <span className="font-semibold text-xs w-6 text-center" style={{ fontFamily: "Sweet Sans Pro" }}>
+                      {item.quantity}
+                    </span>
+                    <button
+                      onClick={() => handleQuantityChange(item.id, 1)}
+                      className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center hover:border-green-500"
+                      data-testid={`button-increase-${item.id}`}
+                    >
+                      <Plus className="w-3 h-3" />
                     </button>
                   </div>
-
-                  {/* Bottom: Total Price and Quantity Controls */}
-                  <div className="mt-2">
-                    <span className="font-bold text-lg block mb-2" style={{ fontFamily: "Sweet Sans Pro", color: "#1A9952" }}>
-                      ₹{(item.price * item.quantity).toLocaleString('en-IN')}
-                    </span>
-                    <div className="flex items-center gap-3">
-                      <button
-                        onClick={() => handleQuantityChange(item.id, -1)}
-                        disabled={item.quantity <= 5}
-                        className={`w-8 h-8 rounded-full border-2 flex items-center justify-center ${
-                          item.quantity <= 5 
-                            ? 'border-gray-200 text-gray-300 cursor-not-allowed' 
-                            : 'border-gray-300 hover:border-green-500'
-                        }`}
-                        data-testid={`button-decrease-${item.id}`}
-                      >
-                        <Minus className="w-4 h-4" />
-                      </button>
-                      <span className="font-semibold text-base w-8 text-center" style={{ fontFamily: "Sweet Sans Pro" }}>
-                        {item.quantity}
-                      </span>
-                      <button
-                        onClick={() => handleQuantityChange(item.id, 1)}
-                        className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center hover:border-green-500"
-                        data-testid={`button-increase-${item.id}`}
-                      >
-                        <Plus className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
+                  <span className="font-semibold text-xs sm:text-sm ml-2" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                    ₹{(item.price * item.quantity).toLocaleString('en-IN')}
+                  </span>
+                  <button
+                    onClick={() => removeFromCart(item.id)}
+                    className="text-red-500 hover:text-red-700 p-1 flex-shrink-0"
+                    data-testid={`button-remove-${item.id}`}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+
+          {/* Subtotal row */}
+          <div className="flex items-center justify-between mt-4 pt-4 border-t border-dashed border-gray-300">
+            <span className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+              Subtotal ({cart.length} items)
+            </span>
+            <span className="font-bold text-base" style={{ fontFamily: "Sweet Sans Pro", color: "#1A9952" }}>
+              ₹{subtotal.toLocaleString('en-IN')}
+            </span>
+          </div>
         </div>
 
         {/* Suggested Items */}

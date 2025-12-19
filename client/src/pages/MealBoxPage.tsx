@@ -3996,7 +3996,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                       <div className="w-2 h-2" style={{ backgroundColor: "#1A9952" }} />
                     </div>
                     <span className="font-semibold text-sm sm:text-base" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                      Veg
+                      Veg Plates
                     </span>
                     <span className="font-bold text-sm sm:text-base ml-auto" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
                       ×{vegBoxes}
@@ -4076,7 +4076,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                       <div className="w-2 h-2" style={{ backgroundColor: "#F97316" }} />
                     </div>
                     <span className="font-semibold text-sm sm:text-base" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                      Egg
+                      Egg Plates
                     </span>
                     <span className="font-bold text-sm sm:text-base ml-auto" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
                       ×{eggBoxes}
@@ -4156,7 +4156,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                       <div className="w-2 h-2" style={{ backgroundColor: "#DC2626" }} />
                     </div>
                     <span className="font-semibold text-sm sm:text-base" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                      Non-Veg
+                      Non-Veg Plates
                     </span>
                     <span className="font-bold text-sm sm:text-base ml-auto" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
                       ×{nonVegBoxes}
