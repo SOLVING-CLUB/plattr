@@ -4013,10 +4013,11 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                       <div key={index} className="flex items-center gap-3">
                         <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
                           <LazyImage
-                            src={selection.item?.image || "/images/placeholder.jpg"}
+                            src={selection.item?.image || biryaniImage1}
                             alt={selection.item?.name || "Dish"}
                             containerClassName="w-full h-full"
                             className="w-full h-full object-cover"
+                            fallbackSrc={biryaniImage1}
                           />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -4093,10 +4094,11 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                       <div key={index} className="flex items-center gap-3">
                         <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
                           <LazyImage
-                            src={selection.item?.image || "/images/placeholder.jpg"}
+                            src={selection.item?.image || biryaniImage1}
                             alt={selection.item?.name || "Dish"}
                             containerClassName="w-full h-full"
                             className="w-full h-full object-cover"
+                            fallbackSrc={biryaniImage1}
                           />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -4173,10 +4175,11 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                       <div key={index} className="flex items-center gap-3">
                         <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
                           <LazyImage
-                            src={selection.item?.image || "/images/placeholder.jpg"}
+                            src={selection.item?.image || biryaniImage1}
                             alt={selection.item?.name || "Dish"}
                             containerClassName="w-full h-full"
                             className="w-full h-full object-cover"
+                            fallbackSrc={biryaniImage1}
                           />
                         </div>
                         <div className="flex-1 min-w-0">
