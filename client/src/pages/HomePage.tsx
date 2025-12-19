@@ -515,6 +515,7 @@ import ContinueOrderBanner from "@/pages/ContinueOrderBanner";
 import NoServicePage from "@/pages/NoServicePage";
 import { useToast } from "@/hooks/use-toast";
 import { PageWithLoader } from "@/components/PageWithLoader";
+import plattrLogo from "@assets/Group_1321316164_1766116420718.png";
 
 export default function Home() {
   const [, setLocation] = useLocation();
@@ -610,6 +611,22 @@ export default function Home() {
 
         <div className="mt-6 mb-4">
           <SmartMenuConciergeSection onTryNow={handleTryMenuConcierge} />
+        </div>
+
+        {/* Footer Section */}
+        <div className="flex flex-col items-center justify-center py-8 mt-8 border-t border-gray-200">
+          <img 
+            src={plattrLogo} 
+            alt="Plattr" 
+            className="h-10 mb-2"
+            style={{ opacity: 0.7 }}
+          />
+          <p 
+            className="text-xs text-gray-500"
+            style={{ fontFamily: "Sweet Sans Pro" }}
+          >
+            by Hostify Technologies Private Limited
+          </p>
         </div>
       
         <ContinueOrderBanner />
