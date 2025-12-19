@@ -80,6 +80,16 @@ export default function ConciergeWizardPage() {
     categoryCounts: [],
   });
 
+  // Redirect to results page if user already has results cached
+  useEffect(() => {
+    const savedResultsUrl = sessionStorage.getItem('concierge-results-url');
+    if (savedResultsUrl) {
+      // User has results, redirect them back to results page
+      setLocation(savedResultsUrl);
+      return;
+    }
+  }, [setLocation]);
+
   // Restore preferences and step from sessionStorage when returning from results page
   useEffect(() => {
     const savedPreferences = sessionStorage.getItem('concierge-preferences');

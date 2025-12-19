@@ -386,6 +386,8 @@ export default function ConciergeResultsPage() {
         // Cache the result in sessionStorage
         sessionStorage.setItem(requestKey, 'completed');
         sessionStorage.setItem(`${requestKey}-data`, JSON.stringify(data));
+        // Save current URL so wizard can redirect back here
+        sessionStorage.setItem('concierge-results-url', window.location.pathname + window.location.search);
         console.log('[Concierge] Request completed and cached');
         
         setRecommendations(data);
@@ -669,7 +671,13 @@ export default function ConciergeResultsPage() {
             </Button>
             <Button
               variant="outline"
-              onClick={() => setLocation("/concierge")}
+              onClick={() => {
+                // Clear all concierge session data and start fresh
+                Object.keys(sessionStorage).forEach(key => {
+                  if (key.startsWith('concierge-')) sessionStorage.removeItem(key);
+                });
+                setLocation("/concierge");
+              }}
               className="w-full"
               data-testid="button-start-over"
             >
@@ -727,6 +735,8 @@ export default function ConciergeResultsPage() {
                 // Save current preferences to sessionStorage and navigate back to wizard
                 sessionStorage.setItem('concierge-preferences', JSON.stringify(preferences));
                 sessionStorage.setItem('concierge-step', '6'); // Go to last step to review
+                // Clear results URL so wizard is accessible
+                sessionStorage.removeItem('concierge-results-url');
                 setLocation("/concierge");
               }}
               data-testid="button-change-preferences"
@@ -756,38 +766,29 @@ export default function ConciergeResultsPage() {
 
           {/* Summary Cards - Horizontal scroll on mobile */}
           <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-            <Card className="flex-shrink-0 min-w-[140px]">
-              <CardContent className="p-3 flex items-center gap-2">
-                <Users className="w-6 h-6 text-primary" />
-                <div>
-                  <p className="text-xs text-muted-foreground">Guests</p>
-                  <p className="text-lg font-bold" data-testid="text-guests">{preferences.numberOfPax}</p>
-                </div>
+            <Card className="flex-shrink-0 min-w-[100px]">
+              <CardContent className="p-3">
+                <p className="text-xs text-muted-foreground">Guests</p>
+                <p className="text-lg font-bold" data-testid="text-guests">{preferences.numberOfPax}</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="flex-shrink-0 min-w-[100px]">
+              <CardContent className="p-3">
+                <p className="text-xs text-muted-foreground">Dishes</p>
+                <p className="text-lg font-bold" data-testid="text-dish-count">{recommendations.recommendations.length}</p>
               </CardContent>
             </Card>
             
             <Card className="flex-shrink-0 min-w-[140px]">
-              <CardContent className="p-3 flex items-center gap-2">
-                <TrendingUp className="w-6 h-6 text-primary" />
-                <div>
-                  <p className="text-xs text-muted-foreground">Dishes</p>
-                  <p className="text-lg font-bold" data-testid="text-dish-count">{recommendations.recommendations.length}</p>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="flex-shrink-0 min-w-[160px]">
-              <CardContent className="p-3 flex items-center gap-2">
-                <TrendingUp className="w-6 h-6 text-primary" />
-                <div>
-                  <p className="text-xs text-muted-foreground">Est. Total</p>
-                  <p className="text-lg font-bold" data-testid="text-total-cost">
-                    ₹{recommendations.totalEstimatedCost.toLocaleString()}
-                  </p>
-                  {recommendations.budgetStatus === "within_budget" && (
-                    <span className="text-xs text-green-600">✓ Within budget</span>
-                  )}
-                </div>
+              <CardContent className="p-3">
+                <p className="text-xs text-muted-foreground">Est. Total</p>
+                <p className="text-lg font-bold" data-testid="text-total-cost">
+                  ₹{recommendations.totalEstimatedCost.toLocaleString()}
+                </p>
+                {recommendations.budgetStatus === "within_budget" && (
+                  <span className="text-xs text-green-600">✓ Within budget</span>
+                )}
               </CardContent>
             </Card>
             
