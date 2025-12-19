@@ -277,8 +277,10 @@ function Router() {
       <Route path="/catering" component={GuardedCateringPage} />
       <Route path="/catering-thank-you" component={CateringThankYouPage} />
       <Route path="/concierge" component={GuardedConciergeWizardPage} />
+      <Route path="/ai-planner" component={GuardedConciergeWizardPage} />
       <Route path="/concierge/results" component={GuardedConciergeResultsPage} />
       <Route path="/concierge-results" component={GuardedConciergeResultsPage} />
+      <Route path="/ai-planner-results" component={GuardedConciergeResultsPage} />
       <Route path="/smart-menu-concierge" component={GuardedSmartMenuConcierge} />
       <Route path="/smart-menu-results" component={GuardedSmartMenuResults} />
       <Route path="/mealbox" component={GuardedMealBoxPage} />
