@@ -6,6 +6,7 @@ import {
   type ReactNode,
 } from "react";
 import { analytics } from "@/lib/analytics";
+import { facebookEvents } from "@/lib/facebook-capi";
 
 export type ServiceType = "bulk-meals" | "mealbox" | "catering" | "corporate";
 
@@ -189,6 +190,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       item.quantity,
       category
     ).catch(() => {});
+    
+    facebookEvents.trackAddToCart(String(item.id), item.name, item.price, item.quantity);
   };
 
   const removeFromCart = (itemId: number) => {

@@ -12,6 +12,7 @@ import CouponInput from "@/components/CouponInput";
 import { CouponValidationResult } from "@/lib/supabase-service";
 import { useToast } from "@/hooks/use-toast";
 import { analytics } from "@/lib/analytics";
+import { facebookEvents } from "@/lib/facebook-capi";
 
 interface SuggestedDish {
   id: string;
@@ -456,6 +457,7 @@ export default function BulkMealCart() {
         <Button
           onClick={() => {
             analytics.trackCheckoutStarted(grandTotal, cart.length, 'bulk_meal').catch(() => {});
+            facebookEvents.trackInitiateCheckout(grandTotal, cart.length, 'bulk_meal');
             setLocation("/bulk-meals-addons");
           }}
           className="w-full py-6 text-lg font-semibold border-0"

@@ -967,6 +967,7 @@ import DeliveryTimePicker from "@/components/DeliveryTimePicker";
 import DeliveryDatePicker from "@/components/DeliveryDatePicker";
 import { validateBangaloreAddress, BANGALORE_VALIDATION_ERROR } from "@/lib/addressValidation";
 import { analytics } from "@/lib/analytics";
+import { facebookEvents } from "@/lib/facebook-capi";
 
 type ServiceType = "bulk-meals" | "mealbox" | "catering" | "corporate";
 
@@ -1328,6 +1329,8 @@ export default function CateringOrder() {
         budget_min: formData.budgetMin,
         budget_max: formData.budgetMax,
       }).catch(() => {});
+      
+      facebookEvents.trackLead('catering', totalPeople, formData.eventType);
 
       toast({
         title: "Order Created!",

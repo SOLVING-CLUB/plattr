@@ -11,6 +11,7 @@ import DeliveryTimePicker from "@/components/DeliveryTimePicker";
 import DeliveryDatePicker from "@/components/DeliveryDatePicker";
 import { validateBangaloreAddress, validateBangalorePincode, BANGALORE_VALIDATION_ERROR } from "@/lib/addressValidation";
 import { analytics } from "@/lib/analytics";
+import { facebookEvents } from "@/lib/facebook-capi";
 
 const SIXTY_MIN_ORDER_FLAG = "isSixtyMinOrder";
 
@@ -361,12 +362,15 @@ export default function BulkMealsDelivery() {
     clearCart();
       
       // Track order completed
+      const orderId = `bulk-meal-${Date.now()}`;
       analytics.trackOrderCompleted(
-        `bulk-meal-${Date.now()}`,
+        orderId,
         grandTotal,
         cart.length,
         'pending'
       ).catch(() => {});
+      
+      facebookEvents.trackPurchase(orderId, grandTotal, cart.length, cart.map(item => String(item.id)));
 
       toast({
         title: "Order Created!",

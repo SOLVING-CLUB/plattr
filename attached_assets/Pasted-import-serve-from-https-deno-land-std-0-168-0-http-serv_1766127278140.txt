@@ -1,0 +1,154 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+async function sha256Hash(value: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(value.toLowerCase().trim());
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function normalizePhone(phone: string): string {
+  let cleaned = phone.replace(/[^\d+]/g, "");
+  if (cleaned.startsWith("+91")) {
+    cleaned = cleaned.substring(3);
+  } else if (cleaned.startsWith("91") && cleaned.length === 12) {
+    cleaned = cleaned.substring(2);
+  }
+  return "91" + cleaned;
+}
+
+interface ConversionEvent {
+  event_name: string;
+  event_id: string;
+  event_time?: number;
+  user_data?: {
+    phone?: string;
+    email?: string;
+    client_ip_address?: string;
+    client_user_agent?: string;
+    fbc?: string;
+    fbp?: string;
+    external_id?: string;
+  };
+  custom_data?: {
+    currency?: string;
+    value?: number;
+    content_ids?: string[];
+    content_type?: string;
+    content_name?: string;
+    num_items?: number;
+    order_id?: string;
+  };
+  event_source_url?: string;
+  action_source?: string;
+}
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  try {
+    const PIXEL_ID = Deno.env.get("FACEBOOK_PIXEL_ID");
+    const ACCESS_TOKEN = Deno.env.get("FACEBOOK_CAPI_ACCESS_TOKEN");
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+    if (!PIXEL_ID || !ACCESS_TOKEN) {
+      throw new Error("Facebook Pixel ID or Access Token not configured");
+    }
+
+    const body = await req.json();
+    const event: ConversionEvent = body.event;
+
+    if (!event || !event.event_name) {
+      throw new Error("Missing event data");
+    }
+
+    const eventTime = event.event_time || Math.floor(Date.now() / 1000);
+    const hashedUserData: Record<string, string> = {};
+
+    if (event.user_data) {
+      if (event.user_data.phone) {
+        const normalizedPhone = normalizePhone(event.user_data.phone);
+        hashedUserData.ph = await sha256Hash(normalizedPhone);
+      }
+      if (event.user_data.email) {
+        hashedUserData.em = await sha256Hash(event.user_data.email);
+      }
+      if (event.user_data.external_id) {
+        hashedUserData.external_id = await sha256Hash(event.user_data.external_id);
+      }
+      if (event.user_data.client_ip_address) {
+        hashedUserData.client_ip_address = event.user_data.client_ip_address;
+      }
+      if (event.user_data.client_user_agent) {
+        hashedUserData.client_user_agent = event.user_data.client_user_agent;
+      }
+      if (event.user_data.fbc) {
+        hashedUserData.fbc = event.user_data.fbc;
+      }
+      if (event.user_data.fbp) {
+        hashedUserData.fbp = event.user_data.fbp;
+      }
+    }
+
+    const fbEvent = {
+      event_name: event.event_name,
+      event_time: eventTime,
+      event_id: event.event_id,
+      event_source_url: event.event_source_url || body.source_url,
+      action_source: event.action_source || "website",
+      user_data: hashedUserData,
+      custom_data: event.custom_data || {},
+    };
+
+    const fbPayload = {
+      data: [fbEvent],
+    };
+
+    const fbResponse = await fetch(
+      `https://graph.facebook.com/v18.0/${PIXEL_ID}/events?access_token=${ACCESS_TOKEN}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(fbPayload),
+      }
+    );
+
+    const fbResult = await fbResponse.json();
+
+    if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      await supabase.from("conversion_events").insert({
+        event_name: event.event_name,
+        event_id: event.event_id,
+        user_id: event.user_data?.external_id || null,
+        event_data: {
+          custom_data: event.custom_data,
+          event_source_url: event.event_source_url,
+        },
+        facebook_response: fbResult,
+        status: fbResponse.ok ? "sent" : "failed",
+      });
+    }
+
+    return new Response(JSON.stringify({ success: true, fb_response: fbResult }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 200,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return new Response(JSON.stringify({ success: false, error: message }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 400,
+    });
+  }
+});
