@@ -658,7 +658,10 @@ export default function ConciergeResultsPage() {
           name: sel.dish.name,
           price: parseFloat(sel.dish.price),
           image: sel.dish.imageUrl,
-          type: (sel.dish.dietaryType?.toLowerCase() || 'veg') as 'veg' | 'egg' | 'non-veg',
+          type: (sel.dish.dietaryType?.toLowerCase() || 'veg') as string,
+          rating: 4.5,
+          reviewCount: 0,
+          category: sel.dish.recommendedCategory || "main",
         },
       }));
     };
@@ -1421,34 +1424,36 @@ export default function ConciergeResultsPage() {
           </Card>
         )}
 
-        {/* Bottom Action */}
-        <div className="mt-6 text-center">
-          <Card className="p-4">
-            <h3 className="text-base font-semibold mb-2">Ready to Order?</h3>
-            <p className="text-xs text-muted-foreground mb-3">
-              Add your selected items to the cart and proceed to checkout
-            </p>
-            <div className="flex justify-center gap-3">
-              <Button
-                size="sm"
-                onClick={() => setLocation("/bulk-meals")}
-                variant="outline"
-                data-testid="button-view-cart"
-              >
-                <ShoppingCart className="w-4 h-4 mr-2" />
-                View Cart
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleAddAllToCart}
-                disabled={isAddingToCart}
-                data-testid="button-add-all-bottom"
-              >
-                Add All & Continue
-              </Button>
-            </div>
-          </Card>
-        </div>
+        {/* Bottom Action - Only show for Bulk Meal mode */}
+        {orderMode === "bulkMeal" && (
+          <div className="mt-6 text-center">
+            <Card className="p-4">
+              <h3 className="text-base font-semibold mb-2">Ready to Order?</h3>
+              <p className="text-xs text-muted-foreground mb-3">
+                Add your selected items to the cart and proceed to checkout
+              </p>
+              <div className="flex justify-center gap-3">
+                <Button
+                  size="sm"
+                  onClick={() => setLocation("/bulk-meals")}
+                  variant="outline"
+                  data-testid="button-view-cart"
+                >
+                  <ShoppingCart className="w-4 h-4 mr-2" />
+                  View Cart
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleAddAllToCart}
+                  disabled={isAddingToCart}
+                  data-testid="button-add-all-bottom"
+                >
+                  Add All & Continue
+                </Button>
+              </div>
+            </Card>
+          </div>
+        )}
       </div>
 
       {/* Floating Cart Button - Only show in Bulk Meal mode when cart has items */}
