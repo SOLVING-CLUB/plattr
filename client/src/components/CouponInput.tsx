@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Tag, X, Check, AlertCircle, Truck, ChevronRight, Ticket, Lock } from "lucide-react";
 import { couponService, CouponValidationResult } from "@/lib/supabase-service";
 import { useQuery } from "@tanstack/react-query";
+import { analytics } from "@/lib/analytics";
 
 interface CouponInputProps {
   subtotal: number;
@@ -67,13 +68,22 @@ export default function CouponInput({
       });
       
       if (result.valid && result.coupon && result.discount !== undefined) {
+        analytics.trackCouponApplied(
+          codeToApply,
+          result.coupon.discountType || 'unknown',
+          result.coupon.discountValue || 0,
+          result.discount,
+          subtotal
+        ).catch(() => {});
         onCouponApply(result);
         setCouponCode("");
         setShowManualEntry(false);
       } else {
+        analytics.trackCouponFailed(codeToApply, result.error || 'Invalid coupon code').catch(() => {});
         setError(result.error || "Invalid coupon code");
       }
     } catch (err) {
+      analytics.trackCouponFailed(codeToApply, 'Validation error').catch(() => {});
       setError("Failed to validate coupon. Please try again.");
     } finally {
       setIsValidating(false);

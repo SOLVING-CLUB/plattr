@@ -997,6 +997,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useCart } from "@/context/CartContex";
 import { mealboxOrderService, sixtyMinMealboxOrderService, addressService, CouponValidationResult } from "@/lib/supabase-service";
+import { analytics } from "@/lib/analytics";
 import CouponInput from "@/components/CouponInput";
 import { useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
@@ -5218,6 +5219,15 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
 
                   // Clear mealbox progress when order is placed
                   clearMealBoxProgress();
+                  
+                  // Track order completed
+                  const itemCount = vegCount + eggCount + nonVegCount;
+                  analytics.trackOrderCompleted(
+                    `mealbox-${Date.now()}`,
+                    total,
+                    itemCount,
+                    'pending'
+                  ).catch(() => {});
 
                   toast({
                     title: "Order Created!",

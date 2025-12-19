@@ -12,6 +12,7 @@ import { supabase } from "@/lib/supabase-client";
 import FloatingNav from "@/pages/FloatingNav";
 import { LazyImage } from "@/components/ui/lazy-image";
 import { useCart } from "@/context/CartContex";
+import { analytics } from "@/lib/analytics";
 
 interface Dish {
   id: string;
@@ -148,6 +149,9 @@ export default function ConciergeResultsPage() {
       sessionStorage.setItem(requestKey, 'pending');
       console.log('[Concierge] Starting new request');
       
+      // Track start time for response time calculation
+      const startTime = Date.now();
+      
       try {
         setIsGenerating(true);
         setError(null);
@@ -181,6 +185,13 @@ export default function ConciergeResultsPage() {
         
         // Generate a unique session ID for n8n tracking
         const sessionId = `plattr-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+        
+        // Track AI planner initiated
+        analytics.trackAIPlannerInitiated(
+          currentPrefs.numberOfPax,
+          currentPrefs.eventType,
+          currentPrefs.budget ? `₹${currentPrefs.budget}` : undefined
+        ).catch(() => {});
         
         // Calculate per-plate budget
         const perPlateBudget = currentPrefs.budget && currentPrefs.numberOfPax > 0 
@@ -395,6 +406,14 @@ export default function ConciergeResultsPage() {
         sessionStorage.setItem('concierge-results-url', window.location.pathname + window.location.search);
         console.log('[Concierge] Request completed and cached');
         
+        // Track AI planner suggestion received
+        const responseTime = Date.now() - startTime;
+        analytics.trackAIPlannerSuggestionReceived(
+          preferences.numberOfPax,
+          formattedDishes.length,
+          responseTime
+        ).catch(() => {});
+        
         setRecommendations(data);
       } catch (error: any) {
         // Ignore abort errors - these are intentional
@@ -418,6 +437,13 @@ export default function ConciergeResultsPage() {
         } else if (error.message) {
           errorMessage = error.message;
         }
+        
+        // Track AI planner failure
+        analytics.trackAIPlannerSuggestionFailed(
+          preferences.numberOfPax,
+          errorMessage,
+          retryCount
+        ).catch(() => {});
         
         console.error('Error details:', { 
           name: error?.name, 
