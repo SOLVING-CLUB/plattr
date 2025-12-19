@@ -34,6 +34,8 @@ export default function BulkMealCart() {
     discountValue: number;
     isFreeDelivery?: boolean;
   } | null>(null);
+  const [isBusinessOrder, setIsBusinessOrder] = useState(false);
+  const [gstNumber, setGstNumber] = useState("");
 
   const handleCouponApply = (result: CouponValidationResult) => {
     if (result.valid && result.coupon && result.discount !== undefined) {
@@ -117,7 +119,7 @@ export default function BulkMealCart() {
 
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const packagingFee = Math.round(subtotal * 0.06);
-  const baseDeliveryCharges = 500;
+  const baseDeliveryCharges = Math.round(subtotal * 0.06); // 6% delivery charges
   const deliveryCharges = appliedCoupon?.isFreeDelivery ? 0 : baseDeliveryCharges;
   const gst = Math.round(subtotal * 0.05);
   const discount = appliedCoupon?.isFreeDelivery ? 0 : (appliedCoupon?.discount || 0);
@@ -313,6 +315,46 @@ export default function BulkMealCart() {
           </div>
         )}
 
+        {/* Business Order Option */}
+        <div className="mb-6 bg-gray-50 rounded-lg p-4">
+          <div className="flex items-center gap-3 mb-3">
+            <input
+              type="checkbox"
+              id="business-order"
+              checked={isBusinessOrder}
+              onChange={(e) => setIsBusinessOrder(e.target.checked)}
+              className="w-5 h-5 accent-[#1A9952] rounded"
+              data-testid="checkbox-business-order"
+            />
+            <label 
+              htmlFor="business-order" 
+              className="text-sm font-semibold cursor-pointer"
+              style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}
+            >
+              This is a business order (GST invoice required)
+            </label>
+          </div>
+          {isBusinessOrder && (
+            <div className="mt-3">
+              <label className="block text-sm mb-2 text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
+                GST Number
+              </label>
+              <input
+                type="text"
+                value={gstNumber}
+                onChange={(e) => setGstNumber(e.target.value.toUpperCase())}
+                placeholder="e.g., 29ABCDE1234F1Z5"
+                className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#1A9952]"
+                style={{ fontFamily: "Sweet Sans Pro" }}
+                data-testid="input-gst-number"
+              />
+              <p className="text-xs text-gray-500 mt-1" style={{ fontFamily: "Sweet Sans Pro" }}>
+                GST number will be included in your invoice
+              </p>
+            </div>
+          )}
+        </div>
+
         {/* Coupon Input */}
         <div className="mb-6">
           <label className="block text-sm font-semibold mb-2" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
@@ -348,7 +390,7 @@ export default function BulkMealCart() {
           </div>
           <div className="flex items-center justify-between">
             <span className="text-sm text-gray-700" style={{ fontFamily: "Sweet Sans Pro" }}>
-              Delivery Charges
+              Delivery Charges (6%)
             </span>
             <span className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: appliedCoupon?.isFreeDelivery ? "#1A9952" : "#06352A" }}>
               {appliedCoupon?.isFreeDelivery ? (

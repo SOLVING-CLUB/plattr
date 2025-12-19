@@ -1500,6 +1500,10 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
     isFreeDelivery?: boolean;
   } | null>(null);
 
+  // Business order state
+  const [isBusinessOrder, setIsBusinessOrder] = useState(false);
+  const [gstNumber, setGstNumber] = useState("");
+
   const handleCouponApply = (result: CouponValidationResult) => {
     if (result.valid && result.coupon && result.discount !== undefined) {
       setAppliedCoupon({
@@ -3946,7 +3950,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
 
                       const subtotal = vegTotal + eggTotal + nonVegTotal;
                       const packagingFee = Math.round(subtotal * 0.06);
-                      const baseDeliveryCharges = 500;
+                      const baseDeliveryCharges = Math.round(subtotal * 0.06); // 6% delivery charges
                       const deliveryCharges = appliedCoupon?.isFreeDelivery ? 0 : baseDeliveryCharges;
                       const gst = Math.round(subtotal * 0.05);
                       const discount = appliedCoupon?.isFreeDelivery ? 0 : (appliedCoupon?.discount || 0);
@@ -4257,7 +4261,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                   const subtotal = vegTotal + eggTotal + nonVegTotal;
                   const gstAmount = Math.round(subtotal * 0.18);
                   const packagingFee = Math.round(subtotal * 0.06);
-                  const baseDeliveryCharges = 500;
+                  const baseDeliveryCharges = Math.round(subtotal * 0.06); // 6% delivery charges
                   const deliveryCharges = appliedCoupon?.isFreeDelivery ? 0 : baseDeliveryCharges;
                   const gst = Math.round(subtotal * 0.05);
                   const discount = appliedCoupon?.isFreeDelivery ? 0 : (appliedCoupon?.discount || 0);
@@ -4277,12 +4281,12 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                           Packaging (6%)
                         </span>
                         <span className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                          6%
+                          ₹{packagingFee.toLocaleString('en-IN')}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-gray-700" style={{ fontFamily: "Sweet Sans Pro" }}>
-                          Delivery Charges
+                          Delivery Charges (6%)
                         </span>
                         <span className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: appliedCoupon?.isFreeDelivery ? "#1A9952" : "#06352A" }}>
                           {appliedCoupon?.isFreeDelivery ? (
@@ -4297,7 +4301,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                           GST (5%)
                         </span>
                         <span className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                          5%
+                          ₹{gst.toLocaleString('en-IN')}
                         </span>
                       </div>
                       {discount > 0 && (
@@ -4313,6 +4317,46 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                     </>
                   );
                 })()}
+              </div>
+
+              {/* Business Order Option */}
+              <div className="mb-6 bg-gray-50 rounded-lg p-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <input
+                    type="checkbox"
+                    id="business-order-mealbox"
+                    checked={isBusinessOrder}
+                    onChange={(e) => setIsBusinessOrder(e.target.checked)}
+                    className="w-5 h-5 accent-[#1A9952] rounded"
+                    data-testid="checkbox-business-order-mealbox"
+                  />
+                  <label 
+                    htmlFor="business-order-mealbox" 
+                    className="text-sm font-semibold cursor-pointer"
+                    style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}
+                  >
+                    This is a business order (GST invoice required)
+                  </label>
+                </div>
+                {isBusinessOrder && (
+                  <div className="mt-3">
+                    <label className="block text-sm mb-2 text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
+                      GST Number
+                    </label>
+                    <input
+                      type="text"
+                      value={gstNumber}
+                      onChange={(e) => setGstNumber(e.target.value.toUpperCase())}
+                      placeholder="e.g., 29ABCDE1234F1Z5"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#1A9952]"
+                      style={{ fontFamily: "Sweet Sans Pro" }}
+                      data-testid="input-gst-number-mealbox"
+                    />
+                    <p className="text-xs text-gray-500 mt-1" style={{ fontFamily: "Sweet Sans Pro" }}>
+                      GST number will be included in your invoice
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Coupon Input */}
@@ -4331,7 +4375,15 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                     return vegTotal + eggTotal + nonVegTotal;
                   })()}
                   orderType="mealbox"
-                  deliveryFee={500}
+                  deliveryFee={(() => {
+                    const vegCount = parseInt(vegBoxes) || 0;
+                    const eggCount = parseInt(eggBoxes) || 0;
+                    const nonVegCount = parseInt(nonVegBoxes) || 0;
+                    const vegTotal = vegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * vegCount;
+                    const eggTotal = eggPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * eggCount;
+                    const nonVegTotal = nonVegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * nonVegCount;
+                    return Math.round((vegTotal + eggTotal + nonVegTotal) * 0.06);
+                  })()}
                   onCouponApply={handleCouponApply}
                   onCouponRemove={handleCouponRemove}
                   appliedCoupon={appliedCoupon}
@@ -4354,7 +4406,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                       const nonVegTotal = nonVegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * nonVegCount;
                       const subtotal = vegTotal + eggTotal + nonVegTotal;
                       const packagingFee = Math.round(subtotal * 0.06);
-                      const baseDeliveryCharges = 500;
+                      const baseDeliveryCharges = Math.round(subtotal * 0.06); // 6% delivery charges
                       const deliveryCharges = appliedCoupon?.isFreeDelivery ? 0 : baseDeliveryCharges;
                       const gst = Math.round(subtotal * 0.05);
                       const discount = appliedCoupon?.isFreeDelivery ? 0 : (appliedCoupon?.discount || 0);
@@ -4392,7 +4444,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                   const nonVegTotal = nonVegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * nonVegCount;
                   const subtotal = vegTotal + eggTotal + nonVegTotal;
                   const packagingFee = Math.round(subtotal * 0.06);
-                  const deliveryCharges = 500;
+                  const deliveryCharges = Math.round(subtotal * 0.06); // 6% delivery charges
                   const gst = Math.round(subtotal * 0.05);
                   return (subtotal + packagingFee + deliveryCharges + gst).toLocaleString('en-IN');
                 })()}
@@ -4693,7 +4745,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                   const nonVegTotal = nonVegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * nonVegCount;
                   const subtotal = vegTotal + eggTotal + nonVegTotal;
                   const packagingFee = Math.round(subtotal * 0.06);
-                  const baseDeliveryCharges = 500;
+                  const baseDeliveryCharges = Math.round(subtotal * 0.06); // 6% delivery charges
                   const deliveryCharges = appliedCoupon?.isFreeDelivery ? 0 : baseDeliveryCharges;
                   const gst = Math.round(subtotal * 0.05);
                   const discount = appliedCoupon?.isFreeDelivery ? 0 : (appliedCoupon?.discount || 0);
@@ -4936,7 +4988,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                   const nonVegTotal = nonVegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * nonVegCount;
                   const subtotal = vegTotal + eggTotal + nonVegTotal;
                   const packagingFee = Math.round(subtotal * 0.06);
-                  const baseDeliveryCharges = 500;
+                  const baseDeliveryCharges = Math.round(subtotal * 0.06); // 6% delivery charges
                   const deliveryCharges = appliedCoupon?.isFreeDelivery ? 0 : baseDeliveryCharges;
                   const gst = Math.round(subtotal * 0.05);
                   const discount = appliedCoupon?.isFreeDelivery ? 0 : (appliedCoupon?.discount || 0);
@@ -5143,7 +5195,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                   const nonVegTotal = nonVegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * nonVegCount;
                   const subtotal = vegTotal + eggTotal + nonVegTotal;
                   const packagingFee = Math.round(subtotal * 0.06);
-                  const baseDeliveryCharges = 500;
+                  const baseDeliveryCharges = Math.round(subtotal * 0.06); // 6% delivery charges
                   const deliveryCharges = appliedCoupon?.isFreeDelivery ? 0 : baseDeliveryCharges;
                   const gst = Math.round(subtotal * 0.05);
                   const discount = appliedCoupon?.isFreeDelivery ? 0 : (appliedCoupon?.discount || 0);
