@@ -165,7 +165,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setCart(
           cart.map((cartItem) =>
             cartItem.id === item.id
-              ? { ...cartItem, quantity: cartItem.quantity + item.quantity }
+              ? { ...cartItem, quantity: cartItem.quantity + item.quantity, image: item.image || cartItem.image }
               : cartItem,
           ),
         );
