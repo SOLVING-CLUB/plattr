@@ -900,6 +900,7 @@ export const mealboxOrderService = {
         delivery_time: orderData.deliveryTime || null,
         address_id: orderData.addressId || null,
         status: 'pending',
+        created_at: new Date().toISOString(),
       })
       .select()
       .single();
@@ -989,6 +990,7 @@ export const bulkMealOrderService = {
         delivery_time: orderData.deliveryTime || null,
         address_id: orderData.addressId || null,
         status: 'pending',
+        created_at: new Date().toISOString(),
       })
       .select()
       .single();
@@ -1110,6 +1112,7 @@ export const sixtyMinBulkOrderService = {
         delivery_address: finalDeliveryAddress,
         order_status: 'pending',
         payment_status: 'pending',
+        created_at: new Date().toISOString(),
       })
       .select()
       .single();
@@ -1264,6 +1267,7 @@ export const sixtyMinMealboxOrderService = {
         delivery_address: finalDeliveryAddress,
         order_status: 'pending',
         payment_status: 'pending',
+        created_at: new Date().toISOString(),
       })
       .select()
       .single();
