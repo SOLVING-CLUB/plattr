@@ -316,41 +316,62 @@ export default function BulkMealCart() {
         )}
 
         {/* Business Order Option */}
-        <div className="mb-6 bg-gray-50 rounded-lg p-4">
-          <div className="flex items-center gap-3 mb-3">
-            <input
-              type="checkbox"
-              id="business-order"
-              checked={isBusinessOrder}
-              onChange={(e) => setIsBusinessOrder(e.target.checked)}
-              className="w-5 h-5 accent-[#1A9952] rounded"
-              data-testid="checkbox-business-order"
-            />
-            <label 
-              htmlFor="business-order" 
-              className="text-sm font-semibold cursor-pointer"
-              style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}
+        <div 
+          className="mb-6 rounded-xl p-4 border-2 transition-all cursor-pointer"
+          style={{ 
+            backgroundColor: isBusinessOrder ? "#E8F5EE" : "#FAFAFA",
+            borderColor: isBusinessOrder ? "#1A9952" : "#E5E7EB"
+          }}
+          onClick={() => setIsBusinessOrder(!isBusinessOrder)}
+        >
+          <div className="flex items-center gap-3">
+            <div 
+              className="w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all"
+              style={{ 
+                borderColor: isBusinessOrder ? "#1A9952" : "#D1D5DB",
+                backgroundColor: isBusinessOrder ? "#1A9952" : "white"
+              }}
             >
-              This is a business order (GST invoice required)
-            </label>
+              {isBusinessOrder && (
+                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+            </div>
+            <div className="flex-1">
+              <span 
+                className="font-semibold text-sm"
+                style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}
+              >
+                Business Order
+              </span>
+              <p className="text-xs text-gray-500" style={{ fontFamily: "Sweet Sans Pro" }}>
+                Get GST invoice for your order
+              </p>
+            </div>
+            <div 
+              className="w-10 h-10 rounded-full flex items-center justify-center"
+              style={{ backgroundColor: isBusinessOrder ? "#1A9952" : "#E5E7EB" }}
+            >
+              <svg className="w-5 h-5" style={{ color: isBusinessOrder ? "white" : "#9CA3AF" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+            </div>
           </div>
           {isBusinessOrder && (
-            <div className="mt-3">
-              <label className="block text-sm mb-2 text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
-                GST Number
+            <div className="mt-4 pt-4 border-t border-gray-200" onClick={(e) => e.stopPropagation()}>
+              <label className="block text-sm font-medium mb-2" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                Enter GST Number
               </label>
               <input
                 type="text"
                 value={gstNumber}
                 onChange={(e) => setGstNumber(e.target.value.toUpperCase())}
                 placeholder="e.g., 29ABCDE1234F1Z5"
-                className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#1A9952]"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#1A9952] bg-white"
                 style={{ fontFamily: "Sweet Sans Pro" }}
                 data-testid="input-gst-number"
               />
-              <p className="text-xs text-gray-500 mt-1" style={{ fontFamily: "Sweet Sans Pro" }}>
-                GST number will be included in your invoice
-              </p>
             </div>
           )}
         </div>
