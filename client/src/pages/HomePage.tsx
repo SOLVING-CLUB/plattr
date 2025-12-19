@@ -614,7 +614,7 @@ export default function Home() {
         </div>
 
         {/* Footer Section */}
-        <div className="flex flex-col items-center justify-center py-6 mt-2 border-t border-gray-200">
+        <div className="flex flex-col items-center justify-center py-4 border-t border-gray-200">
           <img 
             src={plattrLogo} 
             alt="Plattr" 
