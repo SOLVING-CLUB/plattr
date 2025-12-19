@@ -157,28 +157,39 @@ export default function BulkMealCart() {
 
         {/* Cart Items - Receipt Style */}
         <div 
-          className="relative bg-white rounded-lg p-4 sm:p-6 mb-6"
+          className="relative bg-white rounded-xl p-4 sm:p-6 mb-6 border border-gray-200"
           style={{
             backgroundImage: `
               repeating-linear-gradient(
                 0deg,
                 transparent,
                 transparent 20px,
-                rgba(0,0,0,0.03) 20px,
-                rgba(0,0,0,0.03) 21px
+                rgba(0,0,0,0.02) 20px,
+                rgba(0,0,0,0.02) 21px
               )
             `,
-            boxShadow: "0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06)"
+            boxShadow: "0 2px 8px rgba(0,0,0,0.08)"
           }}
         >
-          <div className="space-y-3">
+          {/* Receipt Header */}
+          <div className="text-center mb-6 pb-4 border-b-2 border-dashed border-gray-300">
+            <h3 className="text-lg font-bold mb-1" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+              ORDER SUMMARY
+            </h3>
+            <p className="text-xs text-gray-500" style={{ fontFamily: "Sweet Sans Pro" }}>
+              {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+            </p>
+          </div>
+
+          {/* Cart Items */}
+          <div className="space-y-4">
             {cart.map((item) => (
               <div 
                 key={item.id} 
-                className="flex items-center gap-3"
+                className="flex items-center gap-3 pb-4 border-b border-gray-100 last:border-b-0 last:pb-0"
                 data-testid={`cart-item-${item.id}`}
               >
-                <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
+                <div className="w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100 border border-gray-200">
                   <img 
                     src={item.image || dishFallbackImage} 
                     alt={item.name}
@@ -186,44 +197,45 @@ export default function BulkMealCart() {
                   />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-xs sm:text-sm truncate" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                  <p className="font-semibold text-sm truncate mb-1" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
                     {item.name}
                   </p>
-                  <p className="text-[10px] sm:text-xs text-gray-500" style={{ fontFamily: "Sweet Sans Pro" }}>
-                    ₹{item.price.toLocaleString('en-IN')} × {item.quantity} servings
+                  <p className="text-xs text-gray-500" style={{ fontFamily: "Sweet Sans Pro" }}>
+                    ₹{item.price.toLocaleString('en-IN')} per serving
                   </p>
-                </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <div className="flex items-center gap-1">
+                  {/* Quantity Controls */}
+                  <div className="flex items-center gap-2 mt-2">
                     <button
                       onClick={() => handleQuantityChange(item.id, -1)}
                       disabled={item.quantity <= 5}
-                      className={`w-6 h-6 rounded-full border flex items-center justify-center ${
+                      className={`w-7 h-7 rounded-full border-2 flex items-center justify-center ${
                         item.quantity <= 5 
                           ? 'border-gray-200 text-gray-300 cursor-not-allowed' 
-                          : 'border-gray-300 hover:border-green-500'
+                          : 'border-gray-300 hover:border-green-500 text-gray-600'
                       }`}
                       data-testid={`button-decrease-${item.id}`}
                     >
                       <Minus className="w-3 h-3" />
                     </button>
-                    <span className="font-semibold text-xs w-6 text-center" style={{ fontFamily: "Sweet Sans Pro" }}>
+                    <span className="font-bold text-sm w-8 text-center" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
                       {item.quantity}
                     </span>
                     <button
                       onClick={() => handleQuantityChange(item.id, 1)}
-                      className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center hover:border-green-500"
+                      className="w-7 h-7 rounded-full border-2 border-gray-300 flex items-center justify-center hover:border-green-500 text-gray-600"
                       data-testid={`button-increase-${item.id}`}
                     >
                       <Plus className="w-3 h-3" />
                     </button>
                   </div>
-                  <span className="font-semibold text-xs sm:text-sm ml-2" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                </div>
+                <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                  <span className="font-bold text-base" style={{ fontFamily: "Sweet Sans Pro", color: "#1A9952" }}>
                     ₹{(item.price * item.quantity).toLocaleString('en-IN')}
                   </span>
                   <button
                     onClick={() => removeFromCart(item.id)}
-                    className="text-red-500 hover:text-red-700 p-1 flex-shrink-0"
+                    className="text-red-500 hover:text-red-700 p-1"
                     data-testid={`button-remove-${item.id}`}
                   >
                     <Trash2 className="w-4 h-4" />
@@ -234,11 +246,11 @@ export default function BulkMealCart() {
           </div>
 
           {/* Subtotal row */}
-          <div className="flex items-center justify-between mt-4 pt-4 border-t border-dashed border-gray-300">
-            <span className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+          <div className="flex items-center justify-between mt-6 pt-4 border-t-2 border-dashed border-gray-300">
+            <span className="font-bold text-base" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
               Subtotal ({cart.length} items)
             </span>
-            <span className="font-bold text-base" style={{ fontFamily: "Sweet Sans Pro", color: "#1A9952" }}>
+            <span className="font-bold text-xl" style={{ fontFamily: "Sweet Sans Pro", color: "#1A9952" }}>
               ₹{subtotal.toLocaleString('en-IN')}
             </span>
           </div>
