@@ -609,12 +609,12 @@ export default function Home() {
           <SpotlightFeaturesSection />
         </div>
 
-        <div className="mt-6 mb-4">
+        <div className="mt-6 mb-0">
           <SmartMenuConciergeSection onTryNow={handleTryMenuConcierge} />
         </div>
 
         {/* Footer Section */}
-        <div className="flex flex-col items-center justify-center py-4 border-t border-gray-200">
+        <div className="flex flex-col items-center justify-center py-3 border-t border-gray-200">
           <img 
             src={plattrLogo} 
             alt="Plattr" 
