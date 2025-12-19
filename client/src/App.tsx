@@ -3,7 +3,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { useAndroidBackButton } from "@/hooks/useAndroidBackButton";
-import { useSwipeBack } from "@/hooks/useSwipeBack";
+import { SwipeablePageWrapper } from "@/components/SwipeablePageWrapper";
 import { PageLoaderProvider, usePageLoader } from "@/components/PageLoader";
 import NotFound from "@/pages/not-found";
 import HomePage from "@/pages/HomePage";
@@ -304,8 +304,6 @@ function App() {
   const [, setLocation] = useLocation();
   const { isAuthenticated, loading, initialized } = useAuth();
   
-  useSwipeBack();
-  
   // Check sessionStorage ONCE on mount - if splash was seen, never show it
   const [showSplash, setShowSplash] = useState(() => {
     const alreadySeen = sessionStorage.getItem('splashSeen') === 'true';
@@ -359,7 +357,9 @@ function App() {
               <SplashScreen onVideoEnd={handleVideoEnd} />
             </div>
           )}
-          <Router />
+          <SwipeablePageWrapper>
+            <Router />
+          </SwipeablePageWrapper>
         </PageLoaderProvider>
       </CartProvider>
     </QueryClientProvider>
