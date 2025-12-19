@@ -68,18 +68,23 @@ export default function ConciergeResultsPage() {
   // Bulk Meal mode: quantity per dish
   const [dishQuantities, setDishQuantities] = useState<Record<string, number>>({});
   
-  // MealBox mode: portion counts for veg, egg, and non-veg plates
-  const [vegPortions, setVegPortions] = useState(1);
+  // MealBox mode: portion counts for veg, egg, and non-veg plates (minimum 5 when selected)
+  const [vegPortions, setVegPortions] = useState(5);
   const [eggPortions, setEggPortions] = useState(0);
   const [nonVegPortions, setNonVegPortions] = useState(0);
-  const [mealboxDishes, setMealboxDishes] = useState<{ vegDishes: string[], nonVegDishes: string[] }>({ vegDishes: [], nonVegDishes: [] });
   
   // MealBox portion size (3, 5, 6, 8 items per plate)
   const [mealboxPortionSize, setMealboxPortionSize] = useState<number>(5);
   const PORTION_OPTIONS = [3, 5, 6, 8];
   
-  // Use cart context for bulk meals
-  const { cart, addToCart, getQuantity, clearCart } = useCart();
+  // MealBox dish selection - store selected dish IDs and data for each plate type
+  const [currentDietaryTab, setCurrentDietaryTab] = useState<"veg" | "egg" | "non-veg">("veg");
+  const [vegPlateSelections, setVegPlateSelections] = useState<Array<{ dishId: string; dish: Dish }>>([]);
+  const [eggPlateSelections, setEggPlateSelections] = useState<Array<{ dishId: string; dish: Dish }>>([]);
+  const [nonVegPlateSelections, setNonVegPlateSelections] = useState<Array<{ dishId: string; dish: Dish }>>([]);
+  
+  // Use cart context for bulk meals and mealbox progress
+  const { cart, addToCart, getQuantity, clearCart, saveMealBoxProgress } = useCart();
 
   // Parse preferences from URL
   const searchParams = new URLSearchParams(window.location.search);
@@ -530,27 +535,151 @@ export default function ConciergeResultsPage() {
   const bulkCartTotal = cart.reduce((sum, item) => sum + item.quantity, 0);
   const bulkCartValue = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   
-  // MealBox mode: toggle dish in plate
-  const toggleMealboxDish = (dishId: string, isVeg: boolean) => {
-    setMealboxDishes(prev => {
-      if (isVeg) {
-        const exists = prev.vegDishes.includes(dishId);
-        return {
-          ...prev,
-          vegDishes: exists 
-            ? prev.vegDishes.filter(id => id !== dishId)
-            : [...prev.vegDishes, dishId]
-        };
+  // MealBox mode: add dish to plate selection
+  const handleAddToPlate = (dish: Dish) => {
+    const dietaryType = dish.dietaryType?.toLowerCase() || 'veg';
+    
+    // Determine which plate this dish goes to based on current tab
+    // Veg dishes can go to veg plate only
+    // Egg dishes can go to egg or non-veg plates
+    // Non-veg dishes can go to non-veg plate only
+    const targetTab = currentDietaryTab;
+    
+    // Get current selections and max allowed
+    const getCurrentSelections = () => {
+      if (targetTab === "veg") return vegPlateSelections;
+      if (targetTab === "egg") return eggPlateSelections;
+      return nonVegPlateSelections;
+    };
+    
+    const getMaxItems = () => {
+      if (targetTab === "veg") return mealboxPortionSize;
+      if (targetTab === "egg") return mealboxPortionSize;
+      return mealboxPortionSize;
+    };
+    
+    const currentSelections = getCurrentSelections();
+    const maxItems = getMaxItems();
+    
+    // Check if dish already selected for this plate type
+    if (currentSelections.some(sel => sel.dishId === dish.id)) {
+      // Remove it
+      if (targetTab === "veg") {
+        setVegPlateSelections(prev => prev.filter(sel => sel.dishId !== dish.id));
+      } else if (targetTab === "egg") {
+        setEggPlateSelections(prev => prev.filter(sel => sel.dishId !== dish.id));
       } else {
-        const exists = prev.nonVegDishes.includes(dishId);
-        return {
-          ...prev,
-          nonVegDishes: exists 
-            ? prev.nonVegDishes.filter(id => id !== dishId)
-            : [...prev.nonVegDishes, dishId]
-        };
+        setNonVegPlateSelections(prev => prev.filter(sel => sel.dishId !== dish.id));
       }
+      return;
+    }
+    
+    // Check if at max capacity
+    if (currentSelections.length >= maxItems) {
+      toast({
+        title: "Plate is full",
+        description: `You can only select ${maxItems} items per ${targetTab} plate`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Add to selections
+    const newSelection = { dishId: dish.id, dish };
+    if (targetTab === "veg") {
+      setVegPlateSelections(prev => [...prev, newSelection]);
+    } else if (targetTab === "egg") {
+      setEggPlateSelections(prev => [...prev, newSelection]);
+    } else {
+      setNonVegPlateSelections(prev => [...prev, newSelection]);
+    }
+    
+    toast({
+      title: "Added to plate",
+      description: `${dish.name} added to ${targetTab} plate (${currentSelections.length + 1}/${maxItems})`,
     });
+  };
+  
+  // Check if dish is selected for current plate
+  const isDishSelectedForPlate = (dishId: string) => {
+    if (currentDietaryTab === "veg") return vegPlateSelections.some(sel => sel.dishId === dishId);
+    if (currentDietaryTab === "egg") return eggPlateSelections.some(sel => sel.dishId === dishId);
+    return nonVegPlateSelections.some(sel => sel.dishId === dishId);
+  };
+  
+  // Get dietary types allowed for current tab
+  const getAllowedDietaryTypes = () => {
+    if (currentDietaryTab === "veg") return ["veg"];
+    if (currentDietaryTab === "egg") return ["veg", "egg"];
+    return ["veg", "egg", "non-veg"];
+  };
+  
+  // Filter dishes by dietary type for current tab
+  const getFilteredDishesForTab = () => {
+    if (!recommendations) return [];
+    const allowedTypes = getAllowedDietaryTypes();
+    return recommendations.recommendations.filter(dish => {
+      const dtype = dish.dietaryType?.toLowerCase() || 'veg';
+      return allowedTypes.includes(dtype);
+    });
+  };
+  
+  // Calculate if all required plates are filled
+  const getPlateProgress = () => {
+    const vegProgress = vegPortions > 0 ? { current: vegPlateSelections.length, required: mealboxPortionSize } : null;
+    const eggProgress = eggPortions > 0 ? { current: eggPlateSelections.length, required: mealboxPortionSize } : null;
+    const nonVegProgress = nonVegPortions > 0 ? { current: nonVegPlateSelections.length, required: mealboxPortionSize } : null;
+    
+    const allFilled = 
+      (!vegProgress || vegProgress.current >= vegProgress.required) &&
+      (!eggProgress || eggProgress.current >= eggProgress.required) &&
+      (!nonVegProgress || nonVegProgress.current >= nonVegProgress.required);
+    
+    return { vegProgress, eggProgress, nonVegProgress, allFilled };
+  };
+  
+  // Handle proceed to MealBox checkout
+  const handleProceedToMealbox = () => {
+    // Save progress to mealBoxProgress context so MealBoxPage can resume
+    const mealTypeMap: Record<string, "breakfast" | "lunch" | "dinner" | "hi-tea"> = {
+      breakfast: "breakfast",
+      lunch: "lunch",
+      dinner: "dinner",
+      snacks: "hi-tea",
+    };
+    
+    // Convert selections to MealBoxPage format
+    const formatSelections = (selections: Array<{ dishId: string; dish: Dish }>) => {
+      return selections.map((sel, idx) => ({
+        slot: idx,
+        itemId: sel.dishId,
+        item: {
+          id: sel.dishId,
+          name: sel.dish.name,
+          price: parseFloat(sel.dish.price),
+          image: sel.dish.imageUrl,
+          type: (sel.dish.dietaryType?.toLowerCase() || 'veg') as 'veg' | 'egg' | 'non-veg',
+        },
+      }));
+    };
+    
+    saveMealBoxProgress({
+      currentStep: 5, // Jump to item review step
+      selectedPortions: mealboxPortionSize as 3 | 5 | 6 | 8,
+      mealPreference: currentDietaryTab,
+      selectedMealType: mealTypeMap[preferences.mealType] || "lunch",
+      vegBoxes: vegPortions > 0 ? String(vegPortions) : "",
+      eggBoxes: eggPortions > 0 ? String(eggPortions) : "",
+      nonVegBoxes: nonVegPortions > 0 ? String(nonVegPortions) : "",
+      vegPlateSelections: formatSelections(vegPlateSelections),
+      eggPlateSelections: formatSelections(eggPlateSelections),
+      nonVegPlateSelections: formatSelections(nonVegPlateSelections),
+      selectedAddons: [],
+      currentDietaryTab,
+    });
+    
+    // Navigate to MealBox page
+    setLocation("/mealbox");
   };
 
   // Fun food facts to cycle through while loading
@@ -925,7 +1054,7 @@ export default function ConciergeResultsPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => setVegPortions(Math.max(0, vegPortions - 1))}
+                        onClick={() => setVegPortions(vegPortions <= 5 ? 0 : vegPortions - 1)}
                         className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100"
                         data-testid="button-veg-minus"
                       >
@@ -933,7 +1062,7 @@ export default function ConciergeResultsPage() {
                       </button>
                       <span className="w-8 text-center font-semibold">{vegPortions}</span>
                       <button
-                        onClick={() => setVegPortions(vegPortions + 1)}
+                        onClick={() => setVegPortions(vegPortions === 0 ? 5 : vegPortions + 1)}
                         className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100"
                         data-testid="button-veg-plus"
                       >
@@ -957,7 +1086,7 @@ export default function ConciergeResultsPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => setEggPortions(Math.max(0, eggPortions - 1))}
+                        onClick={() => setEggPortions(eggPortions <= 5 ? 0 : eggPortions - 1)}
                         className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100"
                         data-testid="button-egg-minus"
                       >
@@ -965,7 +1094,7 @@ export default function ConciergeResultsPage() {
                       </button>
                       <span className="w-8 text-center font-semibold">{eggPortions}</span>
                       <button
-                        onClick={() => setEggPortions(eggPortions + 1)}
+                        onClick={() => setEggPortions(eggPortions === 0 ? 5 : eggPortions + 1)}
                         className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100"
                         data-testid="button-egg-plus"
                       >
@@ -989,7 +1118,7 @@ export default function ConciergeResultsPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => setNonVegPortions(Math.max(0, nonVegPortions - 1))}
+                        onClick={() => setNonVegPortions(nonVegPortions <= 5 ? 0 : nonVegPortions - 1)}
                         className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100"
                         data-testid="button-nonveg-minus"
                       >
@@ -997,7 +1126,7 @@ export default function ConciergeResultsPage() {
                       </button>
                       <span className="w-8 text-center font-semibold">{nonVegPortions}</span>
                       <button
-                        onClick={() => setNonVegPortions(nonVegPortions + 1)}
+                        onClick={() => setNonVegPortions(nonVegPortions === 0 ? 5 : nonVegPortions + 1)}
                         className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100"
                         data-testid="button-nonveg-plus"
                       >
@@ -1008,24 +1137,110 @@ export default function ConciergeResultsPage() {
                 )}
               </div>
               
+              {/* Dietary Tab Selector - show when any plates selected */}
+              {(vegPortions > 0 || nonVegPortions > 0 || eggPortions > 0) && (
+                <div className="mt-4 space-y-3">
+                  <p className="text-sm font-medium text-gray-600">Select dishes for each plate type:</p>
+                  
+                  {/* Progress Summary */}
+                  {(() => {
+                    const progress = getPlateProgress();
+                    return (
+                      <div className="flex flex-wrap gap-2">
+                        {progress.vegProgress && (
+                          <Badge 
+                            variant={progress.vegProgress.current >= progress.vegProgress.required ? "default" : "outline"}
+                            className={progress.vegProgress.current >= progress.vegProgress.required ? "bg-green-500" : ""}
+                          >
+                            Veg: {progress.vegProgress.current}/{progress.vegProgress.required}
+                          </Badge>
+                        )}
+                        {progress.eggProgress && (
+                          <Badge 
+                            variant={progress.eggProgress.current >= progress.eggProgress.required ? "default" : "outline"}
+                            className={progress.eggProgress.current >= progress.eggProgress.required ? "bg-amber-500" : ""}
+                          >
+                            Egg: {progress.eggProgress.current}/{progress.eggProgress.required}
+                          </Badge>
+                        )}
+                        {progress.nonVegProgress && (
+                          <Badge 
+                            variant={progress.nonVegProgress.current >= progress.nonVegProgress.required ? "default" : "outline"}
+                            className={progress.nonVegProgress.current >= progress.nonVegProgress.required ? "bg-red-500" : ""}
+                          >
+                            Non-Veg: {progress.nonVegProgress.current}/{progress.nonVegProgress.required}
+                          </Badge>
+                        )}
+                      </div>
+                    );
+                  })()}
+                  
+                  {/* Dietary Tab Buttons */}
+                  <div className="flex gap-2">
+                    {vegPortions > 0 && (
+                      <button
+                        onClick={() => setCurrentDietaryTab("veg")}
+                        className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+                          currentDietaryTab === "veg" 
+                            ? "bg-green-500 text-white" 
+                            : "bg-green-50 text-green-700 border border-green-200"
+                        }`}
+                        data-testid="tab-veg"
+                      >
+                        <Leaf className="w-4 h-4 inline mr-1" />
+                        Veg ({vegPlateSelections.length}/{mealboxPortionSize})
+                      </button>
+                    )}
+                    {eggPortions > 0 && (
+                      <button
+                        onClick={() => setCurrentDietaryTab("egg")}
+                        className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+                          currentDietaryTab === "egg" 
+                            ? "bg-amber-500 text-white" 
+                            : "bg-amber-50 text-amber-700 border border-amber-200"
+                        }`}
+                        data-testid="tab-egg"
+                      >
+                        <span className="inline mr-1">🥚</span>
+                        Egg ({eggPlateSelections.length}/{mealboxPortionSize})
+                      </button>
+                    )}
+                    {nonVegPortions > 0 && (
+                      <button
+                        onClick={() => setCurrentDietaryTab("non-veg")}
+                        className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+                          currentDietaryTab === "non-veg" 
+                            ? "bg-red-500 text-white" 
+                            : "bg-red-50 text-red-700 border border-red-200"
+                        }`}
+                        data-testid="tab-nonveg"
+                      >
+                        <Drumstick className="w-4 h-4 inline mr-1" />
+                        Non-Veg ({nonVegPlateSelections.length}/{mealboxPortionSize})
+                      </button>
+                    )}
+                  </div>
+                  
+                  <p className="text-xs text-gray-500">
+                    {currentDietaryTab === "veg" && "Select veg dishes for your veg plates"}
+                    {currentDietaryTab === "egg" && "Select veg or egg dishes for your egg plates"}
+                    {currentDietaryTab === "non-veg" && "Select any dishes for your non-veg plates"}
+                  </p>
+                </div>
+              )}
+              
               {/* Proceed to MealBox button */}
               {(vegPortions > 0 || nonVegPortions > 0 || eggPortions > 0) && (
                 <Button
-                  onClick={() => {
-                    // Save MealBox preferences to sessionStorage and navigate
-                    sessionStorage.setItem('mealbox-from-concierge', JSON.stringify({
-                      portionSize: mealboxPortionSize,
-                      vegPlates: vegPortions,
-                      eggPlates: eggPortions,
-                      nonVegPlates: nonVegPortions,
-                    }));
-                    setLocation("/mealbox");
-                  }}
+                  onClick={handleProceedToMealbox}
                   className="w-full mt-4"
-                  style={{ backgroundColor: "#1A9952" }}
+                  style={{ backgroundColor: getPlateProgress().allFilled ? "#1A9952" : "#9CA3AF" }}
+                  disabled={!getPlateProgress().allFilled}
                   data-testid="button-proceed-mealbox"
                 >
-                  Proceed to MealBox Selection
+                  {getPlateProgress().allFilled 
+                    ? "Proceed to MealBox Checkout" 
+                    : "Complete dish selection to proceed"}
                 </Button>
               )}
             </div>
@@ -1048,9 +1263,13 @@ export default function ConciergeResultsPage() {
                   const isVeg = dish.dietaryType?.toLowerCase() === 'veg';
                   const isEgg = dish.dietaryType?.toLowerCase() === 'egg';
                   const isNonVeg = dish.dietaryType?.toLowerCase() === 'non-veg';
-                  const isVegOrEgg = isVeg || isEgg || (!isVeg && !isEgg && !isNonVeg);
                   const currentQty = dishQuantities[dish.id] ?? 5;
-                  const isInMealbox = mealboxDishes.vegDishes.includes(dish.id) || mealboxDishes.nonVegDishes.includes(dish.id);
+                  const isSelectedForPlate = isDishSelectedForPlate(dish.id);
+                  
+                  // Check if dish is compatible with current dietary tab
+                  const allowedTypes = getAllowedDietaryTypes();
+                  const dishDietaryType = dish.dietaryType?.toLowerCase() || 'veg';
+                  const isDishAllowedForTab = allowedTypes.includes(dishDietaryType);
                   
                   return (
                     <Card 
@@ -1139,17 +1358,24 @@ export default function ConciergeResultsPage() {
                           </div>
                         )}
                         
-                        {/* MealBox Mode: Toggle add to plate */}
-                        {orderMode === "mealbox" && (
+                        {/* MealBox Mode: Add to plate (only when plates selected and dish is allowed for current tab) */}
+                        {orderMode === "mealbox" && (vegPortions > 0 || eggPortions > 0 || nonVegPortions > 0) && (
                           <Button
                             size="sm"
-                            onClick={() => toggleMealboxDish(dish.id, isVegOrEgg)}
-                            variant={isInMealbox ? "secondary" : "default"}
-                            className="w-full rounded-full text-xs h-8"
-                            style={{ backgroundColor: isInMealbox ? "#E5E7EB" : "#1A9952" }}
-                            data-testid={`button-add-${dish.id}`}
+                            onClick={() => handleAddToPlate(dish)}
+                            variant={isSelectedForPlate ? "secondary" : "default"}
+                            className={`w-full rounded-full text-xs h-8 ${!isDishAllowedForTab ? "opacity-50" : ""}`}
+                            style={{ backgroundColor: isSelectedForPlate ? "#E5E7EB" : isDishAllowedForTab ? "#1A9952" : "#9CA3AF" }}
+                            disabled={!isDishAllowedForTab}
+                            data-testid={`button-add-plate-${dish.id}`}
                           >
-                            {isInMealbox ? "Remove from Plate" : "Add to Plate"}
+                            {isSelectedForPlate ? (
+                              <>✓ Added to {currentDietaryTab} plate</>
+                            ) : isDishAllowedForTab ? (
+                              <>Add to {currentDietaryTab} plate</>
+                            ) : (
+                              <>Not for {currentDietaryTab}</>
+                            )}
                           </Button>
                         )}
                       </div>
