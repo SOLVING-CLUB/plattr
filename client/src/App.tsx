@@ -3,6 +3,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { useAndroidBackButton } from "@/hooks/useAndroidBackButton";
+import { useSwipeBack } from "@/hooks/useSwipeBack";
 import { PageLoaderProvider, usePageLoader } from "@/components/PageLoader";
 import NotFound from "@/pages/not-found";
 import HomePage from "@/pages/HomePage";
@@ -302,6 +303,8 @@ function App() {
   const [fadeOut, setFadeOut] = useState(false);
   const [, setLocation] = useLocation();
   const { isAuthenticated, loading, initialized } = useAuth();
+  
+  useSwipeBack();
   
   // Check sessionStorage ONCE on mount - if splash was seen, never show it
   const [showSplash, setShowSplash] = useState(() => {
