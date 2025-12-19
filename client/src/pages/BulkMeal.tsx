@@ -1523,7 +1523,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                       reviewCount: 0,
                       category: dish.dishType?.toLowerCase() || 'all',
                       type: (dish.dietaryType?.toLowerCase() || 'veg') as 'veg' | 'non-veg' | 'egg',
-                      image: dish.imageUrl ? getSupabaseImageUrl(dish.imageUrl) : undefined,
+                      image: (dish.image_url || dish.imageUrl) ? getSupabaseImageUrl(dish.image_url || dish.imageUrl || '') : undefined,
                     };
 
                     return (

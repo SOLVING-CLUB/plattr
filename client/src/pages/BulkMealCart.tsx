@@ -245,10 +245,27 @@ export default function BulkMealCart() {
             ))}
           </div>
 
+          {/* Single item warning */}
+          {cart.length === 1 && (
+            <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
+              <div className="w-5 h-5 rounded-full bg-amber-400 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span className="text-white text-xs font-bold">!</span>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-amber-800" style={{ fontFamily: "Sweet Sans Pro" }}>
+                  Just one dish?
+                </p>
+                <p className="text-xs text-amber-700 mt-0.5" style={{ fontFamily: "Sweet Sans Pro" }}>
+                  A single dish may not be enough to fill everyone. We recommend adding a few more items for a complete meal experience.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Subtotal row */}
           <div className="flex items-center justify-between mt-6 pt-4 border-t-2 border-dashed border-gray-300">
             <span className="font-bold text-base" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-              Subtotal ({cart.length} items)
+              Subtotal ({cart.length} {cart.length === 1 ? 'item' : 'items'})
             </span>
             <span className="font-bold text-xl" style={{ fontFamily: "Sweet Sans Pro", color: "#1A9952" }}>
               ₹{subtotal.toLocaleString('en-IN')}
