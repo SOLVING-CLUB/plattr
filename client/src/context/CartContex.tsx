@@ -5,6 +5,7 @@ import {
   useEffect,
   type ReactNode,
 } from "react";
+import { analytics } from "@/lib/analytics";
 
 export type ServiceType = "bulk-meals" | "mealbox" | "catering" | "corporate";
 
@@ -180,18 +181,32 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }
     }
     setActiveCategory(category);
+    
+    analytics.trackAddToCart(
+      String(item.id),
+      item.name,
+      item.price,
+      item.quantity,
+      category
+    ).catch(() => {});
   };
 
   const removeFromCart = (itemId: number) => {
-    setCart(cart.filter((item) => item.id !== itemId));
+    const item = cart.find((cartItem) => cartItem.id === itemId);
+    
+    setCart(cart.filter((cartItem) => cartItem.id !== itemId));
     setAddedItems((prev) => {
       const newSet = new Set(prev);
       newSet.delete(itemId);
       return newSet;
     });
 
-    if (cart.filter((item) => item.id !== itemId).length === 0) {
+    if (cart.filter((cartItem) => cartItem.id !== itemId).length === 0) {
       setActiveCategory(null);
+    }
+    
+    if (item) {
+      analytics.trackRemoveFromCart(String(itemId), item.name).catch(() => {});
     }
   };
 

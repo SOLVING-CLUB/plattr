@@ -1,0 +1,324 @@
+Here's a comprehensive implementation guide you can use to add analytics tracking to your other codebase:
+
+Complete Analytics Tracking Implementation Guide
+Step 1: Create the Database Table
+Run this SQL in your Supabase SQL Editor:
+
+-- Create user_events table for analytics tracking
+CREATE TABLE IF NOT EXISTS user_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id TEXT,  -- Use TEXT to match your users.id type (or UUID if that's your user ID type)
+    event_name TEXT NOT NULL,
+    event_data JSONB DEFAULT '{}',
+    device_type TEXT,
+    session_id TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+-- Create indexes for efficient querying
+CREATE INDEX idx_user_events_user_id ON user_events(user_id);
+CREATE INDEX idx_user_events_event_name ON user_events(event_name);
+CREATE INDEX idx_user_events_created_at ON user_events(created_at);
+CREATE INDEX idx_user_events_session_id ON user_events(session_id);
+CREATE INDEX idx_user_events_event_name_created_at ON user_events(event_name, created_at);
+-- Enable Row Level Security
+ALTER TABLE user_events ENABLE ROW LEVEL SECURITY;
+-- Policy: Allow authenticated users to insert their own events
+CREATE POLICY "Users can insert their own events" ON user_events
+    FOR INSERT WITH CHECK (true);
+-- Policy: Allow users to read only their own events (optional, for user dashboards)
+CREATE POLICY "Users can view their own events" ON user_events
+    FOR SELECT USING (auth.uid()::text = user_id OR user_id IS NULL);
+Step 2: Create the Analytics Service
+Create a new file lib/analytics.ts (or wherever you keep your utility functions):
+
+/**
+ * Analytics Tracking Service
+ * Tracks user events to Supabase for internal analytics
+ */
+// Import your Supabase client here
+import { supabaseAuth } from './supabase-auth'; // CHANGE THIS to your Supabase client import
+// SSR Safety - Check if running in browser
+function isBrowser(): boolean {
+  return typeof window !== 'undefined';
+}
+// Session Management - Unique ID per browser session
+function getSessionId(): string {
+  if (!isBrowser()) return '';
+  let sessionId = sessionStorage.getItem('analytics_session_id');
+  if (!sessionId) {
+    sessionId = `${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+    sessionStorage.setItem('analytics_session_id', sessionId);
+  }
+  return sessionId;
+}
+// Device Detection
+function getDeviceType(): string {
+  if (!isBrowser()) return 'unknown';
+  const ua = navigator.userAgent;
+  if (/android/i.test(ua)) return 'android';
+  if (/iPad|iPhone|iPod/.test(ua)) return 'ios';
+  if (/mobile/i.test(ua)) return 'mobile';
+  return 'desktop';
+}
+// Get current user ID (returns null for guests)
+async function getUserId(): Promise<string | null> {
+  try {
+    const { data: { session } } = await supabaseAuth.auth.getSession();
+    return session?.user?.id || null;
+  } catch {
+    return null;
+  }
+}
+interface EventData {
+  [key: string]: any;
+}
+// Core tracking function
+async function trackEvent(eventName: string, eventData: EventData = {}): Promise<void> {
+  if (!isBrowser()) return;
+  try {
+    const userId = await getUserId();
+    const sessionId = getSessionId();
+    const deviceType = getDeviceType();
+    await supabaseAuth.from('user_events').insert({
+      user_id: userId,
+      event_name: eventName,
+      event_data: eventData,
+      device_type: deviceType,
+      session_id: sessionId,
+    });
+  } catch (error) {
+    console.error('Analytics tracking error:', error);
+  }
+}
+// Export all tracking methods
+export const analytics = {
+  // Page Views
+  trackPageView: (screen: string, category?: string) => {
+    return trackEvent('page_view', { screen, category });
+  },
+  // Cart Events
+  trackAddToCart: (dishId: string, dishName: string, price: number, quantity: number, category?: string) => {
+    return trackEvent('add_to_cart', { dish_id: dishId, dish_name: dishName, price, quantity, category });
+  },
+  trackRemoveFromCart: (dishId: string, dishName: string) => {
+    return trackEvent('remove_from_cart', { dish_id: dishId, dish_name: dishName });
+  },
+  trackCartAbandoned: (cartTotal: number, itemCount: number, items: string[], timeInCartSeconds: number) => {
+    return trackEvent('cart_abandoned', { cart_total: cartTotal, item_count: itemCount, items, time_in_cart_seconds: timeInCartSeconds });
+  },
+  // Checkout Events
+  trackCheckoutStarted: (cartTotal: number, itemCount: number, orderType: string) => {
+    return trackEvent('checkout_started', { cart_total: cartTotal, item_count: itemCount, order_type: orderType });
+  },
+  trackCheckoutAbandoned: (step: string, cartTotal: number, timeOnCheckoutSeconds: number) => {
+    return trackEvent('checkout_abandoned', { step, cart_total: cartTotal, time_on_checkout_seconds: timeOnCheckoutSeconds });
+  },
+  trackOrderCompleted: (orderId: string, total: number, itemCount: number, paymentMethod?: string) => {
+    return trackEvent('order_completed', { order_id: orderId, total, item_count: itemCount, payment_method: paymentMethod });
+  },
+  // AI Planner Events
+  trackAIPlannerInitiated: (guestCount: number, eventType: string, budgetRange?: string) => {
+    return trackEvent('ai_planner_initiated', { guest_count: guestCount, event_type: eventType, budget_range: budgetRange });
+  },
+  trackAIPlannerSuggestionReceived: (guestCount: number, suggestionsCount: number, responseTimeMs: number) => {
+    return trackEvent('ai_planner_suggestion_received', { guest_count: guestCount, suggestions_count: suggestionsCount, response_time_ms: responseTimeMs });
+  },
+  trackAIPlannerSuggestionFailed: (guestCount: number, error: string, retryCount: number) => {
+    return trackEvent('ai_planner_suggestion_failed', { guest_count: guestCount, error, retry_count: retryCount });
+  },
+  // Coupon Events
+  trackCouponApplied: (code: string, discountType: string, discountValue: number, discountAmount: number, orderTotal: number) => {
+    return trackEvent('coupon_applied', { code, discount_type: discountType, discount_value: discountValue, discount_amount: discountAmount, order_total: orderTotal });
+  },
+  trackCouponFailed: (code: string, reason: string) => {
+    return trackEvent('coupon_failed', { code, reason });
+  },
+  // Form Abandonment Events
+  trackFormAbandoned: (formType: string, lastCompletedField: string, fieldsFilled: string[], fieldsMissing: string[], timeOnFormSeconds: number) => {
+    return trackEvent(`${formType}_form_abandoned`, { last_completed_field: lastCompletedField, fields_filled: fieldsFilled, fields_missing: fieldsMissing, time_on_form_seconds: timeOnFormSeconds });
+  },
+  // Search Events
+  trackSearch: (query: string, resultsCount: number) => {
+    return trackEvent('search', { query, results_count: resultsCount });
+  },
+  // Generic event for custom tracking
+  track: trackEvent,
+};
+Step 3: Integrate Cart Tracking
+In your Cart Context or wherever you handle addToCart and removeFromCart:
+
+// Add this import at the top of your cart context file
+import { analytics } from '@/lib/analytics';
+// Inside your addToCart function, AFTER the item is added:
+const addToCart = async (dish: Dish, quantity: number = 1) => {
+  // ... your existing add to cart logic ...
+  // Track the event (fire-and-forget with error suppression)
+  analytics.trackAddToCart(
+    dish.id,
+    dish.name,
+    parseFloat(dish.price),
+    quantity,
+    dish.categoryName || undefined
+  ).catch(() => {});
+};
+// Inside your removeFromCart function, AFTER the item is removed:
+const removeFromCart = async (dishId: string) => {
+  // Get item details BEFORE removing (for tracking)
+  const item = cartItems.find(item => item.dishId === dishId);
+  
+  // ... your existing remove logic ...
+  // Track the event
+  if (item) {
+    analytics.trackRemoveFromCart(dishId, item.dish?.name || 'Unknown').catch(() => {});
+  }
+};
+Step 4: Integrate Checkout Tracking
+In your Checkout Page, add this at the component level:
+
+import { useState, useEffect, useRef } from 'react';
+import { analytics } from '@/lib/analytics';
+export default function CheckoutPage() {
+  // ... your existing state and hooks ...
+  // Tracking refs - these persist across re-renders without triggering effects
+  const checkoutStartTimeRef = useRef<number>(Date.now());
+  const orderCompletedRef = useRef<boolean>(false);
+  const hasTrackedStartRef = useRef<boolean>(false);
+  const lastCartTotalRef = useRef<number>(0);
+  const lastCartCountRef = useRef<number>(0);
+  // Track checkout_started ONCE when component mounts with items
+  useEffect(() => {
+    if (!hasTrackedStartRef.current && cartItems.length > 0) {
+      const cartTotal = cartItems.reduce((sum, item) => sum + (parseFloat(item.dish.price) * item.quantity), 0);
+      lastCartTotalRef.current = cartTotal;
+      lastCartCountRef.current = cartItems.length;
+      analytics.trackCheckoutStarted(cartTotal, cartItems.length, 'bulk-meals').catch(() => {});
+      hasTrackedStartRef.current = true;
+    }
+  }, [cartItems]);
+  // Track checkout_abandoned ONLY on actual unmount (empty dependency array!)
+  useEffect(() => {
+    return () => {
+      // Only track abandonment if order wasn't completed and there were items
+      if (!orderCompletedRef.current && lastCartCountRef.current > 0) {
+        const timeOnCheckout = Math.floor((Date.now() - checkoutStartTimeRef.current) / 1000);
+        analytics.trackCheckoutAbandoned('checkout_page', lastCartTotalRef.current, timeOnCheckout).catch(() => {});
+      }
+    };
+  }, []); // IMPORTANT: Empty array means this ONLY runs on unmount
+  // In your order mutation onSuccess callback, BEFORE clearing cart:
+  const handleOrderSuccess = (orderData: any) => {
+    // Mark order as completed FIRST to prevent abandonment tracking
+    orderCompletedRef.current = true;
+    // ... rest of your success handling (clear cart, redirect, etc.)
+  };
+  // ... rest of your component
+}
+CRITICAL PATTERN NOTES:
+
+Use useRef for values that need to persist but shouldn't trigger re-renders
+The abandonment effect has [] as dependency - it only runs cleanup on unmount
+Set orderCompletedRef.current = true BEFORE any navigation/cleanup in success handler
+Always use .catch(() => {}) to suppress errors (tracking should never break the app)
+Step 5: Integrate AI Planner Tracking
+When user initiates the AI planner (e.g., clicking "Generate Menu"):
+
+import { analytics } from '@/lib/analytics';
+const handleStartPlanning = () => {
+  // Track initiation BEFORE calling the API
+  analytics.trackAIPlannerInitiated(
+    guestCount,
+    eventType || 'general',
+    budgetRange
+  ).catch(() => {});
+  // ... your API call logic
+};
+When AI returns suggestions:
+
+const startTime = Date.now();
+try {
+  const response = await fetchAISuggestions(params);
+  const responseTime = Date.now() - startTime;
+  // Track successful response
+  analytics.trackAIPlannerSuggestionReceived(
+    guestCount,
+    response.suggestions.length,
+    responseTime
+  ).catch(() => {});
+} catch (error) {
+  // Track failure
+  analytics.trackAIPlannerSuggestionFailed(
+    guestCount,
+    error.message || 'Unknown error',
+    retryCount
+  ).catch(() => {});
+}
+Step 6: Integrate Coupon Tracking
+In your coupon validation handler:
+
+import { analytics } from '@/lib/analytics';
+const handleApplyCoupon = async (couponCode: string) => {
+  try {
+    const result = await validateCoupon(couponCode, { orderTotal: subtotal });
+    if (result.valid && result.coupon && result.discount !== undefined) {
+      // Track successful coupon application
+      analytics.trackCouponApplied(
+        couponCode,
+        result.coupon.discountType || 'unknown',
+        result.coupon.discountValue || 0,
+        result.discount,
+        subtotal
+      ).catch(() => {});
+      // ... apply coupon to order
+    } else {
+      // Track failed coupon (invalid code, minimum not met, etc.)
+      analytics.trackCouponFailed(couponCode, result.error || 'Invalid coupon code').catch(() => {});
+      setError(result.error || 'Invalid coupon code');
+    }
+  } catch (err) {
+    // Track system error
+    analytics.trackCouponFailed(couponCode, 'Validation error').catch(() => {});
+    setError('Failed to validate coupon');
+  }
+};
+Step 7: Key Patterns to Remember
+Pattern	Why
+isBrowser() check	Prevents errors during SSR/build
+.catch(() => {}) on all calls	Tracking should never break the app
+useRef for tracking state	Avoids re-renders and stale closures
+Empty [] dependency for unmount effects	Ensures cleanup only runs on actual navigation away
+hasTrackedStartRef pattern	Prevents duplicate events on re-renders
+Mark completion BEFORE navigation	Ensures abandonment tracking doesn't fire on success
+Step 8: Querying Your Analytics
+Useful SQL queries for analyzing your data:
+
+-- Events by type (last 7 days)
+SELECT event_name, COUNT(*) as count
+FROM user_events
+WHERE created_at > NOW() - INTERVAL '7 days'
+GROUP BY event_name
+ORDER BY count DESC;
+-- Checkout funnel (started vs completed vs abandoned)
+SELECT 
+  COUNT(*) FILTER (WHERE event_name = 'checkout_started') as started,
+  COUNT(*) FILTER (WHERE event_name = 'order_completed') as completed,
+  COUNT(*) FILTER (WHERE event_name = 'checkout_abandoned') as abandoned
+FROM user_events
+WHERE created_at > NOW() - INTERVAL '7 days';
+-- Average time before abandonment
+SELECT AVG((event_data->>'time_on_checkout_seconds')::int) as avg_seconds
+FROM user_events
+WHERE event_name = 'checkout_abandoned'
+AND created_at > NOW() - INTERVAL '7 days';
+-- Most popular coupons
+SELECT event_data->>'code' as coupon, COUNT(*) as uses
+FROM user_events
+WHERE event_name = 'coupon_applied'
+GROUP BY event_data->>'code'
+ORDER BY uses DESC;
+-- AI Planner success rate
+SELECT 
+  COUNT(*) FILTER (WHERE event_name = 'ai_planner_suggestion_received') * 100.0 / 
+  NULLIF(COUNT(*) FILTER (WHERE event_name = 'ai_planner_initiated'), 0) as success_rate_percent
+FROM user_events
+WHERE created_at > NOW() - INTERVAL '7 days';
+Would you like me to provide any additional details for specific parts of this implementation?
