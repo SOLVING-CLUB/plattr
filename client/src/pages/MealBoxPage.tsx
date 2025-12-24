@@ -1065,6 +1065,7 @@ import FloatingNav from "@/pages/FloatingNav";
 import ContinueOrderBanner from "@/pages/ContinueOrderBanner";
 import { SearchOverlay } from "@/components/SearchOverlay";
 import { validateBangaloreAddress, validateBangalorePincode, BANGALORE_VALIDATION_ERROR } from "@/lib/addressValidation";
+import { getCurrentPosition, getLocationPermissionInstructions } from "@/lib/locationPermission";
 import mealBoxHeroPattern from "@assets/Hero_MealBox.png";
 import mealBoxImage from "@assets/mockup8_1763889604975.png";
 import hiTeaIcon from "@assets/Image2322_1763882700309.png";
@@ -1528,22 +1529,37 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
 
   // Function to get current location and reverse geocode
   const getCurrentLocation = async () => {
-    if (!navigator.geolocation) {
-      toast({ title: "Error", description: "Geolocation is not supported by your browser", variant: "destructive" });
-      return;
-    }
-
     setIsGettingLocation(true);
     try {
-      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0
-        });
+      const result = await getCurrentPosition({
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
       });
 
-      const { latitude, longitude } = position.coords;
+      if (!result.success || !result.position) {
+        const errorMessage = result.error?.userFriendlyMessage || 
+          "Could not get your location. Please enter your address manually.";
+        
+        if (result.error?.code === 1) {
+          toast({
+            title: "Location Permission Denied",
+            description: `${errorMessage}\n\n${getLocationPermissionInstructions()}`,
+            variant: "destructive",
+            duration: 8000,
+          });
+        } else {
+          toast({
+            title: "Location Error",
+            description: errorMessage,
+            variant: "destructive",
+          });
+        }
+        setIsGettingLocation(false);
+        return;
+      }
+
+      const { latitude, longitude } = result.position.coords;
       
       // Reverse geocode using Nominatim
       const response = await fetch(

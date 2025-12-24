@@ -12,6 +12,7 @@ import DeliveryDatePicker from "@/components/DeliveryDatePicker";
 import { validateBangaloreAddress, validateBangalorePincode, BANGALORE_VALIDATION_ERROR } from "@/lib/addressValidation";
 import { analytics } from "@/lib/analytics";
 import { facebookEvents } from "@/lib/facebook-capi";
+import { getCurrentPosition, getLocationPermissionInstructions } from "@/lib/locationPermission";
 
 const SIXTY_MIN_ORDER_FLAG = "isSixtyMinOrder";
 
@@ -102,26 +103,32 @@ export default function BulkMealsDelivery() {
   const getCurrentLocation = async () => {
     setIsGettingLocation(true);
     try {
-      // First try browser geolocation
-      if (navigator.geolocation) {
-        try {
-          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(resolve, reject, {
-              enableHighAccuracy: true,
-              timeout: 5000,
-              maximumAge: 0
-            });
-          });
+      // First try browser geolocation using improved permission handling
+      const result = await getCurrentPosition({
+        enableHighAccuracy: true,
+        timeout: 5000,
+        maximumAge: 0,
+      });
 
-          const { latitude, longitude } = position.coords;
-          const success = await reverseGeocode(latitude, longitude);
-          if (success) {
-            toast({ title: "Location Found", description: "Address filled from your current location" });
-            return;
-          }
-        } catch (geoError) {
-          console.log('Browser geolocation failed, trying IP-based fallback...');
+      if (result.success && result.position) {
+        const { latitude, longitude } = result.position.coords;
+        const success = await reverseGeocode(latitude, longitude);
+        if (success) {
+          toast({ title: "Location Found", description: "Address filled from your current location" });
+          setIsGettingLocation(false);
+          return;
         }
+      } else {
+        // If permission denied, show helpful message
+        if (result.error?.code === 1) {
+          toast({
+            title: "Location Permission Denied",
+            description: `${result.error.userFriendlyMessage}\n\n${getLocationPermissionInstructions()}`,
+            variant: "destructive",
+            duration: 8000,
+          });
+        }
+        console.log('Browser geolocation failed, trying IP-based fallback...', result.error);
       }
 
       // Fallback: IP-based geolocation using free API

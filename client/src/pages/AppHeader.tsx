@@ -3,6 +3,7 @@ import { MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import headerBg from "@assets/Hero_1763854193361.png";
+import { getCurrentPosition } from "@/lib/locationPermission";
 
 interface AppHeaderProps {
   onLocationClick?: () => void;
@@ -122,25 +123,25 @@ export default function AppHeader({
       console.log('No saved address found, checking GPS/IP location...');
       
       try {
-        if (navigator.geolocation) {
-          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(resolve, reject, {
-              enableHighAccuracy: true,
-              timeout: 8000,
-              maximumAge: 0
-            });
-          });
+        const result = await getCurrentPosition({
+          enableHighAccuracy: true,
+          timeout: 8000,
+          maximumAge: 0,
+        });
 
-          const { latitude, longitude } = position.coords;
+        if (result.success && result.position) {
+          const { latitude, longitude } = result.position.coords;
           const isInBangalore = isWithinBangalore(latitude, longitude);
           
           console.log('GPS location detected (no saved address):', { latitude, longitude, isInBangalore });
           setShowServiceUnavailable(!isInBangalore);
           setIsCheckingLocation(false);
           return;
+        } else {
+          console.log('Browser geolocation failed, trying IP-based fallback...', result.error);
         }
       } catch (geoError) {
-        console.log('Browser geolocation failed, trying IP-based fallback...', geoError);
+        console.log('Location permission check failed, trying IP-based fallback...', geoError);
       }
 
       // Fallback: IP-based geolocation

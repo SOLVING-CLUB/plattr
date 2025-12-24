@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { addressService } from "@/lib/supabase-service";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabaseAuth } from "@/lib/supabase-auth";
+import { getCurrentPosition, getLocationPermissionInstructions } from "@/lib/locationPermission";
 
 const LOCATION_STORAGE_KEY = "activeLocation";
 const RECENT_LOCATIONS_KEY = "recentLocations";
@@ -117,58 +118,60 @@ export default function MapConfirmationPage() {
   };
 
   useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const newPos: [number, number] = [pos.coords.latitude, pos.coords.longitude];
-          
-          // Check if location is within Bangalore
-          if (isWithinBangalore(newPos[0], newPos[1])) {
-            setPosition(newPos);
-            setInitialCenter(newPos);
-            setIsOutsideBangalore(false);
-            reverseGeocode(newPos[0], newPos[1]);
-          } else {
-            // Location is outside Bangalore - use default Bangalore center
-            setPosition(BANGALORE_CENTER);
-            setInitialCenter(BANGALORE_CENTER);
-            setIsOutsideBangalore(true);
-            reverseGeocode(BANGALORE_CENTER[0], BANGALORE_CENTER[1]);
-            showBangaloreOnlyError();
-          }
-          setIsLoading(false);
-        },
-        (error) => {
-          console.error("Geolocation error:", error);
-          setIsLoading(false);
+    const loadLocation = async () => {
+      const result = await getCurrentPosition({
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      });
 
-          let errorMessage = "Could not get your location. Using default Bangalore location.";
-          if (error.code === 1) {
-            errorMessage = "Location permission denied. Using default Bangalore location.";
-          } else if (error.code === 2) {
-            errorMessage = "Location unavailable. Using default Bangalore location.";
-          } else if (error.code === 3) {
-            errorMessage = "Location request timed out. Using default Bangalore location.";
-          }
+      if (result.success && result.position) {
+        const newPos: [number, number] = [
+          result.position.coords.latitude,
+          result.position.coords.longitude,
+        ];
 
+        // Check if location is within Bangalore
+        if (isWithinBangalore(newPos[0], newPos[1])) {
+          setPosition(newPos);
+          setInitialCenter(newPos);
+          setIsOutsideBangalore(false);
+          reverseGeocode(newPos[0], newPos[1]);
+        } else {
+          // Location is outside Bangalore - use default Bangalore center
+          setPosition(BANGALORE_CENTER);
+          setInitialCenter(BANGALORE_CENTER);
+          setIsOutsideBangalore(true);
+          reverseGeocode(BANGALORE_CENTER[0], BANGALORE_CENTER[1]);
+          showBangaloreOnlyError();
+        }
+        setIsLoading(false);
+      } else {
+        // Handle error
+        setIsLoading(false);
+        const errorMessage = result.error?.userFriendlyMessage || 
+          "Could not get your location. Using default Bangalore location.";
+
+        // Show more helpful message for permission denied
+        if (result.error?.code === 1) {
+          toast({
+            title: "Location Permission Denied",
+            description: `${errorMessage}\n\n${getLocationPermissionInstructions()}`,
+            variant: "destructive",
+            duration: 8000,
+          });
+        } else {
           toast({
             title: "Location Error",
             description: errorMessage,
             variant: "destructive",
           });
-          reverseGeocode(BANGALORE_CENTER[0], BANGALORE_CENTER[1]);
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-      );
-    } else {
-      setIsLoading(false);
-      toast({
-        title: "Location Not Supported",
-        description: "Your browser doesn't support geolocation. Using default Bangalore location.",
-        variant: "destructive",
-      });
-      reverseGeocode(BANGALORE_CENTER[0], BANGALORE_CENTER[1]);
-    }
+        }
+        reverseGeocode(BANGALORE_CENTER[0], BANGALORE_CENTER[1]);
+      }
+    };
+
+    loadLocation();
   }, []);
 
   const reverseGeocode = async (lat: number, lng: number) => {
@@ -277,53 +280,53 @@ export default function MapConfirmationPage() {
     setShowTooltip(false);
   };
 
-  const handleRecenterToCurrentLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const newPos: [number, number] = [pos.coords.latitude, pos.coords.longitude];
-          
-          // Check if location is within Bangalore
-          if (isWithinBangalore(newPos[0], newPos[1])) {
-            setPosition(newPos);
-            setShouldRecenter(true);
-            setIsOutsideBangalore(false);
-            reverseGeocode(newPos[0], newPos[1]);
-          } else {
-            // Location is outside Bangalore - show error and use Bangalore center
-            showBangaloreOnlyError();
-            setPosition(BANGALORE_CENTER);
-            setShouldRecenter(true);
-            setIsOutsideBangalore(true);
-            reverseGeocode(BANGALORE_CENTER[0], BANGALORE_CENTER[1]);
-          }
-        },
-        (error) => {
-          console.error("Geolocation error:", error);
+  const handleRecenterToCurrentLocation = async () => {
+    const result = await getCurrentPosition({
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 0,
+    });
 
-          let errorMessage = "Could not get your current location.";
-          if (error.code === 1) {
-            errorMessage = "Location permission denied. Please enable location access in your browser settings.";
-          } else if (error.code === 2) {
-            errorMessage = "Location unavailable. Please check your device settings.";
-          } else if (error.code === 3) {
-            errorMessage = "Location request timed out. Please try again.";
-          }
+    if (result.success && result.position) {
+      const newPos: [number, number] = [
+        result.position.coords.latitude,
+        result.position.coords.longitude,
+      ];
 
-          toast({
-            title: "Location Error",
-            description: errorMessage,
-            variant: "destructive",
-          });
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-      );
+      // Check if location is within Bangalore
+      if (isWithinBangalore(newPos[0], newPos[1])) {
+        setPosition(newPos);
+        setShouldRecenter(true);
+        setIsOutsideBangalore(false);
+        reverseGeocode(newPos[0], newPos[1]);
+      } else {
+        // Location is outside Bangalore - show error and use Bangalore center
+        showBangaloreOnlyError();
+        setPosition(BANGALORE_CENTER);
+        setShouldRecenter(true);
+        setIsOutsideBangalore(true);
+        reverseGeocode(BANGALORE_CENTER[0], BANGALORE_CENTER[1]);
+      }
     } else {
-      toast({
-        title: "Location Not Supported",
-        description: "Your browser doesn't support geolocation.",
-        variant: "destructive",
-      });
+      // Handle error
+      const errorMessage = result.error?.userFriendlyMessage || 
+        "Could not get your current location.";
+
+      // Show more helpful message for permission denied
+      if (result.error?.code === 1) {
+        toast({
+          title: "Location Permission Denied",
+          description: `${errorMessage}\n\n${getLocationPermissionInstructions()}`,
+          variant: "destructive",
+          duration: 8000,
+        });
+      } else {
+        toast({
+          title: "Location Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
     }
   };
 

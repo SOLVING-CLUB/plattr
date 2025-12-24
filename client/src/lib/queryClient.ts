@@ -22,7 +22,7 @@ export async function apiRequest(
   const route = url.split('/').filter(Boolean);
   
   // Auth routes and other backend-only routes should always go to backend
-  const backendOnlyRoutes = ['api/auth', 'api/orders', 'api/cart', 'api/corporate', 'api/figma', 'api/catering-orders', 'api/user', 'api/addresses'];
+  const backendOnlyRoutes = ['api/auth', 'api/orders', 'api/cart', 'api/corporate', 'api/figma', 'api/catering-orders', 'api/user', 'api/addresses', 'api/notifications'];
   const isBackendRoute = backendOnlyRoutes.some(backendRoute => 
     url.includes(backendRoute)
   );

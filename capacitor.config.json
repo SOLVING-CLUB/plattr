@@ -1,0 +1,9 @@
+{
+  "appId": "com.caterplanner.app",
+  "appName": "Plattr",
+  "webDir": "dist/public",
+  "server": {
+    "androidScheme": "https"
+  }
+}
+

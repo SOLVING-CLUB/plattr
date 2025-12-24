@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1041507825726",
+    "project_id": "plattr-cf2ce",
+    "storage_bucket": "plattr-cf2ce.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1041507825726:android:67b43b255b2f25891db96f",
+        "android_client_info": {
+          "package_name": "com.caterplanner.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBx8-UqYfrvnzktD-eZ8TbIDqdTNrAYx8s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

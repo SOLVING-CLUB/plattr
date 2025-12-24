@@ -4,13 +4,22 @@ import { Capacitor } from "@capacitor/core";
 
 // Default backend URL used only when running inside a native shell and no VITE_API_URL is provided
 // For iOS simulator, localhost points to the Mac; for Android emulator, use 10.0.2.2 to reach host.
+// For physical devices, use VITE_API_URL with your computer's IP address
 function getDefaultNativeBackend(): string {
   if (Capacitor?.getPlatform?.() === 'android') {
+    // Check if we have a custom API URL (for physical devices)
+    const customUrl = import.meta.env.VITE_API_URL;
+    if (customUrl) {
+      return customUrl;
+    }
     // Android emulator: host machine is 10.0.2.2
-    return 'http://10.0.2.2:3000';
+    // For physical devices, you need to set VITE_API_URL to your computer's IP
+    const port = import.meta.env.VITE_PORT || '5000';
+    return `http://10.0.2.2:${port}`;
   }
   // iOS simulator / other native: localhost is fine
-  return 'http://localhost:3000';
+  const port = import.meta.env.VITE_PORT || '5000';
+  return `http://localhost:${port}`;
 }
 
 // Production backend URL for mobile access (Capacitor). Must be HTTPS in production.

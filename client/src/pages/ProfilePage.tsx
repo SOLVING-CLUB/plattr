@@ -26,7 +26,7 @@ const menuItems: MenuItem[] = [
   { id: "saved-addresses", label: "Saved Addresses", icon: MapPin, hasChevron: true },
   { id: "payment-methods", label: "Payment Methods", icon: CreditCard, hasChevron: true },
   { id: "about", label: "About", icon: Info, hasChevron: true },
-  { id: "notifications", label: "Notifications", icon: Bell, hasChevron: false },
+  { id: "notifications", label: "Notifications", icon: Bell, hasChevron: true },
 ];
 
 interface UserProfile {
@@ -256,6 +256,8 @@ export default function Profile() {
                     setLocation("/payment-methods");
                   } else if (item.id === "about") {
                     setLocation("/about");
+                  } else if (item.id === "notifications") {
+                    setLocation("/notification-settings");
                   }
                 }}
                 className={`w-full flex items-center justify-between px-5 py-4 hover-elevate ${index < menuItems.length - 1 ? "border-b border-gray-100" : ""

@@ -53,9 +53,11 @@ import TestAuthPage from "@/pages/TestAuthPage";
 import TestOtpPasswordPage from "@/pages/TestOtpPasswordPage";
 import LocationPage from "@/pages/LocationPage";
 import MapConfirmationPage from "@/pages/MapConfirmationPage";
+import NotificationSettingsPage from "@/pages/NotificationSettingsPage";
 import SplashScreen from "@/components/SplashScreen";
 import { useAuth } from "@/hooks/useAuth";
 import { CartProvider } from "@/context/CartContex";
+import { NotificationHandler } from "@/components/NotificationHandler";
 import { useEffect, useState, useRef, type ComponentType, type ReactNode } from "react";
 
 // Simple auth guard - redirects to /phone if not authenticated
@@ -198,6 +200,7 @@ function Router() {
   const GuardedOrderDetailsPage = withAuthGuard(OrderDetailsPage);
   const GuardedProfilePage = withAuthGuard(ProfilePage);
   const GuardedEditProfile = withAuthGuard(EditProfile);
+  const GuardedNotificationSettingsPage = withAuthGuard(NotificationSettingsPage);
   const GuardedSavedAddresses = withAuthGuard(SavedAddresses);
   const GuardedLocationPage = withAuthGuard(LocationPage);
   const GuardedMapConfirmationPage = withAuthGuard(MapConfirmationPage);
@@ -263,6 +266,7 @@ function Router() {
       <Route path="/orders/:orderId" component={GuardedOrderDetailsPage} />
       <Route path="/profile" component={GuardedProfilePage} />
       <Route path="/edit-profile" component={GuardedEditProfile} />
+      <Route path="/notification-settings" component={GuardedNotificationSettingsPage} />
       <Route path="/saved-addresses" component={GuardedSavedAddresses} />
       <Route path="/location" component={GuardedLocationPage} />
       <Route path="/location/map" component={GuardedMapConfirmationPage} />
@@ -349,6 +353,7 @@ function App() {
       <CartProvider>
         <PageLoaderProvider>
           <Toaster />
+          <NotificationHandler />
           {showSplash && (
             <div
               className={`fixed inset-0 transition-opacity duration-500 ${

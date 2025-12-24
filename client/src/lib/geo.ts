@@ -1,3 +1,5 @@
+import { getCurrentPosition } from './locationPermission';
+
 export const EXPLORE_MENU_CENTER = {
   lat: 12.850257,
   lng: 77.650970,
@@ -142,43 +144,37 @@ export async function checkExploreMenuAccess(): Promise<{
     }
   }
 
-  if (!navigator.geolocation) {
-    return { status: 'unavailable', error: 'Please select a delivery address first' };
-  }
-
-  return new Promise((resolve) => {
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        const distance = haversineDistance(
-          latitude,
-          longitude,
-          EXPLORE_MENU_CENTER.lat,
-          EXPLORE_MENU_CENTER.lng
-        );
-        
-        console.log('Checking browser geolocation:', { latitude, longitude }, 'Distance:', distance);
-        
-        if (distance <= EXPLORE_MENU_RADIUS_KM) {
-          resolve({ status: 'in-range', distance });
-        } else {
-          resolve({ status: 'out-of-range', distance });
-        }
-      },
-      (error) => {
-        if (error.code === error.PERMISSION_DENIED) {
-          resolve({ status: 'denied', error: 'Please select a delivery address or enable location access' });
-        } else if (error.code === error.POSITION_UNAVAILABLE) {
-          resolve({ status: 'unavailable', error: 'Please select a delivery address' });
-        } else {
-          resolve({ status: 'error', error: error.message });
-        }
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 60000,
-      }
-    );
+  // Try to get current position using improved permission handling
+  const result = await getCurrentPosition({
+    enableHighAccuracy: true,
+    timeout: 10000,
+    maximumAge: 60000,
   });
+
+  if (result.success && result.position) {
+    const { latitude, longitude } = result.position.coords;
+    const distance = haversineDistance(
+      latitude,
+      longitude,
+      EXPLORE_MENU_CENTER.lat,
+      EXPLORE_MENU_CENTER.lng
+    );
+    
+    console.log('Checking browser geolocation:', { latitude, longitude }, 'Distance:', distance);
+    
+    if (distance <= EXPLORE_MENU_RADIUS_KM) {
+      return { status: 'in-range', distance };
+    } else {
+      return { status: 'out-of-range', distance };
+    }
+  } else {
+    // Handle errors
+    if (result.error?.code === 1) {
+      return { status: 'denied', error: 'Please select a delivery address or enable location access' };
+    } else if (result.error?.code === 2) {
+      return { status: 'unavailable', error: 'Please select a delivery address' };
+    } else {
+      return { status: 'error', error: result.error?.message || 'Location access failed' };
+    }
+  }
 }
