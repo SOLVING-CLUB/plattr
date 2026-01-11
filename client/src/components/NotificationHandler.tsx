@@ -1,6 +1,9 @@
 /**
  * Notification Handler Component
  * Handles notification initialization and deep linking
+ * 
+ * NOTE: Real system notifications are handled by the notification service
+ * This component only handles initialization and deep link navigation
  */
 
 import { useEffect } from 'react';
@@ -9,12 +12,10 @@ import { App as CapacitorApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { useNotificationListener } from '@/hooks/useNotifications';
 import { notificationService } from '@/lib/notifications/service';
-import { useToast } from '@/hooks/use-toast';
 import type { NotificationPayload } from '@/lib/notifications/types';
 
 export function NotificationHandler() {
   const [, setLocation] = useLocation();
-  const { toast } = useToast();
 
   // Initialize notifications on mount
   useEffect(() => {
@@ -24,16 +25,10 @@ export function NotificationHandler() {
     return cleanup;
   }, []);
 
-  // Listen to notification events
+  // Listen to notification events (for deep link handling only - no toasts!)
   useNotificationListener((payload: NotificationPayload) => {
-    // Show toast for foreground notifications
-    toast({
-      title: payload.title,
-      description: payload.body,
-      duration: 5000,
-    });
-
-    // Handle deep link if provided
+    // NO TOAST - real system notifications are shown by the notification service
+    // Only handle deep links here if notification was tapped
     if (payload.deep_link) {
       handleDeepLink(payload.deep_link);
     }
@@ -79,10 +74,15 @@ export function NotificationHandler() {
       }
 
       // Navigate based on path
-      if (path.startsWith('/orders/')) {
-        const orderId = path.split('/orders/')[1]?.split('?')[0];
+      if (path.startsWith('/orders/') || path.startsWith('orders/')) {
+        const orderId = path.split('/orders/')[1]?.split('?')[0] || path.split('orders/')[1]?.split('?')[0];
         if (orderId) {
           setLocation(`/orders/${orderId}`, { replace: false });
+        }
+      } else if (path.startsWith('/bulk-orders/') || path.startsWith('bulk-orders/')) {
+        const orderId = path.split('/bulk-orders/')[1]?.split('?')[0] || path.split('bulk-orders/')[1]?.split('?')[0];
+        if (orderId) {
+          setLocation(`/bulk-orders/${orderId}`, { replace: false });
         }
       } else if (path === '/cart' || path.startsWith('/cart')) {
         setLocation('/checkout', { replace: false });

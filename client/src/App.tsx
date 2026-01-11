@@ -16,6 +16,7 @@ import PaymentPage from "@/pages/PaymentPage";
 import AddOnsPage from "@/pages/AddOnsPage";
 import OrdersPage from "@/pages/OrdersPage";
 import OrderDetailsPage from "@/pages/OrderDetailsPage";
+import BulkMealOrderDetailsPage from "@/pages/BulkMealOrderDetailsPage";
 import ProfilePage from "@/pages/ProfilePage";
 import EditProfile from "@/pages/EditProfile";
 import SavedAddresses from "@/pages/SavedAddresses";
@@ -198,6 +199,7 @@ function Router() {
   const GuardedAddOnsPage = withAuthGuard(AddOnsPage);
   const GuardedOrdersPage = withAuthGuard(OrdersPage);
   const GuardedOrderDetailsPage = withAuthGuard(OrderDetailsPage);
+  const GuardedBulkMealOrderDetailsPage = withAuthGuard(BulkMealOrderDetailsPage);
   const GuardedProfilePage = withAuthGuard(ProfilePage);
   const GuardedEditProfile = withAuthGuard(EditProfile);
   const GuardedNotificationSettingsPage = withAuthGuard(NotificationSettingsPage);
@@ -264,6 +266,7 @@ function Router() {
       <Route path="/order-confirmation" component={GuardedOrderConfirmationPage} />
       <Route path="/orders" component={GuardedOrdersPage} />
       <Route path="/orders/:orderId" component={GuardedOrderDetailsPage} />
+      <Route path="/bulk-orders/:orderId" component={GuardedBulkMealOrderDetailsPage} />
       <Route path="/profile" component={GuardedProfilePage} />
       <Route path="/edit-profile" component={GuardedEditProfile} />
       <Route path="/notification-settings" component={GuardedNotificationSettingsPage} />

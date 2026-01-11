@@ -10,6 +10,7 @@ export default function OrderConfirmationPage() {
   // Get order number from URL query parameters
   const urlParams = new URLSearchParams(window.location.search);
   const orderNumber = urlParams.get('orderNumber');
+  const orderId = urlParams.get('orderId');
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -61,11 +62,11 @@ export default function OrderConfirmationPage() {
 
         <div className="pt-4 space-y-3">
           <Button 
-            onClick={() => setLocation('/orders')} 
+            onClick={() => orderId ? setLocation(`/orders/${orderId}`) : setLocation('/orders')} 
             className="w-full"
             data-testid="button-view-orders"
           >
-            View My Orders
+            {orderId ? "View Order Status" : "View My Orders"}
           </Button>
           <Button 
             onClick={() => setLocation('/')} 

@@ -1,12 +1,13 @@
 /**
  * Notification Sender Utility
- * Sends push notifications using Firebase REST API (no Admin SDK required)
+ * Sends push notifications using Firebase Cloud Messaging V1 API
  * 
- * SETUP REQUIRED:
- * 1. Get Firebase Server Key from Firebase Console → Project Settings → Cloud Messaging
- * 2. Set FIREBASE_SERVER_KEY environment variable
+ * SETUP REQUIRED (choose one):
+ * 1. Set FIREBASE_SERVICE_ACCOUNT_PATH=./path/to/service-account.json
+ * 2. Set FIREBASE_SERVICE_ACCOUNT_JSON=<json_string_or_base64>
  * 
- * Alternative: If you have Firebase Admin SDK access, set FIREBASE_SERVICE_ACCOUNT_PATH
+ * The Legacy Cloud Messaging API was deprecated in June 2024.
+ * This module uses the Firebase Admin SDK or V1 REST API.
  */
 
 import { getUserDeviceTokens, shouldSendNotification } from './notifications';
@@ -16,10 +17,9 @@ import type { NotificationPayload } from './notifications';
 let firebaseAdmin: any = null;
 let messaging: any = null;
 
-// Firebase REST API configuration
-const FIREBASE_SERVER_KEY = process.env.FIREBASE_SERVER_KEY || '';
+// Firebase configuration
 const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID || 'plattr-cf2ce';
-const USE_REST_API = !process.env.FIREBASE_SERVICE_ACCOUNT_PATH && !process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+const HAS_SERVICE_ACCOUNT = !!(process.env.FIREBASE_SERVICE_ACCOUNT_PATH || process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
 
 async function initializeFirebase() {
   if (firebaseAdmin && messaging) return;
@@ -197,71 +197,6 @@ async function sendNotificationViaV1API(
 }
 
 /**
- * Send notification via Firebase REST API (Legacy) - Fallback
- */
-async function sendNotificationViaLegacyREST(
-  deviceToken: string,
-  payload: NotificationPayload
-): Promise<void> {
-  if (!FIREBASE_SERVER_KEY) {
-    throw new Error('FIREBASE_SERVER_KEY not configured');
-  }
-
-  const message = {
-    to: deviceToken,
-    notification: {
-      title: payload.title,
-      body: payload.body,
-      sound: 'default',
-      badge: '1',
-    },
-    data: {
-      notification_id: payload.notification_id,
-      category: payload.category,
-      event_name: payload.event_name,
-      user_id: payload.user_id,
-      deep_link: payload.deep_link || '',
-      image_url: payload.image_url || '',
-      cta_text: payload.cta_text || '',
-      metadata: JSON.stringify(payload.metadata || {}),
-      dedupe_key: payload.dedupe_key,
-      created_at: payload.created_at,
-    },
-    priority: 'high',
-  };
-
-  try {
-    const response = await fetch('https://fcm.googleapis.com/fcm/send', {
-      method: 'POST',
-      headers: {
-        'Authorization': `key=${FIREBASE_SERVER_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(message),
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      if (result.results?.[0]?.error === 'InvalidRegistration' || 
-          result.results?.[0]?.error === 'NotRegistered') {
-        console.warn(`[Notifications] Invalid token, removing: ${deviceToken}`);
-        throw new Error('INVALID_TOKEN');
-      }
-      throw new Error(`FCM API error: ${result.results?.[0]?.error || response.statusText}`);
-    }
-
-    console.log(`[Notifications] Sent ${payload.event_name} via Legacy REST API:`, result);
-  } catch (error: any) {
-    if (error.message === 'INVALID_TOKEN') {
-      throw error;
-    }
-    console.error(`[Notifications] Legacy REST API error:`, error);
-    throw error;
-  }
-}
-
-/**
  * Send notification to a single device
  */
 export async function sendNotificationToDevice(
@@ -275,20 +210,13 @@ export async function sendNotificationToDevice(
     return;
   }
 
-  // Use REST API if Admin SDK is not available
-  if (USE_REST_API) {
-    // Try V1 API first (recommended), fallback to Legacy if Server Key available
-    if (FIREBASE_SERVER_KEY) {
-      return sendNotificationViaLegacyREST(deviceToken, payload);
-    } else {
-      return sendNotificationViaV1API(deviceToken, payload);
-    }
-  }
-
-  // Otherwise use Firebase Admin SDK
+  // Try Firebase Admin SDK first
   await initializeFirebase();
+  
+  // If Admin SDK not available, fall back to V1 REST API
   if (!messaging) {
-    throw new Error('Firebase Admin not initialized');
+    console.log('[Notifications] Admin SDK not available, using V1 REST API');
+    return sendNotificationViaV1API(deviceToken, payload);
   }
 
   const message = {

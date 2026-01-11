@@ -29,10 +29,33 @@ export async function setupVite(server: Server, app: Express) {
     appType: "custom",
   });
 
-  app.use(vite.middlewares);
+  // Only apply Vite middleware to non-API routes
+  // This ensures API routes are handled by Express before Vite intercepts them
+  const viteMiddlewareWrapper = (req: any, res: any, next: any) => {
+    if (req.path && req.path.startsWith("/api/")) {
+      // Skip Vite middleware for API routes - let Express handle them
+      return next();
+    }
+    // Apply Vite middleware for all other routes
+    return vite.middlewares(req, res, next);
+  };
 
-  app.use("*", async (req, res, next) => {
+  app.use(viteMiddlewareWrapper);
+
+  // Catch-all route for serving the React app (must be last, after all API routes)
+  // Use app.use() without a path to catch all remaining routes
+  app.use(async (req, res, next) => {
     const url = req.originalUrl;
+
+    // Skip Vite handling for API routes - let them be handled by Express routes
+    if (url.startsWith("/api/")) {
+      return next();
+    }
+
+    // Skip if already handled (e.g., by Vite middleware or if response was sent)
+    if (res.headersSent) {
+      return next();
+    }
 
     try {
       const clientTemplate = path.resolve(

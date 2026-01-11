@@ -1,0 +1,93 @@
+-- Migration: Setup Odoo Webhooks via Supabase Dashboard
+-- 
+-- IMPORTANT: This migration file documents the webhook setup process.
+-- The actual webhooks must be configured in Supabase Dashboard → Database → Webhooks
+-- because webhooks cannot be created via SQL migrations.
+--
+-- Follow these steps:
+--
+-- 1. Go to Supabase Dashboard → Database → Webhooks
+-- 2. Click "Create a new webhook"
+-- 3. Configure each webhook as shown below
+--
+-- ============================================================
+-- WEBHOOK 1: bulk_meal_orders
+-- ============================================================
+-- Name: bulk_meal_orders_to_odoo
+-- Table: bulk_meal_orders
+-- Events: INSERT, UPDATE
+-- HTTP Request:
+--   URL: https://YOUR_PROJECT_REF.supabase.co/functions/v1/crm-sync
+--   Method: POST
+--   Headers:
+--     Content-Type: application/json
+--     Authorization: Bearer YOUR_SERVICE_ROLE_KEY
+--   Body (JSON):
+--     {
+--       "type": "{{$event.type}}",
+--       "table": "{{$event.table}}",
+--       "record": {{$event.record}},
+--       "old_record": {{$event.old_record}}
+--     }
+--
+-- ============================================================
+-- WEBHOOK 2: mealbox_orders
+-- ============================================================
+-- Name: mealbox_orders_to_odoo
+-- Table: mealbox_orders
+-- Events: INSERT, UPDATE
+-- HTTP Request: (same as above)
+--
+-- ============================================================
+-- WEBHOOK 3: sixty_min_bulk_orders
+-- ============================================================
+-- Name: sixty_min_bulk_orders_to_odoo
+-- Table: sixty_min_bulk_orders
+-- Events: INSERT, UPDATE
+-- HTTP Request: (same as above)
+--
+-- ============================================================
+-- WEBHOOK 4: sixty_min_mealbox_orders
+-- ============================================================
+-- Name: sixty_min_mealbox_orders_to_odoo
+-- Table: sixty_min_mealbox_orders
+-- Events: INSERT, UPDATE
+-- HTTP Request: (same as above)
+--
+-- ============================================================
+-- NOTES:
+-- ============================================================
+-- 1. Replace YOUR_PROJECT_REF with your Supabase project reference
+--    (found in Dashboard URL or Project Settings)
+--
+-- 2. Replace YOUR_SERVICE_ROLE_KEY with your service role key
+--    (found in Dashboard → Project Settings → API → service_role key)
+--
+-- 3. The webhook will trigger on:
+--    - INSERT: When a new order is created (status='pending' or 'paid')
+--    - UPDATE: When order status changes (especially to 'paid')
+--
+-- 4. Test orders will be marked with [TEST] prefix in Odoo if:
+--    - RAZORPAY_KEY_ID environment variable contains "test" or "rzp_test"
+--    - Or if order has is_test_payment=true (if you add this column)
+--
+-- ============================================================
+-- VERIFY SETUP:
+-- ============================================================
+-- 1. Deploy Edge Function:
+--    supabase functions deploy crm-sync --no-verify-jwt
+--
+-- 2. Set Odoo secrets in Supabase Dashboard:
+--    - ODOO_URL
+--    - ODOO_DB
+--    - ODOO_USERNAME
+--    - ODOO_API_KEY
+--
+-- 3. Test by creating an order and checking:
+--    - Supabase Dashboard → Edge Functions → crm-sync → Logs
+--    - Odoo → Sales → Orders (should see new order)
+--
+-- ============================================================
+
+-- This file is for documentation only
+-- No SQL to execute

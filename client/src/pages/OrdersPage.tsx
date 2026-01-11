@@ -285,7 +285,15 @@ export default function Orders() {
                   {order.orderType === 'bulk' && (
                     <div>
                       <h4 className="font-semibold text-[#1C1C1C] mb-2">Bulk Meal Order</h4>
-                      <p className="text-sm text-gray-700">Large quantity meal order</p>
+                      <p className="text-sm text-gray-700 mb-3">Large quantity meal order</p>
+                      <Button
+                        onClick={() => setLocation(`/bulk-orders/${order.id}`)}
+                        className="w-full bg-[#1A9952] hover:bg-[#158544] text-white"
+                        style={{ fontFamily: "Sweet Sans Pro" }}
+                        data-testid={`button-view-status-${order.id}`}
+                      >
+                        View Order Status
+                      </Button>
                     </div>
                   )}
 

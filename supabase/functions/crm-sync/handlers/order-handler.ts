@@ -19,6 +19,28 @@ interface OrderResult {
   message: string;
 }
 
+// ==================== TEST PAYMENT DETECTION ====================
+
+/**
+ * Detect if this is a test payment
+ * Checks environment variables and order metadata
+ */
+function isTestPayment(order: BulkMealOrder | MealboxOrder): boolean {
+  // Check if Razorpay key is a test key
+  const razorpayKeyId = Deno.env.get("RAZORPAY_KEY_ID") || "";
+  const isTestKey = razorpayKeyId.includes("test") || razorpayKeyId.includes("rzp_test");
+  
+  // Check if order has is_test_payment field (if you add it to the schema)
+  // @ts-ignore - field might not exist in type yet
+  if (order.is_test_payment === true) {
+    return true;
+  }
+  
+  // For now, use environment variable check
+  // In production, you should add is_test_payment column to orders tables
+  return isTestKey;
+}
+
 // ==================== BULK MEAL ORDERS ====================
 
 export async function handleBulkMealOrder(
@@ -26,7 +48,8 @@ export async function handleBulkMealOrder(
   supabase: SupabaseClient,
   odoo: OdooClient
 ): Promise<OrderResult> {
-  console.log(`Processing bulk meal order #${record.order_number}, status: ${record.status}`);
+  const isTest = isTestPayment(record);
+  console.log(`Processing bulk meal order #${record.order_number}, status: ${record.status}, test: ${isTest}`);
 
   if (record.status === "failed") {
     return { success: true, message: "Payment failed, no Odoo action taken" };
@@ -49,7 +72,7 @@ export async function handleBulkMealOrder(
     // Parse items JSON
     const items = parseItems(record.items);
     const orderLines = buildBulkMealOrderLines(record, items);
-    const description = buildBulkMealDescription(record, items);
+    const description = buildBulkMealDescription(record, items, isTest);
 
     if (record.status === "pending") {
       // Needs clarification - Create Opportunity + Quotation
@@ -62,7 +85,9 @@ export async function handleBulkMealOrder(
           userId: record.user_id,
           orderNumber: record.order_number,
           partnerId,
-          name: `Bulk Meal Order #${record.order_number}`,
+          name: isTest 
+            ? `[TEST] Bulk Meal Order #${record.order_number}` 
+            : `Bulk Meal Order #${record.order_number}`,
           description,
           expectedRevenue: record.total,
           orderLines,
@@ -80,6 +105,7 @@ export async function handleBulkMealOrder(
           partnerId,
           orderLines,
           notes: description,
+          isTest,
         }
       );
     }
@@ -108,7 +134,8 @@ export async function handleMealboxOrder(
   supabase: SupabaseClient,
   odoo: OdooClient
 ): Promise<OrderResult> {
-  console.log(`Processing mealbox order #${record.order_number}, status: ${record.status}`);
+  const isTest = isTestPayment(record);
+  console.log(`Processing mealbox order #${record.order_number}, status: ${record.status}, test: ${isTest}`);
 
   if (record.status === "failed") {
     return { success: true, message: "Payment failed, no Odoo action taken" };
@@ -129,7 +156,7 @@ export async function handleMealboxOrder(
     });
 
     const orderLines = buildMealboxOrderLines(record);
-    const description = buildMealboxDescription(record);
+    const description = buildMealboxDescription(record, isTest);
 
     if (record.status === "pending") {
       // Needs clarification - Create Opportunity + Quotation
@@ -142,7 +169,9 @@ export async function handleMealboxOrder(
           userId: record.user_id,
           orderNumber: record.order_number,
           partnerId,
-          name: `Mealbox Order #${record.order_number}`,
+          name: isTest 
+            ? `[TEST] Mealbox Order #${record.order_number}` 
+            : `Mealbox Order #${record.order_number}`,
           description,
           expectedRevenue: record.total,
           orderLines,
@@ -160,6 +189,7 @@ export async function handleMealboxOrder(
           partnerId,
           orderLines,
           notes: description,
+          isTest,
         }
       );
     }
@@ -189,6 +219,8 @@ async function handleBulkMealOrderInternal(
   odoo: OdooClient,
   sourceTable: string
 ): Promise<OrderResult> {
+  const isTest = isTestPayment(record);
+  
   if (record.status === "failed") {
     return { success: true, message: "Payment failed, no Odoo action taken" };
   }
@@ -208,7 +240,7 @@ async function handleBulkMealOrderInternal(
 
     const items = parseItems(record.items);
     const orderLines = buildBulkMealOrderLines(record, items);
-    const description = buildBulkMealDescription(record, items);
+    const description = buildBulkMealDescription(record, items, isTest);
 
     if (record.status === "pending") {
       return await createOpportunityAndQuotation(supabase, odoo, {
@@ -217,7 +249,9 @@ async function handleBulkMealOrderInternal(
         userId: record.user_id,
         orderNumber: record.order_number,
         partnerId,
-        name: `60-Min Bulk Meal Order #${record.order_number}`,
+        name: isTest 
+          ? `[TEST] 60-Min Bulk Meal Order #${record.order_number}` 
+          : `60-Min Bulk Meal Order #${record.order_number}`,
         description,
         expectedRevenue: record.total,
         orderLines,
@@ -230,6 +264,7 @@ async function handleBulkMealOrderInternal(
         partnerId,
         orderLines,
         notes: description,
+        isTest,
       });
     }
 
@@ -246,6 +281,8 @@ async function handleMealboxOrderInternal(
   odoo: OdooClient,
   sourceTable: string
 ): Promise<OrderResult> {
+  const isTest = isTestPayment(record);
+  
   if (record.status === "failed") {
     return { success: true, message: "Payment failed, no Odoo action taken" };
   }
@@ -264,7 +301,7 @@ async function handleMealboxOrderInternal(
     });
 
     const orderLines = buildMealboxOrderLines(record);
-    const description = buildMealboxDescription(record);
+    const description = buildMealboxDescription(record, isTest);
 
     if (record.status === "pending") {
       return await createOpportunityAndQuotation(supabase, odoo, {
@@ -273,7 +310,9 @@ async function handleMealboxOrderInternal(
         userId: record.user_id,
         orderNumber: record.order_number,
         partnerId,
-        name: `60-Min Mealbox Order #${record.order_number}`,
+        name: isTest 
+          ? `[TEST] 60-Min Mealbox Order #${record.order_number}` 
+          : `60-Min Mealbox Order #${record.order_number}`,
         description,
         expectedRevenue: record.total,
         orderLines,
@@ -286,6 +325,7 @@ async function handleMealboxOrderInternal(
         partnerId,
         orderLines,
         notes: description,
+        isTest,
       });
     }
 
@@ -409,6 +449,7 @@ async function createSalesOrderAndInvoice(
     partnerId: number;
     orderLines: OrderLineItem[];
     notes: string;
+    isTest?: boolean;
   }
 ): Promise<OrderResult> {
   // Idempotency check - return existing if already processed
@@ -454,11 +495,16 @@ async function createSalesOrderAndInvoice(
     salesOrderId = existingQuotation.odoo_id;
     console.log("Reusing existing quotation:", salesOrderId);
   } else {
-    // Create new quotation/sales order
+    // Create new quotation/sales order with TEST prefix if needed
+    const orderName = params.isTest 
+      ? `[TEST] Order #${params.orderNumber}`
+      : `Order #${params.orderNumber}`;
+    
     salesOrderId = await odoo.createQuotation({
       partnerId: params.partnerId,
       orderLines: params.orderLines,
       notes: params.notes,
+      name: orderName,
     });
   }
 
@@ -616,11 +662,12 @@ function buildMealboxOrderLines(record: MealboxOrder): OrderLineItem[] {
   return lines;
 }
 
-function buildBulkMealDescription(record: BulkMealOrder, items: any[]): string {
+function buildBulkMealDescription(record: BulkMealOrder, items: any[], isTest: boolean = false): string {
   const itemsList = items.map((i: any) => `- ${i.name || "Item"} x${i.quantity || 1} @ ₹${i.price || 0}`).join("\n");
+  const testPrefix = isTest ? "[TEST PAYMENT] " : "";
 
   return [
-    `Order #${record.order_number}`,
+    `${testPrefix}Order #${record.order_number}`,
     `\nItems:\n${itemsList || "No items parsed"}`,
     `\nSubtotal: ₹${record.subtotal}`,
     `GST: ₹${record.gst}`,
@@ -633,9 +680,11 @@ function buildBulkMealDescription(record: BulkMealOrder, items: any[]): string {
   ].filter(Boolean).join("\n");
 }
 
-function buildMealboxDescription(record: MealboxOrder): string {
+function buildMealboxDescription(record: MealboxOrder, isTest: boolean = false): string {
+  const testPrefix = isTest ? "[TEST PAYMENT] " : "";
+  
   return [
-    `Order #${record.order_number}`,
+    `${testPrefix}Order #${record.order_number}`,
     `Portions: ${record.portions}`,
     `Meal Preference: ${record.meal_preference}`,
     record.selected_meal_type ? `Meal Type: ${record.selected_meal_type}` : null,

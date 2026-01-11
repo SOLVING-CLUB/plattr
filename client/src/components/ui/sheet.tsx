@@ -49,19 +49,28 @@ const sheetVariants = cva(
   }
 )
 
+// Safe area styles for different sides
+const safeAreaStyles: Record<string, React.CSSProperties> = {
+  top: { paddingTop: 'env(safe-area-inset-top, 0px)' },
+  bottom: { paddingBottom: 'env(safe-area-inset-bottom, 0px)' },
+  left: { paddingLeft: 'env(safe-area-inset-left, 0px)' },
+  right: { paddingRight: 'env(safe-area-inset-right, 0px)' },
+}
+
 interface SheetContentProps
   extends React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content>,
     VariantProps<typeof sheetVariants> {}
 
 const SheetContent = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Content>,
-  SheetContentProps
->(({ side = "right", className, children, ...props }, ref) => (
+  SheetContentProps & { style?: React.CSSProperties }
+>(({ side = "right", className, children, style, ...props }, ref) => (
   <SheetPortal>
     <SheetOverlay />
     <SheetPrimitive.Content
       ref={ref}
       className={cn(sheetVariants({ side }), className)}
+      style={{ ...safeAreaStyles[side || "right"], ...style }}
       {...props}
     >
       {children}

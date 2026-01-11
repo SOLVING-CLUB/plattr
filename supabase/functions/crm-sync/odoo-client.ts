@@ -225,18 +225,24 @@ export class OdooClient {
       priceUnit: number;
     }>;
     notes?: string;
+    name?: string; // Optional name for the order (e.g., "[TEST] Order #123")
   }): Promise<number> {
     console.log("Creating quotation for partner:", data.partnerId);
 
     // Create the sales order (quotation)
-    const orderId = await this.execute("sale.order", "create", [
-      {
+    const orderData: any = {
         partner_id: data.partnerId,
         opportunity_id: data.opportunityId || false,
         note: data.notes || false,
         state: "draft", // Quotation state
-      },
-    ]);
+    };
+    
+    // Add name if provided (Odoo uses 'name' field for custom order reference)
+    if (data.name) {
+      orderData.client_order_ref = data.name; // Use client_order_ref for custom reference
+    }
+
+    const orderId = await this.execute("sale.order", "create", [orderData]);
 
     // Add order lines
     for (const line of data.orderLines) {

@@ -1,13 +1,22 @@
+import { useState, useEffect } from "react";
 import { useLocation, useRoute } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Clock, MapPin, Package, Calendar } from "lucide-react";
-import { orderService } from "@/lib/supabase-service";
+import { ArrowLeft, Clock, MapPin, Package, Calendar, IndianRupee, Info, Loader2, CheckCircle } from "lucide-react";
+import { orderService, bulkMealOrderService, sixtyMinBulkOrderService, paymentService } from "@/lib/supabase-service";
 import { getSupabaseImageUrl } from "@/lib/supabase";
 import { useGoBack } from "@/hooks/useGoBack";
+import { useToast } from "@/hooks/use-toast";
+import { getApiUrl } from "@/config/api";
+
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
 
 interface OrderItem {
   id: string;
@@ -57,10 +66,166 @@ export default function OrderDetailsPage() {
   const [, params] = useRoute("/orders/:orderId");
   const orderId = params?.orderId;
   const goBack = useGoBack('/orders');
+  const { toast } = useToast();
+  
+  // Payment state
+  const [razorpayLoaded, setRazorpayLoaded] = useState(false);
+  const [razorpayKeyId, setRazorpayKeyId] = useState<string | null>(null);
+  const [processingPayment, setProcessingPayment] = useState<string | null>(null);
+  const [paidStages, setPaidStages] = useState<string[]>(['initial']);
+  
+  // Load Razorpay script
+  useEffect(() => {
+    const loadRazorpay = async () => {
+      if (window.Razorpay) {
+        setRazorpayLoaded(true);
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.async = true;
+      script.onload = () => setRazorpayLoaded(true);
+      script.onerror = () => console.error('Failed to load Razorpay SDK');
+      document.body.appendChild(script);
+    };
+    loadRazorpay();
+  }, []);
 
-  const { data: order, isLoading } = useQuery<OrderDetails>({
+  // Fetch Razorpay key
+  useEffect(() => {
+    const fetchKey = async () => {
+      try {
+        const response = await fetch(getApiUrl('/api/payments/key'));
+        if (!response.ok) throw new Error('Failed to fetch key');
+        const data = await response.json();
+        if (data.key) setRazorpayKeyId(data.key);
+      } catch (error) {
+        console.error('Error fetching Razorpay key:', error);
+      }
+    };
+    fetchKey();
+  }, []);
+
+  // Try to fetch from different order tables
+  const { data: order, isLoading } = useQuery<OrderDetails | any>({
     queryKey: ['order', orderId],
-    queryFn: () => orderService.getById(orderId!),
+    queryFn: async () => {
+      if (!orderId) return null;
+      
+      // First try regular orders table
+      try {
+        return await orderService.getById(orderId);
+      } catch (error: any) {
+        // If not found in orders, try bulk_meal_orders
+        try {
+          const bulkOrder = await bulkMealOrderService.getById(orderId);
+          
+          // Parse items JSON string
+          let items = [];
+          if (bulkOrder.items) {
+            try {
+              const parsedItems = typeof bulkOrder.items === 'string' 
+                ? JSON.parse(bulkOrder.items) 
+                : bulkOrder.items;
+              
+              // Transform items to match OrderDetails format
+              items = parsedItems.map((item: any) => ({
+                id: item.dishId || item.id || '',
+                quantity: item.quantity || 0,
+                price: (item.price || 0).toString(),
+                dish: {
+                  id: item.dishId || item.id || '',
+                  name: item.name || `Dish ${item.dishId || ''}`,
+                  description: item.description || '',
+                  price: (item.price || 0).toString(),
+                  imageUrl: item.image_url || item.imageUrl || '',
+                  dietaryType: item.dietary_type || 'Regular',
+                },
+              }));
+            } catch (parseError) {
+              console.error('Error parsing bulk order items:', parseError);
+            }
+          }
+          
+          // Transform bulk order to match OrderDetails format
+          return {
+            id: bulkOrder.id,
+            orderNumber: bulkOrder.order_number,
+            subtotal: bulkOrder.subtotal?.toString() || '0',
+            deliveryFee: bulkOrder.platform_fee?.toString() || '0',
+            tax: bulkOrder.gst?.toString() || '0',
+            total: bulkOrder.total?.toString() || '0',
+            deliveryDate: bulkOrder.delivery_date || '',
+            deliveryTime: bulkOrder.delivery_time || '',
+            status: bulkOrder.status || 'pending',
+            createdAt: bulkOrder.created_at || '',
+            address: {
+              id: bulkOrder.address_id || '',
+              label: 'Delivery Address',
+              address: bulkOrder.delivery_address || '',
+              landmark: null,
+            },
+            items: items,
+          };
+        } catch (bulkError: any) {
+          // If not found in bulk_meal_orders, try sixty_min_bulk_orders
+          try {
+            const sixtyMinOrder = await sixtyMinBulkOrderService.getById(orderId);
+            
+            // Parse items (could be JSON string or JSONB)
+            let items = [];
+            if (sixtyMinOrder.items) {
+              try {
+                const parsedItems = typeof sixtyMinOrder.items === 'string' 
+                  ? JSON.parse(sixtyMinOrder.items) 
+                  : sixtyMinOrder.items;
+                
+                // Transform items to match OrderDetails format
+                items = Array.isArray(parsedItems) ? parsedItems.map((item: any) => ({
+                  id: item.dishId || item.id || '',
+                  quantity: item.quantity || 0,
+                  price: (item.price || item.unit_price || 0).toString(),
+                  dish: {
+                    id: item.dishId || item.id || '',
+                    name: item.dish_name || item.name || `Dish ${item.dishId || ''}`,
+                    description: item.description || '',
+                    price: (item.price || item.unit_price || 0).toString(),
+                    imageUrl: item.image_url || item.imageUrl || '',
+                    dietaryType: item.dietary_type || 'Regular',
+                  },
+                })) : [];
+              } catch (parseError) {
+                console.error('Error parsing 60-min order items:', parseError);
+              }
+            }
+            
+            // Transform 60-min order to match OrderDetails format
+            return {
+              id: sixtyMinOrder.id,
+              orderNumber: sixtyMinOrder.order_number,
+              subtotal: sixtyMinOrder.subtotal?.toString() || '0',
+              deliveryFee: sixtyMinOrder.platform_fee?.toString() || '0',
+              tax: sixtyMinOrder.gst?.toString() || '0',
+              total: sixtyMinOrder.total?.toString() || '0',
+              deliveryDate: sixtyMinOrder.delivery_date || '',
+              deliveryTime: sixtyMinOrder.delivery_time || '',
+              status: sixtyMinOrder.status || 'pending',
+              createdAt: sixtyMinOrder.created_at || '',
+              address: {
+                id: '',
+                label: 'Delivery Address',
+                address: sixtyMinOrder.delivery_address || '',
+                landmark: null,
+              },
+              items: items,
+            };
+          } catch (sixtyMinError: any) {
+            // If not found in any table, throw the original error
+            throw error;
+          }
+        }
+      }
+    },
     enabled: !!orderId,
   });
 
@@ -93,6 +258,275 @@ export default function OrderDetailsPage() {
   }
 
   const statusConfig = STATUS_VARIANTS[order.status as keyof typeof STATUS_VARIANTS] || STATUS_VARIANTS.pending;
+
+  const calculatePaymentSchedule = () => {
+    if (!order.deliveryDate || !order.total) return null;
+
+    const totalAmount = parseFloat(order.total);
+    if (!Number.isFinite(totalAmount) || totalAmount <= 0) return null;
+
+    // Case 4: If total <= ₹700, full payment was made - no schedule needed
+    if (totalAmount <= 700) {
+      return {
+        type: "full" as const,
+        stages: [
+          {
+            key: "full",
+            label: "Full Payment",
+            description: "Complete payment made at order placement.",
+            amount: totalAmount,
+            when: "Paid at order placement",
+            dueDate: new Date().toISOString(),
+            status: "paid",
+          },
+        ],
+      };
+    }
+
+    const today = new Date();
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const delivery = new Date(order.deliveryDate);
+    const deliveryStart = new Date(
+      delivery.getFullYear(),
+      delivery.getMonth(),
+      delivery.getDate()
+    );
+
+    const diffMs = deliveryStart.getTime() - todayStart.getTime();
+    const diffDays = diffMs / (1000 * 60 * 60 * 24);
+
+    // Case 3: Same day delivery - full payment was made
+    if (diffDays < 1) {
+      return {
+        type: "full" as const,
+        stages: [
+          {
+            key: "full",
+            label: "Full Payment",
+            description: "Complete payment made at order placement.",
+            amount: totalAmount,
+            when: "Paid at order placement",
+            dueDate: todayStart.toISOString(),
+            status: "paid",
+          },
+        ],
+      };
+    }
+
+    // Case 1: Gap >= 2 days - 10% now, 70% before 1 day, 20% before delivery
+    if (diffDays >= 2) {
+      const advance = Math.round(totalAmount * 0.1);
+      const beforeDay = Math.round(totalAmount * 0.7);
+      const remaining = Math.max(totalAmount - advance - beforeDay, 0);
+
+      const oneDayBefore = new Date(deliveryStart);
+      oneDayBefore.setDate(oneDayBefore.getDate() - 1);
+
+      return {
+        type: "long" as const,
+        stages: [
+          {
+            key: "advance",
+            label: "Booking Advance",
+            description: "Pay 10% right away to confirm your slot.",
+            amount: advance,
+            when: "Now",
+            dueDate: todayStart.toISOString(),
+            status: "paid",
+          },
+          {
+            key: "before-day",
+            label: "Before Event Day",
+            description: "Pay 70% one day before delivery.",
+            amount: beforeDay,
+            when: "1 day before delivery",
+            dueDate: oneDayBefore.toISOString(),
+            status: "pending",
+          },
+          {
+            key: "on-delivery",
+            label: "On Delivery",
+            description: "Pay the remaining 20% on delivery.",
+            amount: remaining,
+            when: "On delivery day",
+            dueDate: deliveryStart.toISOString(),
+            status: "pending",
+          },
+        ],
+      };
+    }
+    
+    // Case 2: Gap < 2 days (but not same day) - 80% now, 20% before delivery
+    const immediate = Math.round(totalAmount * 0.8);
+    const remaining = Math.max(totalAmount - immediate, 0);
+
+    return {
+      type: "short" as const,
+      stages: [
+        {
+          key: "immediate",
+          label: "Booking Payment",
+          description: "Pay 80% right away to confirm your slot.",
+          amount: immediate,
+          when: "Now",
+          dueDate: todayStart.toISOString(),
+          status: "paid",
+        },
+        {
+          key: "on-delivery",
+          label: "On Delivery",
+          description: "Pay the remaining 20% on delivery.",
+          amount: remaining,
+          when: "On delivery day",
+          dueDate: deliveryStart.toISOString(),
+          status: "pending",
+        },
+      ],
+    };
+  };
+
+  // Helper to determine if a stage is eligible for payment (today >= due date)
+  const isStageEligible = (stage: any) => {
+    if (!stage.dueDate) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const due = new Date(stage.dueDate);
+    due.setHours(0, 0, 0, 0);
+    return today.getTime() >= due.getTime();
+  };
+
+  // Handle payment for a specific stage
+  const handleStagePayment = async (stage: { key: string; amount: number; label: string }) => {
+    if (!order || !razorpayLoaded || !razorpayKeyId) {
+      toast({
+        title: "Payment Error",
+        description: "Payment gateway is not ready. Please refresh and try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setProcessingPayment(stage.key);
+
+    try {
+      // Create Razorpay order
+      const createOrderResponse = await fetch(getApiUrl('/api/payments/create-order'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          amount: stage.amount,
+          currency: 'INR',
+          receipt: `${order.orderNumber}-${stage.key}-${Date.now()}`,
+        }),
+      });
+
+      if (!createOrderResponse.ok) {
+        const errorData = await createOrderResponse.json();
+        throw new Error(errorData.error || 'Failed to create payment order');
+      }
+
+      const orderData = await createOrderResponse.json();
+      const razorpayOrderId = orderData.orderId;
+      const isTestPayment = razorpayKeyId?.includes('test') || razorpayKeyId?.includes('rzp_test');
+
+      // Open Razorpay modal
+      const razorpay = new window.Razorpay({
+        key: razorpayKeyId,
+        amount: stage.amount * 100,
+        currency: 'INR',
+        name: 'Plattr',
+        description: `${stage.label} - Order #${order.orderNumber}`,
+        order_id: razorpayOrderId,
+        handler: async function (response: any) {
+          try {
+            // Verify payment
+            const verifyResponse = await fetch(getApiUrl('/api/payments/verify'), {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              }),
+            });
+
+            if (!verifyResponse.ok) throw new Error('Payment verification failed');
+
+            const userId = localStorage.getItem('userId');
+            if (!userId) throw new Error('User not authenticated');
+
+            // Store payment details
+            console.log(`[Payment] Storing ${stage.key} payment details...`);
+            try {
+              await paymentService.addPaymentStage({
+                orderId: order.id,
+                orderType: 'mealbox',
+                orderNumber: order.orderNumber,
+                userId: userId,
+                paymentStage: stage.key as 'second' | 'final',
+                amount: stage.amount,
+                razorpayOrderId: response.razorpay_order_id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature,
+                razorpayReceipt: razorpayOrderId,
+                paymentStatus: 'success',
+                isTestPayment: isTestPayment,
+                metadata: {
+                  payment_date: new Date().toISOString(),
+                  payment_method: 'razorpay',
+                  stage_label: stage.label,
+                },
+              });
+              console.log(`[Payment] ✓ ${stage.key} payment stored successfully`);
+            } catch (paymentError: any) {
+              console.error(`[Payment] ✗ Error storing ${stage.key} payment:`, paymentError);
+              toast({
+                title: "Payment Record Warning",
+                description: "Payment successful but record failed to save. Support will be notified.",
+                variant: "destructive",
+              });
+            }
+
+            setPaidStages(prev => [...prev, stage.key]);
+            toast({
+              title: "Payment Successful!",
+              description: `${stage.label} of ₹${stage.amount} has been completed.`,
+            });
+          } catch (error: any) {
+            console.error('Payment verification error:', error);
+            toast({
+              title: "Payment Error",
+              description: error.message || "Failed to verify payment. Please contact support.",
+              variant: "destructive",
+            });
+          } finally {
+            setProcessingPayment(null);
+          }
+        },
+        prefill: {
+          contact: localStorage.getItem('phone') || '',
+          email: localStorage.getItem('email') || '',
+        },
+        theme: { color: '#1A9952' },
+        modal: {
+          ondismiss: function() { setProcessingPayment(null); },
+        },
+      });
+      razorpay.open();
+    } catch (error: any) {
+      console.error("Error initiating payment:", error);
+      toast({
+        variant: "destructive",
+        title: "Payment Error",
+        description: error.message || "Failed to initiate payment. Please try again.",
+      });
+      setProcessingPayment(null);
+    }
+  };
+
+  const paymentSchedule = calculatePaymentSchedule();
 
   return (
     <div className="min-h-screen bg-background pb-6">
@@ -160,6 +594,105 @@ export default function OrderDetailsPage() {
             </div>
           </div>
         </Card>
+
+        {/* Payment Schedule */}
+        {paymentSchedule && (
+          <Card className="p-4 space-y-4" data-testid="card-payment-schedule">
+            <div className="flex items-start gap-3">
+              <div className="mt-1">
+                <IndianRupee className="w-5 h-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <h2 className="font-semibold text-lg mb-1">Payment Schedule</h2>
+                <p className="text-sm text-muted-foreground">
+                  Your payment is split into stages based on the time remaining until delivery.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {paymentSchedule.stages.map((stage, index) => (
+                <div
+                  key={stage.key}
+                  className="flex items-start gap-3"
+                  data-testid={`payment-stage-${index}`}
+                >
+                  <div className="flex flex-col items-center mt-1">
+                    <div className="w-2.5 h-2.5 rounded-full bg-primary" />
+                    {index !== paymentSchedule.stages.length - 1 && (
+                      <div className="w-px flex-1 bg-muted mt-1" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="text-sm font-semibold">{stage.label}</p>
+                          {stage.status === 'paid' && (
+                            <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300 text-xs">
+                              Paid
+                            </Badge>
+                          )}
+                          {stage.status === 'pending' && (
+                            <Badge variant="secondary" className="text-xs">Pending</Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {stage.description}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Due: {stage.when}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-semibold text-primary flex items-center justify-end gap-1">
+                          <IndianRupee className="w-3 h-3" />
+                          {stage.amount.toFixed(0)}
+                        </p>
+                      </div>
+                    </div>
+                    {/* Pay button for eligible pending stages */}
+                    {stage.status === 'pending' && !paidStages.includes(stage.key) && isStageEligible(stage) && (
+                      <div className="mt-3">
+                        <Button
+                          variant="default"
+                          size="sm"
+                          className="text-xs w-full bg-[#1A9952] hover:bg-[#158844]"
+                          onClick={() => handleStagePayment(stage)}
+                          disabled={processingPayment !== null || !razorpayLoaded || !razorpayKeyId}
+                          data-testid={`button-pay-stage-${stage.key}`}
+                        >
+                          {processingPayment === stage.key ? (
+                            <>
+                              <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                              Processing...
+                            </>
+                          ) : (
+                            `Pay ₹${stage.amount.toFixed(0)}`
+                          )}
+                        </Button>
+                      </div>
+                    )}
+                    {paidStages.includes(stage.key) && stage.key !== 'initial' && (
+                      <div className="mt-3 flex items-center justify-center gap-1 text-green-600 text-sm">
+                        <CheckCircle className="w-4 h-4" />
+                        <span>Payment Complete</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-start gap-2 text-xs text-muted-foreground">
+              <Info className="w-3 h-3 mt-0.5" />
+              <p>
+                This schedule is calculated from today to your delivery date. If your event date
+                changes, your payment stages may also change.
+              </p>
+            </div>
+          </Card>
+        )}
 
         {/* Delivery Address */}
         <Card className="p-4">

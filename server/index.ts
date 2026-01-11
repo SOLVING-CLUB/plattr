@@ -1,7 +1,37 @@
+import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+
+// Verify environment variables are loaded
+if (!process.env.RAZORPAY_KEY_ID) {
+  console.warn("[Server] WARNING: RAZORPAY_KEY_ID is not set in environment variables");
+  console.warn("[Server] Make sure your .env file is in the project root and contains RAZORPAY_KEY_ID");
+} else {
+  console.log("[Server] ✓ RAZORPAY_KEY_ID is configured");
+}
+
+if (!process.env.RAZORPAY_KEY_SECRET) {
+  console.warn("[Server] WARNING: RAZORPAY_KEY_SECRET is not set in environment variables");
+} else {
+  console.log("[Server] ✓ RAZORPAY_KEY_SECRET is configured");
+}
+
+// Check Firebase configuration for notifications
+if (!process.env.FIREBASE_PROJECT_ID) {
+  console.warn("[Server] WARNING: FIREBASE_PROJECT_ID is not set. Push notifications may not work.");
+  console.warn("[Server] Set FIREBASE_PROJECT_ID=plattr-cf2ce in your .env file");
+} else {
+  console.log("[Server] ✓ FIREBASE_PROJECT_ID is configured:", process.env.FIREBASE_PROJECT_ID);
+}
+
+// Check if Firebase credentials are available (optional - will use Application Default Credentials if not set)
+if (process.env.FIREBASE_SERVICE_ACCOUNT_PATH || process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+  console.log("[Server] ✓ Firebase service account credentials found");
+} else {
+  console.log("[Server] ℹ Firebase will use Application Default Credentials (if available)");
+}
 
 const app = express();
 const httpServer = createServer(app);
@@ -86,11 +116,8 @@ app.use((req, res, next) => {
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || "5000", 10);
   httpServer.listen(
-    {
       port,
-      host: "0.0.0.0",
-      reusePort: true,
-    },
+    "0.0.0.0",
     () => {
       log(`serving on port ${port}`);
     },

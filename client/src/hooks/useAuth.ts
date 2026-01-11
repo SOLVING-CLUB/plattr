@@ -130,6 +130,11 @@ function initAuthListener() {
     switch (event) {
       case 'SIGNED_IN':
         console.log('✅ User signed in:', session?.user?.id);
+        // Retry notification token registration now that user is logged in
+        import('@/lib/notifications/service').then(({ notificationService }) => {
+          console.log('[Auth] Triggering notification token registration after sign in');
+          notificationService.retryTokenRegistration();
+        }).catch(err => console.warn('[Auth] Could not retry notification registration:', err));
         break;
       case 'SIGNED_OUT':
         console.log('👋 User signed out');
@@ -175,6 +180,12 @@ export function refreshAuthState() {
       initialized: true,
     };
     notifySubscribers();
+    
+    // Retry notification token registration now that user is logged in
+    import('@/lib/notifications/service').then(({ notificationService }) => {
+      console.log('[Auth] Triggering notification token registration after OTP verification');
+      notificationService.retryTokenRegistration();
+    }).catch(err => console.warn('[Auth] Could not retry notification registration:', err));
   }
 }
 

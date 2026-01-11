@@ -1,9 +1,11 @@
 /**
  * Notification Service
  * Handles push notifications, preferences, and deep linking
+ * Shows REAL system notifications (not in-app toasts)
  */
 
 import { PushNotifications } from '@capacitor/push-notifications';
+import { LocalNotifications } from '@capacitor/local-notifications';
 import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
 import { useLocation } from 'wouter';
@@ -43,19 +45,34 @@ class NotificationService {
     }
 
     try {
+      // Request PUSH notification permission
       console.log('[Notifications] Requesting push notification permissions...');
-      // Request permission
-      const permission = await PushNotifications.requestPermissions();
-      console.log('[Notifications] Permission result:', permission);
+      const pushPermission = await PushNotifications.requestPermissions();
+      console.log('[Notifications] Push permission result:', pushPermission);
       
-      if (permission.receive === 'granted') {
+      // Request LOCAL notification permission (needed for foreground notifications)
+      console.log('[Notifications] Requesting local notification permissions...');
+      const localPermission = await LocalNotifications.requestPermissions();
+      console.log('[Notifications] Local permission result:', localPermission);
+      
+      if (pushPermission.receive === 'granted') {
         console.log('[Notifications] Permission granted, registering for push...');
         // Register for push
         await PushNotifications.register();
         console.log('[Notifications] Registration initiated, waiting for token...');
       } else {
-        console.warn('[Notifications] Permission denied:', permission);
+        console.warn('[Notifications] Push permission denied:', pushPermission);
       }
+      
+      // Set up local notification action listener (when user taps local notification)
+      LocalNotifications.addListener('localNotificationActionPerformed', (action) => {
+        console.log('[Notifications] Local notification tapped:', action);
+        const data = action.notification.extra;
+        if (data?.deep_link) {
+          this.handleDeepLink(data.deep_link);
+        }
+      });
+      
     } catch (error) {
       console.error('[Notifications] Initialization error:', error);
     }
@@ -107,16 +124,47 @@ class NotificationService {
 
   /**
    * Handle notification received (foreground)
+   * Shows a REAL system notification using Local Notifications
    */
-  private handleNotificationReceived(notification: any): void {
+  private async handleNotificationReceived(notification: any): Promise<void> {
     try {
-      const payload = this.parseNotificationPayload(notification.data);
-      if (payload && this.shouldShowNotification(payload)) {
-        // Show in-app notification or toast
+      console.log('[Notifications] Push received in foreground:', notification);
+      
+      // Get notification title and body from the push notification
+      const title = notification.title || notification.data?.title || 'Plattr';
+      const body = notification.body || notification.data?.body || '';
+      const data = notification.data || {};
+      
+      // Show a REAL system notification using Local Notifications
+      // This makes it appear in the notification tray like other apps (WhatsApp, Instagram, etc.)
+      const notificationConfig: any = {
+        id: Math.floor(Math.random() * 100000), // Unique ID
+        title: title,
+        body: body,
+        sound: 'default',
+        channelId: 'plattr_notifications',
+        extra: data, // Pass along the original data for when tapped
+      };
+      
+      // Add Android-specific options
+      if (Capacitor.getPlatform() === 'android') {
+        notificationConfig.smallIcon = 'ic_notification';
+        notificationConfig.iconColor = '#F5A524'; // Plattr brand color
+      }
+      
+      await LocalNotifications.schedule({
+        notifications: [notificationConfig],
+      });
+      
+      console.log('[Notifications] ✅ Local notification shown in system tray');
+      
+      // Also notify listeners for any in-app handling if needed
+      const payload = this.parseNotificationPayload(data);
+      if (payload) {
         this.notifyListeners(payload);
       }
     } catch (error) {
-      console.error('[Notifications] Error handling received notification:', error);
+      console.error('[Notifications] Error showing local notification:', error);
     }
   }
 
@@ -245,38 +293,164 @@ class NotificationService {
   }
 
   /**
-   * Send device token to backend
+   * Send device token directly to Supabase (no backend needed)
+   * Retries if user is not logged in yet
    */
-  private async sendTokenToBackend(token: string): Promise<void> {
+  private async sendTokenToBackend(token: string, retryCount = 0): Promise<void> {
     try {
+      console.log('[Notifications] sendTokenToBackend called, attempt:', retryCount + 1);
+      
       // Import dynamically to avoid circular dependencies
-      const { apiRequest } = await import('@/lib/queryClient');
       const { Capacitor } = await import('@capacitor/core');
-      
-      // Get current user
       const { supabaseAuth } = await import('@/lib/supabase-auth');
-      const { data: { session } } = await supabaseAuth.auth.getSession();
       
-      // Fallback to localStorage if no session
+      // Try to get session
+      let session: any = null;
+      try {
+        const result = await supabaseAuth.auth.getSession();
+        session = result.data?.session;
+        console.log('[Notifications] Session check:', session ? 'Found session' : 'No session');
+      } catch (e) {
+        console.warn('[Notifications] Error getting session:', e);
+      }
+      
+      // Get user ID from session or localStorage
       const userId = session?.user?.id || localStorage.getItem('userId');
+      console.log('[Notifications] User ID:', userId ? userId.substring(0, 8) + '...' : 'null');
       
       if (!userId) {
-        console.warn('[Notifications] No user ID available, skipping token registration');
+        // Retry up to 10 times with exponential backoff
+        if (retryCount < 10) {
+          const delay = Math.min(2000 * Math.pow(1.5, retryCount), 30000);
+          console.log(`[Notifications] No user ID, retrying in ${delay}ms (attempt ${retryCount + 1}/10)`);
+          setTimeout(() => {
+            this.sendTokenToBackend(token, retryCount + 1);
+          }, delay);
+          return;
+        }
+        console.warn('[Notifications] No user ID after 10 retries, giving up');
         return;
       }
 
       const platform = Capacitor.getPlatform() || 'web';
+      const platformType = platform === 'ios' ? 'ios' : platform === 'android' ? 'android' : 'web';
       
-      await apiRequest('POST', '/api/notifications/register', {
-        user_id: userId,
-        device_token: token,
-        platform: platform === 'ios' ? 'ios' : platform === 'android' ? 'android' : 'web',
-        preferences: this.preferences,
+      console.log('[Notifications] Registering token in Supabase...', {
+        user_id: userId.substring(0, 8) + '...',
+        platform: platformType,
+        token_preview: token.substring(0, 20) + '...'
       });
+
+      // First ensure user exists in public.users table (required by RLS)
+      console.log('[Notifications] Checking if user exists in users table...');
+      const { data: existingUser, error: userCheckError } = await supabaseAuth
+        .from('users')
+        .select('id')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (userCheckError) {
+        console.warn('[Notifications] Error checking user:', userCheckError);
+      }
+
+      if (!existingUser) {
+        console.log('[Notifications] User not in users table, creating...');
+        const phone = session?.user?.phone || localStorage.getItem('phone') || '';
+        const { error: createUserError } = await supabaseAuth
+          .from('users')
+          .insert({
+            id: userId,
+            username: `user_${Math.floor(1000 + Math.random() * 9000)}`,
+            phone: phone.replace('+91', ''),
+            password: 'OTP_AUTH',
+            is_verified: true,
+          });
+
+        if (createUserError && !createUserError.message?.includes('duplicate')) {
+          console.error('[Notifications] Failed to create user:', createUserError);
+          // Continue anyway - maybe user exists but RLS blocked us from seeing
+        } else {
+          console.log('[Notifications] User created in users table');
+        }
+      } else {
+        console.log('[Notifications] User exists in users table');
+      }
+
+      // Check if this exact token already exists for this user
+      console.log('[Notifications] Checking for existing token...');
+      const { data: existingToken, error: tokenCheckError } = await supabaseAuth
+        .from('device_tokens')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('device_token', token)
+        .maybeSingle();
+
+      if (tokenCheckError) {
+        console.warn('[Notifications] Error checking token:', tokenCheckError);
+      }
+
+      if (existingToken) {
+        // Update existing token
+        console.log('[Notifications] Token exists, updating...');
+        const { error: updateError } = await supabaseAuth
+          .from('device_tokens')
+          .update({
+            platform: platformType,
+            preferences: this.preferences,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', existingToken.id);
+
+        if (updateError) {
+          console.error('[Notifications] Update failed:', updateError);
+          throw updateError;
+        }
+        console.log('[Notifications] ✅ Token updated successfully');
+      } else {
+        // Insert new token
+        console.log('[Notifications] Inserting new token...');
+        const { data: insertedData, error: insertError } = await supabaseAuth
+          .from('device_tokens')
+          .insert({
+            user_id: userId,
+            device_token: token,
+            platform: platformType,
+            preferences: this.preferences,
+          })
+          .select()
+          .single();
+
+        if (insertError) {
+          console.error('[Notifications] Insert failed:', insertError);
+          console.error('[Notifications] Insert error details:', JSON.stringify(insertError));
+          throw insertError;
+        }
+        console.log('[Notifications] ✅ Token inserted successfully:', insertedData?.id);
+      }
+    } catch (error: any) {
+      console.error('[Notifications] Error saving token:', error);
+      console.error('[Notifications] Error message:', error?.message);
+      console.error('[Notifications] Error details:', JSON.stringify(error));
       
-      console.log('[Notifications] Token saved to backend');
-    } catch (error) {
-      console.error('[Notifications] Error sending token to backend:', error);
+      // Retry on network errors
+      if (retryCount < 3 && (error?.message?.includes('network') || error?.message?.includes('fetch'))) {
+        const delay = 3000 * (retryCount + 1);
+        console.log(`[Notifications] Network error, retrying in ${delay}ms`);
+        setTimeout(() => {
+          this.sendTokenToBackend(token, retryCount + 1);
+        }, delay);
+      }
+    }
+  }
+
+  /**
+   * Retry token registration (call after user logs in)
+   */
+  async retryTokenRegistration(): Promise<void> {
+    const token = this.deviceToken || localStorage.getItem(DEVICE_TOKEN_STORAGE_KEY);
+    if (token) {
+      console.log('[Notifications] Retrying token registration after login...');
+      await this.sendTokenToBackend(token, 0);
     }
   }
 

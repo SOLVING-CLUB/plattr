@@ -76,24 +76,53 @@ serve(async (req) => {
       case "bulk_meal_orders":
         if (type === "INSERT") {
           result = await handleBulkMealOrder(record, supabase, odoo);
+        } else if (type === "UPDATE") {
+          // Handle status changes - if status changed to "paid", create Sales Order
+          if (old_record && old_record.status !== record.status && record.status === "paid") {
+            console.log(`Order status changed to paid, syncing to Odoo: ${record.order_number}`);
+            result = await handleBulkMealOrder(record, supabase, odoo);
+          } else {
+            result = { success: true, message: "No action needed for this update" };
+          }
         }
         break;
 
       case "mealbox_orders":
         if (type === "INSERT") {
           result = await handleMealboxOrder(record, supabase, odoo);
+        } else if (type === "UPDATE") {
+          if (old_record && old_record.status !== record.status && record.status === "paid") {
+            console.log(`Order status changed to paid, syncing to Odoo: ${record.order_number}`);
+            result = await handleMealboxOrder(record, supabase, odoo);
+          } else {
+            result = { success: true, message: "No action needed for this update" };
+          }
         }
         break;
 
       case "sixty_min_bulk_orders":
         if (type === "INSERT") {
           result = await handleSixtyMinBulkOrder(record, supabase, odoo);
+        } else if (type === "UPDATE") {
+          if (old_record && old_record.status !== record.status && record.status === "paid") {
+            console.log(`Order status changed to paid, syncing to Odoo: ${record.order_number}`);
+            result = await handleSixtyMinBulkOrder(record, supabase, odoo);
+          } else {
+            result = { success: true, message: "No action needed for this update" };
+          }
         }
         break;
 
       case "sixty_min_mealbox_orders":
         if (type === "INSERT") {
           result = await handleSixtyMinMealboxOrder(record, supabase, odoo);
+        } else if (type === "UPDATE") {
+          if (old_record && old_record.status !== record.status && record.status === "paid") {
+            console.log(`Order status changed to paid, syncing to Odoo: ${record.order_number}`);
+            result = await handleSixtyMinMealboxOrder(record, supabase, odoo);
+          } else {
+            result = { success: true, message: "No action needed for this update" };
+          }
         }
         break;
 
