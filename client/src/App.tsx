@@ -291,8 +291,8 @@ function Router() {
       <Route path="/privacy" component={GuardedPrivacyPage} />
       <Route path="/licenses" component={GuardedLicensesPage} />
       <Route path="/referral" component={GuardedReferralPage} />
-      <Route path="/corporate" component={GuardedCorporatePage} />
-      <Route path="/corporate-thank-you" component={CorporateThankYouPage} />
+      <Route path="/corporate" component={GuardedSnackBoxPage} />
+      <Route path="/corporate-thank-you" component={SnackBoxThankYouPage} />
       <Route path="/catering" component={GuardedCateringPage} />
       <Route path="/catering-thank-you" component={CateringThankYouPage} />
       <Route path="/concierge" component={GuardedConciergeWizardPage} />

@@ -555,7 +555,7 @@ export default function Home() {
     console.log(`Service clicked: ${serviceId}`);
     
     if (serviceId === "corporate") {
-      setLocation("/corporate");
+      setLocation("/snack-box");
     } else if (serviceId === "catering") {
       setLocation("/catering");
     } else if (serviceId === "mealbox") {

@@ -7,14 +7,14 @@ const categoryLabels = {
   "bulk-meals": "Bulk Meal",
   "mealbox": "MealBox",
   "catering": "Catering",
-  "corporate": "Corporate Catering"
+  "snack-box": "Snack-box"
 };
 
 const categoryRoutes = {
   "bulk-meals": "/bulk-meals",
   "mealbox": "/mealbox",
   "catering": "/catering",
-  "corporate": "/corporate"
+  "snack-box": "/snack-box"
 };
 
 type CategoryType = keyof typeof categoryLabels;

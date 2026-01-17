@@ -74,6 +74,7 @@ export default function SnackBoxPage() {
     const { toast } = useToast();
     const { addToCart, cart, addedItems, removeFromCart, enterCategory, setBulkMealType } = useCart();
 
+    const [selectedService, setSelectedService] = useState<ServiceType>("snack-box");
     const [dishDetailOpen, setDishDetailOpen] = useState(false);
     const [detailDish, setDetailDish] = useState<any | null>(null);
     const [quantities, setQuantities] = useState<Record<string, string>>({});
@@ -373,80 +374,154 @@ export default function SnackBoxPage() {
                 }}
             />
 
-            {/* Header Section - Mobile only */}
-            {!isDesktop && (
-                <div className="relative z-10 px-4 pt-4 pb-6">
-                    {/* Empty spacer to maintain layout */}
-                    <div className="h-[40px] mb-6" />
+            {/* Sticky Back Button Header */}
+            <div
+                className="sticky top-0 z-50 transition-all duration-200"
+                style={{
+                    backgroundColor: scrollY > 50 ? 'white' : 'transparent',
+                    boxShadow: scrollY > 50 ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                }}
+            >
+                <div className="px-4 pt-12 pb-3">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className={scrollY > 50 ? "text-[#06352A] hover:text-[#06352A] hover:bg-gray-100" : "text-white hover:text-white hover:bg-white/20"}
+                        onClick={() => setLocation("/")}
+                        data-testid="button-back"
+                    >
+                        <ArrowLeft className="w-4 h-4 mr-2" />
+                        Back
+                    </Button>
+                </div>
+            </div>
 
-                    {/* Service Navigation Tabs */}
-                    <div className="grid grid-cols-4 gap-2 lg:gap-4 max-w-2xl lg:max-w-4xl mx-auto">
+            {/* Header Section */}
+            <div className="relative z-10 px-4 pt-4 pb-6">
+                {/* Location and AI Menu Planner */}
+                <div className="flex items-center justify-between mb-6">
+                    <button 
+                        className="flex items-center gap-2 max-w-[180px] hover:opacity-80 transition-opacity" 
+                        onClick={() => setLocation("/location")}
+                        data-testid="button-location"
+                    >
+                        <MapPin className="w-5 h-5 text-white flex-shrink-0" />
+                        <span className="text-white font-semibold text-[18px] truncate max-w-[120px]" style={{ fontFamily: "Sweet Sans Pro" }}>
+                            {locationLabel}
+                        </span>
+                    </button>
+                    <button
+                        onClick={() => setLocation("/concierge")}
+                        data-testid="button-ai-menu-planner"
+                        className="flex items-center justify-center px-3 py-2 rounded-[10px] shadow-md hover:opacity-90 transition-opacity"
+                        style={{
+                            background: "linear-gradient(135deg, #06352A 0%, #1A9952 100%)",
+                            fontFamily: "Sweet Sans Pro",
+                            fontSize: "12px",
+                            fontWeight: 500,
+                            color: "#F5E9DB",
+                            height: "40px",
+                        }}
+                    >
+                        AI Menu Planner
+                    </button>
+                </div>
+
+                {/* Service Navigation Tabs */}
+                <div className="grid grid-cols-4 gap-2 lg:gap-4 max-w-2xl lg:max-w-4xl mx-auto">
                         <button
-                            onClick={() => setLocation("/bulk-meals")}
-                            className="flex flex-col items-center justify-center transition-all hover-elevate active-elevate-2 aspect-square p-0"
+                            onClick={() => { setSelectedService("bulk-meals"); setLocation("/bulk-meals"); }}
+                            data-testid="service-tab-bulk-meals"
+                            className="flex flex-col items-center justify-center p-3 transition-all hover-elevate active-elevate-2 aspect-square"
                             style={{
                                 borderRadius: "10px",
-                                backgroundColor: "#FFFFFF",
-                                color: "#06352A",
+                                backgroundColor: selectedService === "bulk-meals" ? "#06352A" : "#FFFFFF",
+                                color: selectedService === "bulk-meals" ? "#F5E9DB" : "#06352A",
                             }}
                         >
-                            <img
-                                src={bulkMealsIconInactive}
-                                alt="Bulk Meals"
-                                className="w-full h-full object-cover rounded-[10px]"
+                            <img 
+                                src={selectedService === "bulk-meals" ? bulkMealsIconActive : bulkMealsIconInactive} 
+                                alt="Bulk Meals" 
+                                className="w-6 h-6 mb-1"
                             />
+                            <span
+                                className="text-[10px] font-semibold text-center leading-tight"
+                                style={{ fontFamily: "Sweet Sans Pro" }}
+                            >
+                                Bulk Meals
+                            </span>
                         </button>
 
                         <button
-                            onClick={() => setLocation("/mealbox")}
-                            className="flex flex-col items-center justify-center transition-all hover-elevate active-elevate-2 aspect-square p-0"
+                            onClick={() => { setSelectedService("mealbox"); setLocation("/mealbox"); }}
+                            data-testid="service-tab-mealbox"
+                            className="flex flex-col items-center justify-center p-3 transition-all hover-elevate active-elevate-2 aspect-square"
                             style={{
                                 borderRadius: "10px",
-                                backgroundColor: "#FFFFFF",
-                                color: "#06352A",
+                                backgroundColor: selectedService === "mealbox" ? "#06352A" : "#FFFFFF",
+                                color: selectedService === "mealbox" ? "#F5E9DB" : "#06352A",
                             }}
                         >
-                            <img
-                                src={mealBoxIconInactive}
-                                alt="MealBox"
-                                className="w-full h-full object-cover rounded-[10px]"
+                            <img 
+                                src={selectedService === "mealbox" ? mealBoxIconActive : mealBoxIconInactive} 
+                                alt="MealBox" 
+                                className="w-6 h-6 mb-1"
                             />
+                            <span
+                                className="text-[10px] font-semibold text-center leading-tight"
+                                style={{ fontFamily: "Sweet Sans Pro" }}
+                            >
+                                MealBox
+                            </span>
                         </button>
 
                         <button
-                            onClick={() => setLocation("/snack-box")}
-                            className="flex flex-col items-center justify-center transition-all hover-elevate active-elevate-2 aspect-square p-0"
+                            onClick={() => { setSelectedService("catering"); setLocation("/catering"); }}
+                            data-testid="service-tab-catering"
+                            className="flex flex-col items-center justify-center p-3 transition-all hover-elevate active-elevate-2 aspect-square"
                             style={{
                                 borderRadius: "10px",
-                                backgroundColor: "#06352A",
-                                color: "#F5E9DB",
+                                backgroundColor: selectedService === "catering" ? "#06352A" : "#FFFFFF",
+                                color: selectedService === "catering" ? "#F5E9DB" : "#06352A",
                             }}
                         >
-                            <img
-                                src={snackBoxIconActive}
-                                alt="Snack-box"
-                                className="w-full h-full object-cover rounded-[10px]"
+                            <img 
+                                src={selectedService === "catering" ? cateringIconActive : cateringIconInactive} 
+                                alt="Catering" 
+                                className="w-6 h-6 mb-1"
                             />
+                            <span
+                                className="text-[10px] font-semibold text-center leading-tight"
+                                style={{ fontFamily: "Sweet Sans Pro" }}
+                            >
+                                Catering
+                            </span>
                         </button>
 
                         <button
-                            onClick={() => setLocation("/catering")}
-                            className="flex flex-col items-center justify-center transition-all hover-elevate active-elevate-2 aspect-square p-0"
+                            onClick={() => { setSelectedService("snack-box"); setLocation("/snack-box"); }}
+                            data-testid="service-tab-snack-box"
+                            className="flex flex-col items-center justify-center p-3 transition-all hover-elevate active-elevate-2 aspect-square"
                             style={{
                                 borderRadius: "10px",
-                                backgroundColor: "#FFFFFF",
-                                color: "#06352A",
+                                backgroundColor: selectedService === "snack-box" ? "#06352A" : "#FFFFFF",
+                                color: selectedService === "snack-box" ? "#F5E9DB" : "#06352A",
                             }}
                         >
-                            <img
-                                src={cateringIconInactive}
-                                alt="Catering"
-                                className="w-full h-full object-cover rounded-[10px]"
+                            <img 
+                                src={selectedService === "snack-box" ? snackBoxIconActive : snackBoxIconInactive} 
+                                alt="Snack-box" 
+                                className="w-6 h-6 mb-1"
                             />
+                            <span
+                                className="text-[10px] font-semibold text-center leading-tight"
+                                style={{ fontFamily: "Sweet Sans Pro" }}
+                            >
+                                Snack-box
+                            </span>
                         </button>
                     </div>
-                </div>
-            )}
+            </div>
 
             {/* Sticky Search Bar and Meal Category Container - At the top */}
             <div

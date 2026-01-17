@@ -1021,7 +1021,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { LazyImage } from "@/components/ui/lazy-image";
-import { ArrowLeft, Building2, MapPin, ShoppingCart, UtensilsCrossed, Package, Truck, Search, Check, ChevronRight, ChevronLeft, Star, ArrowUpDown, SlidersHorizontal, LayoutGrid, Leaf, Drumstick, Egg, Sparkles, Phone, X, Calendar } from "lucide-react";
+import { ArrowLeft, Building2, MapPin, ShoppingCart, UtensilsCrossed, Package, Truck, Search, Check, ChevronRight, ChevronLeft, Star, ArrowUpDown, SlidersHorizontal, LayoutGrid, Leaf, Drumstick, Egg, Sparkles, Phone, X, Calendar, Utensils } from "lucide-react";
 import DeliveryTimePicker from "@/components/DeliveryTimePicker";
 
 // Define missing types locally to resolve import errors
@@ -1091,6 +1091,8 @@ import cateringIconActive from "@assets/streamline-plump_food-truck-event-fair-s
 import cateringIconInactive from "@assets/streamline-plump_food-truck-event-fair-solid_1765649076929.png";
 import corporateIconActive from "@assets/fi_12471703678_1765649076915.png";
 import corporateIconInactive from "@assets/Vector34567_1765649076929.png";
+import snackBoxIconActive from "@assets/fi_116537845_1765649076928.png";
+import snackBoxIconInactive from "@assets/fi_1165378_1765649076929.png";
 import decorIcon from "@assets/streamline-ultimate_party-decoration-bold_1763917839170.png";
 import tablewareIcon from "@assets/roentgen_fork-and-knife_1763917839169.png";
 import musicIcon from "@assets/roentgen_fork-and-knife_1763917839169.png";
@@ -1278,7 +1280,7 @@ const getMealTypeFilter = (mealType: MealType): string => {
   }
 };
 
-type ServiceType = "bulk-meals" | "mealbox" | "catering" | "corporate";
+type ServiceType = "bulk-meals" | "mealbox" | "catering" | "snack-box";
 type PortionSize = 3 | 5 | 6 | 8;
 type MealPreference = "veg" | "egg" | "non-veg";
 type MealType = "hi-tea" | "breakfast" | "lunch" | "dinner";
@@ -2811,27 +2813,27 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
 
               <button
                 onClick={() => {
-                  setSelectedService("corporate");
-                  navigate("/corporate");
+                  setSelectedService("snack-box");
+                  navigate("/snack-box");
                 }}
-                data-testid="service-tab-corporate"
+                data-testid="service-tab-snack-box"
                 className="flex flex-col items-center justify-center p-3 transition-all hover-elevate active-elevate-2 aspect-square"
                 style={{
                   borderRadius: "10px",
-                  backgroundColor: selectedService === "corporate" ? "#06352A" : "#FFFFFF",
-                  color: selectedService === "corporate" ? "#F5E9DB" : "#06352A",
+                  backgroundColor: selectedService === "snack-box" ? "#06352A" : "#FFFFFF",
+                  color: selectedService === "snack-box" ? "#F5E9DB" : "#06352A",
                 }}
               >
                 <img 
-                  src={selectedService === "corporate" ? corporateIconActive : corporateIconInactive} 
-                  alt="Corporate" 
+                  src={selectedService === "snack-box" ? snackBoxIconActive : snackBoxIconInactive} 
+                  alt="Snack-box" 
                   className="w-6 h-6 mb-1"
                 />
                 <span
                   className="text-[9px] xs:text-[10px] sm:text-xs font-semibold text-center leading-tight"
                   style={{ fontFamily: "Sweet Sans Pro" }}
                 >
-                  Corporate
+                  Snack-box
                 </span>
               </button>
             </>
@@ -3576,23 +3578,18 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
                 Non-Veg
               </button>
 
-              {/* Sort Dropdown */}
-              <Select value={sortOption} onValueChange={(value) => setSortOption(value as typeof sortOption)}>
-                <SelectTrigger
-                  className="w-auto h-6 px-2 text-[10px] bg-white border-gray-200 rounded-full gap-0.5 flex-shrink-0"
-                  style={{ fontFamily: "Sweet Sans Pro" }}
-                  data-testid="select-sort"
-                >
-                  <ArrowUpDown className="w-2.5 h-2.5" />
-                  <SelectValue placeholder="Sort" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="price-low">Price: Low → High</SelectItem>
-                  <SelectItem value="price-high">Price: High → Low</SelectItem>
-                  <SelectItem value="name-az">Name: A → Z</SelectItem>
-                  <SelectItem value="name-za">Name: Z → A</SelectItem>
-                </SelectContent>
-              </Select>
+              {/* Tasting Menu Button */}
+              <Button
+                onClick={() => window.open("https://www.plattr.club/tasting-menu", "_blank")}
+                className="w-auto h-6 px-2 text-[10px] bg-white border border-gray-200 rounded-full gap-0.5 flex-shrink-0 hover:bg-gray-50"
+                style={{ fontFamily: "Sweet Sans Pro" }}
+                variant="outline"
+                size="sm"
+                data-testid="button-tasting-menu"
+              >
+                <Utensils className="w-2.5 h-2.5" />
+                Tasting Menu
+              </Button>
             </div>
 
             {/* Helper text explaining template behavior */}

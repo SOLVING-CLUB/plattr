@@ -79,7 +79,7 @@ export default function MealBoxBuilderPage() {
     { id: "bulk-meals", label: "Bulk Meals", icon: Package },
     { id: "mealbox", label: "MealBox", icon: Utensils },
     { id: "catering", label: "Catering", icon: UtensilsCrossed },
-    { id: "corporate", label: "Corporate", icon: Building2 },
+    { id: "snack-box", label: "Snack-box", icon: Package },
   ];
 
   const handleNext = () => {

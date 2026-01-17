@@ -2,8 +2,6 @@ import ServiceCardSection from "@/pages/ServiceCard";
 import mealBoxImage from "@assets/Tiffin_1764989484948.png";
 import cateringImage from "@assets/Tiffin5_1764990291688.png";
 import bulkMealImage from "@assets/Tiffin8_1764990094179.png";
-import corporateImage from "@assets/Tiffin10_1764990422090.png";
-// TODO: Request snackbox image from group - placeholder for now
 import snackboxCardImage from "@assets/snackbox_card.png";
 
 interface ServicesWeOfferSectionProps {
@@ -41,7 +39,7 @@ export default function ServicesWeOfferSection({ onServiceClick }: ServicesWeOff
             backgroundImage={bulkMealImage}
           />
 
-          {/* Snack-box - Bottom Left (replaces Catering position) */}
+          {/* Snack-box - Bottom Left */}
           <ServiceCardSection
             serviceId="snack-box"
             title="Snack-box"
@@ -51,17 +49,7 @@ export default function ServicesWeOfferSection({ onServiceClick }: ServicesWeOff
             backgroundImage={snackboxCardImage}
           />
 
-          {/* Daily Corporate - Bottom, spans full width */}
-          <ServiceCardSection
-            serviceId="corporate"
-            title="Daily Corporate"
-            description="Customizations & more"
-            onClick={() => onServiceClick?.("corporate")}
-            className="col-span-2 h-[160px]"
-            backgroundImage={corporateImage}
-          />
-
-          {/* Catering - Below Daily Corporate, spans full width */}
+          {/* Catering - Below Snack-box, spans full width */}
           <ServiceCardSection
             serviceId="catering"
             title="Catering"

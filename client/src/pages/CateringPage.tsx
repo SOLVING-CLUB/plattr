@@ -963,13 +963,15 @@ import cateringIconActive from "@assets/streamline-plump_food-truck-event-fair-s
 import cateringIconInactive from "@assets/streamline-plump_food-truck-event-fair-solid_1765649076929.png";
 import corporateIconActive from "@assets/fi_12471703678_1765649076915.png";
 import corporateIconInactive from "@assets/Vector34567_1765649076929.png";
+import snackBoxIconActive from "@assets/fi_116537845_1765649076928.png";
+import snackBoxIconInactive from "@assets/fi_1165378_1765649076929.png";
 import DeliveryTimePicker from "@/components/DeliveryTimePicker";
 import DeliveryDatePicker from "@/components/DeliveryDatePicker";
 import { validateBangaloreAddress, BANGALORE_VALIDATION_ERROR } from "@/lib/addressValidation";
 import { analytics } from "@/lib/analytics";
 import { facebookEvents } from "@/lib/facebook-capi";
 
-type ServiceType = "bulk-meals" | "mealbox" | "catering" | "corporate";
+type ServiceType = "bulk-meals" | "mealbox" | "catering" | "snack-box";
 
 const LOCATION_STORAGE_KEY = "activeLocation";
 
@@ -1515,26 +1517,26 @@ export default function CateringOrder() {
           </button>
 
           <button
-            onClick={() => { setSelectedService("corporate"); setLocation("/corporate"); }}
-            data-testid="service-tab-corporate"
+            onClick={() => { setSelectedService("snack-box"); setLocation("/snack-box"); }}
+            data-testid="service-tab-snack-box"
             className="flex flex-col items-center justify-center p-3 transition-all hover-elevate active-elevate-2 aspect-square"
             style={{
               borderRadius: "10px",
               backgroundColor:
-                selectedService === "corporate" ? "#06352A" : "#FFFFFF",
-              color: selectedService === "corporate" ? "#F5E9DB" : "#06352A",
+                selectedService === "snack-box" ? "#06352A" : "#FFFFFF",
+              color: selectedService === "snack-box" ? "#F5E9DB" : "#06352A",
             }}
           >
             <img 
-              src={selectedService === "corporate" ? corporateIconActive : corporateIconInactive} 
-              alt="Corporate" 
+              src={selectedService === "snack-box" ? snackBoxIconActive : snackBoxIconInactive} 
+              alt="Snack-box" 
               className="w-6 h-6 mb-1"
             />
             <span
               className="text-[10px] font-semibold text-center leading-tight"
               style={{ fontFamily: "Sweet Sans Pro" }}
             >
-              Corporate
+              Snack-box
             </span>
           </button>
         </div>
