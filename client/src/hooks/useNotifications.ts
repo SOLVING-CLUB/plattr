@@ -15,12 +15,6 @@ export function useNotifications() {
   );
 
   useEffect(() => {
-    // Initialize notifications
-    notificationService.initialize();
-
-    // Set up listeners
-    const cleanup = notificationService.setupListeners();
-
     // Update device token when it changes
     const checkToken = setInterval(() => {
       const token = notificationService.getDeviceToken();
@@ -30,7 +24,6 @@ export function useNotifications() {
     }, 1000);
 
     return () => {
-      cleanup();
       clearInterval(checkToken);
     };
   }, []);

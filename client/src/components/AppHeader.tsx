@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Sparkles, ArrowLeft, MapPin } from "lucide-react";
 import { useLocation } from "wouter";
+import NotificationCenter from "@/components/NotificationCenter";
 
 const LOCATION_STORAGE_KEY = "activeLocation";
 
@@ -113,6 +114,10 @@ export default function AppHeader({ onBackClick, onSearch, searchQuery }: AppHea
         >
           <Sparkles className="w-5 h-5 text-[#06352A]" />
         </button>
+
+        <div className="flex-shrink-0">
+          <NotificationCenter />
+        </div>
       </div>
     </header>
   );

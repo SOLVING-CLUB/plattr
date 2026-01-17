@@ -138,7 +138,12 @@ export default function AppHeader({
           setIsCheckingLocation(false);
           return;
         } else {
-          console.log('Browser geolocation failed, trying IP-based fallback...', result.error);
+          // Only log essential error info, not the full userFriendlyMessage
+          if (result.error?.code === 1) {
+            console.warn('Geolocation permission denied, using IP-based fallback');
+          } else {
+            console.log('Browser geolocation failed, trying IP-based fallback...');
+          }
         }
       } catch (geoError) {
         console.log('Location permission check failed, trying IP-based fallback...', geoError);

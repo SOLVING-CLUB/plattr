@@ -1,0 +1,13 @@
+{
+  "Simulator Target Bundle": "com.caterplanner.app",
+  "aps": {
+    "alert": {
+      "title": "Test Notification",
+      "subtitle": "This is a test",
+      "body": "Testing push notifications in simulator"
+    },
+    "badge": 1,
+    "sound": "default"
+  },
+  "customKey": "customValue"
+}

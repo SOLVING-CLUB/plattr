@@ -166,7 +166,9 @@ curl -X POST https://leltckltotobsibixhqo.supabase.co/functions/v1/send-notifica
 ## How It Works
 
 1. **User installs app** → App requests notification permission
-2. **Permission granted** → FCM generates a device token
+2. **Permission granted** → Device token is generated
+   - Android: FCM token from `@capacitor/push-notifications`
+   - iOS: FCM token from Firebase Messaging (bridged to JS); APNs token is also generated but is not usable with the backend FCM v1 sender
 3. **Token registration** → App sends token to backend via `POST /api/notifications/register`
 4. **Token stored** → Backend stores token in `device_tokens` table
 5. **Order status changes** → Database trigger calls Supabase Edge Function

@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { ChevronLeft, Bell } from "lucide-react";
+import { ChevronLeft, Bell, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -14,10 +14,46 @@ import FloatingNav from "@/pages/FloatingNav";
 
 export default function NotificationSettingsPage() {
   const [, setLocation] = useLocation();
-  const { preferences, updatePreferences } = useNotifications();
+  const { preferences, updatePreferences, deviceToken } = useNotifications();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<"home" | "menu" | "profile">("profile");
   const [localPreferences, setLocalPreferences] = useState(preferences);
+  const [copied, setCopied] = useState(false);
+  const [tokenFromStorage, setTokenFromStorage] = useState<string | null>(null);
+  const [tokenFromSupabase, setTokenFromSupabase] = useState<string | null>(null);
+
+  // Load token from localStorage and Supabase
+  useEffect(() => {
+    // Check localStorage
+    const storedToken = localStorage.getItem('plattr_device_token');
+    setTokenFromStorage(storedToken);
+    
+    // Check Supabase
+    const checkSupabaseToken = async () => {
+      try {
+        const { data: { session } } = await supabaseAuth.auth.getSession();
+        const userId = session?.user?.id || localStorage.getItem('userId');
+        
+        if (userId) {
+          const { data, error } = await supabaseAuth
+            .from('device_tokens')
+            .select('device_token')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          
+          if (!error && data) {
+            setTokenFromSupabase(data.device_token);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching token from Supabase:', error);
+      }
+    };
+    
+    checkSupabaseToken();
+  }, []);
 
   const handleTabChange = (tab: "home" | "menu" | "profile") => {
     setActiveTab(tab);
@@ -28,6 +64,16 @@ export default function NotificationSettingsPage() {
     } else if (tab === "profile") {
       setLocation("/profile");
     }
+  };
+
+  const handleCopyToken = (token: string) => {
+    navigator.clipboard.writeText(token);
+    setCopied(true);
+    toast({
+      title: "Copied!",
+      description: "FCM token copied to clipboard",
+    });
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleToggle = async (key: keyof typeof preferences, value: boolean) => {
@@ -66,6 +112,23 @@ export default function NotificationSettingsPage() {
         return;
       }
 
+      // Check notification permissions first (especially important for iOS)
+      const { Capacitor } = await import('@capacitor/core');
+      if (Capacitor.isNativePlatform()) {
+        const { PushNotifications } = await import('@capacitor/push-notifications');
+        const permResult = await PushNotifications.checkPermissions();
+        console.log('[Test Notification] Permission status:', permResult);
+        
+        if (permResult.receive !== 'granted') {
+          toast({
+            variant: "destructive",
+            title: "Notifications Disabled",
+            description: "Please enable notifications in iPhone Settings → Notifications → Plattr",
+          });
+          return;
+        }
+      }
+
       const deviceToken = notificationService.getDeviceToken();
       if (!deviceToken) {
         toast({
@@ -75,6 +138,10 @@ export default function NotificationSettingsPage() {
         });
         return;
       }
+
+      console.log('[Test Notification] Device token:', deviceToken.substring(0, 30) + '...');
+      console.log('[Test Notification] Token length:', deviceToken.length);
+      console.log('[Test Notification] Token format:', /^[a-zA-Z0-9_-]+$/.test(deviceToken) ? 'FCM-like' : 'Other');
 
       toast({
         title: "Sending test notification...",
@@ -99,10 +166,30 @@ export default function NotificationSettingsPage() {
         }
 
         if (data?.success) {
+          // Check if actually sent or if there were errors
+          if (data.sent === 0) {
+            const errorMsg = data.errors?.length > 0 
+              ? `Failed: ${data.errors.join(', ')}`
+              : 'No device tokens found. Make sure you\'re logged in and notifications are enabled.';
+            toast({
+              variant: "destructive",
+              title: "No notifications sent",
+              description: errorMsg,
+            });
+            console.error('[Test Notification] Edge Function response:', data);
+          } else if (data.failed > 0 && data.errors?.length > 0) {
+            toast({
+              variant: "destructive",
+              title: "Partial failure",
+              description: `Sent to ${data.sent} device(s), but ${data.failed} failed: ${data.errors.join(', ')}`,
+            });
+            console.error('[Test Notification] Partial failure:', data.errors);
+          } else {
           toast({
             title: "Test sent!",
-            description: `Notification sent to ${data.sent || 0} device(s). Check your notifications.`,
+              description: `Notification sent to ${data.sent} device(s). Check your notifications.`,
           });
+          }
         } else {
           throw new Error(data?.error || "Failed to send");
         }
@@ -243,6 +330,89 @@ export default function NotificationSettingsPage() {
               onCheckedChange={(checked) => handleToggle("reminders", checked)}
             />
           </div>
+        </div>
+
+        {/* FCM Token Display */}
+        <div className="bg-white rounded-lg p-4">
+          <Label className="text-base font-semibold text-[#1C1C1C] mb-3 block" style={{ fontFamily: "'Sweet Sans Pro', sans-serif" }}>
+            FCM Registration Token
+          </Label>
+          
+          {/* Token from Service */}
+          {deviceToken && (
+            <div className="mb-3">
+              <p className="text-xs text-gray-500 mb-1">From Notification Service:</p>
+              <div className="flex items-center gap-2 p-2 bg-gray-50 rounded border">
+                <code className="text-xs flex-1 break-all font-mono">{deviceToken}</code>
+                <button
+                  onClick={() => handleCopyToken(deviceToken)}
+                  className="p-1 hover:bg-gray-200 rounded"
+                  title="Copy token"
+                >
+                  {copied ? (
+                    <Check className="w-4 h-4 text-green-600" />
+                  ) : (
+                    <Copy className="w-4 h-4 text-gray-600" />
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+          
+          {/* Token from localStorage */}
+          {tokenFromStorage && tokenFromStorage !== deviceToken && (
+            <div className="mb-3">
+              <p className="text-xs text-gray-500 mb-1">From LocalStorage:</p>
+              <div className="flex items-center gap-2 p-2 bg-gray-50 rounded border">
+                <code className="text-xs flex-1 break-all font-mono">{tokenFromStorage}</code>
+                <button
+                  onClick={() => handleCopyToken(tokenFromStorage)}
+                  className="p-1 hover:bg-gray-200 rounded"
+                  title="Copy token"
+                >
+                  {copied ? (
+                    <Check className="w-4 h-4 text-green-600" />
+                  ) : (
+                    <Copy className="w-4 h-4 text-gray-600" />
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+          
+          {/* Token from Supabase */}
+          {tokenFromSupabase && tokenFromSupabase !== deviceToken && tokenFromSupabase !== tokenFromStorage && (
+            <div className="mb-3">
+              <p className="text-xs text-gray-500 mb-1">From Supabase:</p>
+              <div className="flex items-center gap-2 p-2 bg-gray-50 rounded border">
+                <code className="text-xs flex-1 break-all font-mono">{tokenFromSupabase}</code>
+                <button
+                  onClick={() => handleCopyToken(tokenFromSupabase)}
+                  className="p-1 hover:bg-gray-200 rounded"
+                  title="Copy token"
+                >
+                  {copied ? (
+                    <Check className="w-4 h-4 text-green-600" />
+                  ) : (
+                    <Copy className="w-4 h-4 text-gray-600" />
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+          
+          {!deviceToken && !tokenFromStorage && !tokenFromSupabase && (
+            <p className="text-sm text-gray-500 italic">
+              No FCM token found. Make sure notifications are enabled and the app has been registered for push notifications.
+            </p>
+          )}
+          
+          {deviceToken && (
+            <div className="mt-2 text-xs text-gray-500">
+              <p>Token Length: {deviceToken.length} characters</p>
+              <p>Token Format: {/^[a-zA-Z0-9_-]+$/.test(deviceToken) ? 'FCM (valid)' : deviceToken.length === 64 && /^[0-9a-fA-F]{64}$/.test(deviceToken) ? 'APNs (needs conversion)' : 'Unknown'}</p>
+            </div>
+          )}
         </div>
 
         {/* Test Notification Button */}

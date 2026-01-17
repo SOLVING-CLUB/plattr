@@ -273,13 +273,16 @@ serve(async (req) => {
             apns: {
               headers: {
                 "apns-priority": "10", // High priority
+                "apns-push-type": "alert",
               },
               payload: {
                 aps: {
+                  alert: {
+                    title,
+                    body,
+                  },
                   sound: "default",
                   badge: 1,
-                  "mutable-content": 1,
-                  "content-available": 1,
                 },
               },
             },

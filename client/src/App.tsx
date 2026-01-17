@@ -58,6 +58,7 @@ import NotificationSettingsPage from "@/pages/NotificationSettingsPage";
 import SplashScreen from "@/components/SplashScreen";
 import { useAuth } from "@/hooks/useAuth";
 import { CartProvider } from "@/context/CartContex";
+import { NotificationProvider } from "@/context/NotificationContext";
 import { NotificationHandler } from "@/components/NotificationHandler";
 import { useEffect, useState, useRef, type ComponentType, type ReactNode } from "react";
 
@@ -354,21 +355,23 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <CartProvider>
-        <PageLoaderProvider>
-          <Toaster />
-          <NotificationHandler />
-          {showSplash && (
-            <div
-              className={`fixed inset-0 transition-opacity duration-500 ${
-                fadeOut ? "opacity-0 pointer-events-none" : "opacity-100"
-              }`}
-              style={{ zIndex: 10000 }}
-            >
-              <SplashScreen onVideoEnd={handleVideoEnd} />
-            </div>
-          )}
-          <Router />
-        </PageLoaderProvider>
+        <NotificationProvider>
+          <PageLoaderProvider>
+            <Toaster />
+            <NotificationHandler />
+            {showSplash && (
+              <div
+                className={`fixed inset-0 transition-opacity duration-500 ${
+                  fadeOut ? "opacity-0 pointer-events-none" : "opacity-100"
+                }`}
+                style={{ zIndex: 10000 }}
+              >
+                <SplashScreen onVideoEnd={handleVideoEnd} />
+              </div>
+            )}
+            <Router />
+          </PageLoaderProvider>
+        </NotificationProvider>
       </CartProvider>
     </QueryClientProvider>
   );

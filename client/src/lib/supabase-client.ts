@@ -326,6 +326,16 @@ export function mapApiRouteToSupabase(route: string[]): { table: string; options
         }
       };
       
+    case '/api/subcategories':
+      // Fetch all subcategories from Supabase
+      return {
+        table: 'subcategories',
+        options: {
+          select: '*',
+          order: 'name.asc'
+        }
+      };
+      
     default:
       throw new Error(`Unknown API route: ${endpoint}`);
   }

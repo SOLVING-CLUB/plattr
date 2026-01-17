@@ -74,12 +74,38 @@ adb logcat
 
 For now, **testing on a real Android device is recommended** since that's your target platform.
 
+## 2b. View Console Logs on Mobile (iOS)
+
+### Method: Xcode Console (Recommended)
+
+1. Open `plattr/ios/App/App.xcworkspace` in Xcode
+2. Run the app on a real device
+3. Open **View → Debug Area → Activate Console**
+4. Filter logs by `[Notifications]` (JS) or `[Plattr]` (native)
+
+### What tokens to expect on iOS
+
+- **FCM token (used by backend)**: `[Plattr] FCM token:` and `[Notifications] iOS FCM token...`
+- **APNs token (not used by backend)**: stored in `localStorage.getItem('plattr_apns_token')`
+
+### TestFlight note (important)
+
+TestFlight uses a **Release** build, which requires `aps-environment=production`.
+This repo is configured as:
+- Debug: `ios/App/App/AppDebug.entitlements` → `development`
+- Release/TestFlight: `ios/App/App/App.entitlements` → `production`
+
 ## 3. Debugging Steps
 
 ### Step 1: Check if token is received
 Look for this log:
 ```
 [Notifications] Device token: <token>
+```
+
+On iOS, ensure you also see:
+```
+[Notifications] iOS FCM token received: <token...>
 ```
 
 ### Step 2: Check if user is logged in

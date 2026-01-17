@@ -236,6 +236,9 @@ EXECUTE FUNCTION notify_order_status_change();
 **iOS**:
 1. Add `GoogleService-Info.plist` to `ios/App/App/`
 2. Configure Firebase in Xcode
+3. Ensure Push Notifications entitlement is enabled (this repo sets `CODE_SIGN_ENTITLEMENTS` to `ios/App/App/App.entitlements`)
+4. Important: when using the backend FCM v1 sender, iOS must register/store an **FCM registration token** (not the raw APNs token).
+   - The app now bridges the FCM token from native → JS via `ios/App/App/FCMTokenPlugin.swift`
 
 ### 11. Deep Link Configuration
 

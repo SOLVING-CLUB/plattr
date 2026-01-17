@@ -149,7 +149,7 @@ export default function BulkMealsDelivery() {
           setIsGettingLocation(false);
           return;
         }
-      } else {
+        } else {
         // If permission denied, show helpful message
         if (result.error?.code === 1) {
           toast({
@@ -158,8 +158,10 @@ export default function BulkMealsDelivery() {
             variant: "destructive",
             duration: 8000,
           });
+          console.warn('Geolocation permission denied, using IP-based fallback');
+        } else {
+          console.log('Browser geolocation failed, trying IP-based fallback...');
         }
-        console.log('Browser geolocation failed, trying IP-based fallback...', result.error);
       }
 
       // Fallback: IP-based geolocation using free API
