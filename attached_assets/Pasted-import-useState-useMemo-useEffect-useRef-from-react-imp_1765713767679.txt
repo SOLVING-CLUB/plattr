@@ -1,0 +1,4127 @@
+import { useState, useMemo, useEffect, useRef } from "react";
+import { PageWithLoader } from "@/components/PageWithLoader";
+import { useLocation } from "wouter";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { useCart } from "@/context/CartContex";
+import { mealboxOrderService, sixtyMinMealboxOrderService, addressService, CouponValidationResult } from "@/lib/supabase-service";
+import CouponInput from "@/components/CouponInput";
+import { useQuery } from "@tanstack/react-query";
+import { getQueryFn } from "@/lib/queryClient";
+// import { getQueryFn } from "@/lib/queryClient"; // Duplicate removed
+// import type { Dish, Category as CategoryType } from "@shared/schema";
+import { getSupabaseImageUrl, getDishTypeImage } from "@/lib/supabase";
+// import { getSupabaseImageUrl, getDishTypeImage } from "@/lib/supabase";÷ // Duplicate with typo removed
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
+import { Slider } from "@/components/ui/slider";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
+import { LazyImage } from "@/components/ui/lazy-image";
+import { ArrowLeft, Building2, MapPin, ShoppingCart, UtensilsCrossed, Package, Truck, Search, Check, ChevronRight, ChevronLeft, Star, ArrowUpDown, SlidersHorizontal, LayoutGrid, Leaf, Drumstick, Egg, Sparkles, Phone, X, Calendar } from "lucide-react";
+import DeliveryTimePicker from "@/components/DeliveryTimePicker";
+
+// Define missing types locally to resolve import errors
+export interface Dish {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  image_url: string;
+  category_id: string;
+  dietary_type: string;
+  is_available: boolean;
+  rating?: number;
+  preparation_time?: number;
+  calories?: number;
+  protein?: number;
+  carbs?: number;
+  fat?: number;
+  tags?: string[];
+  allergens?: string[];
+  type: "veg" | "non-veg" | "egg";
+  // CamelCase properties for compatibility
+  imageUrl?: string;
+  categoryId?: string;
+  isAvailable?: boolean;
+  dietaryType?: string;
+  dishType?: string;
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  image_url: string;
+  description?: string;
+  display_order?: number;
+  imageUrl?: string;
+}
+
+export type CategoryType = Category;
+import FloatingNav from "@/pages/FloatingNav";
+import ContinueOrderBanner from "@/pages/ContinueOrderBanner";
+import { SearchOverlay } from "@/components/SearchOverlay";
+import mealBoxHeroPattern from "@assets/Hero_MealBox.png";
+import mealBoxImage from "@assets/mockup8_1763889604975.png";
+import hiTeaIcon from "@assets/Image2322_1763882700309.png";
+import breakfastIcon from "@assets/Image34344_1763882700312.png";
+import lunchIcon from "@assets/9_1763882651330.png";
+import dinnerIcon from "@assets/Rectangle 34625261_1763882651331.png";
+import grilledIcon from "@assets/Image34_1763904331982.png";
+import friedIcon from "@assets/Image65_1763904331981.png";
+import stuffedIcon from "@assets/Image49_1763904331978.png";
+import plate3Portions from "@assets/mockup82_1763911387450.png";
+import plate5Portions from "@assets/mockup 84_1763911387448.png";
+import plate6Portions from "@assets/mockup 83_1763911387449.png";
+import plate8Portions from "@assets/01. Take Away Package22 1_1763911387446.png";
+import chefHatIcon from "@assets/tabler_chef-hat-filled_1763917839168.png";
+import servingStaffIcon from "@assets/ic_baseline-people_1763917839170.png";
+
+// Service category icons (cream/beige for active, dark green for inactive)
+import bulkMealsIconActive from "@assets/Group234_1765649076929.png";
+import bulkMealsIconInactive from "@assets/fi_809724162362_1765649112053.png";
+import mealBoxIconActive from "@assets/fi_116537845_1765649076928.png";
+import mealBoxIconInactive from "@assets/fi_1165378_1765649076929.png";
+import cateringIconActive from "@assets/streamline-plump_food-truck-event-fair-solid34_1765649076927.png";
+import cateringIconInactive from "@assets/streamline-plump_food-truck-event-fair-solid_1765649076929.png";
+import corporateIconActive from "@assets/fi_12471703678_1765649076915.png";
+import corporateIconInactive from "@assets/Vector34567_1765649076929.png";
+import decorIcon from "@assets/streamline-ultimate_party-decoration-bold_1763917839170.png";
+import tablewareIcon from "@assets/roentgen_fork-and-knife_1763917839169.png";
+import musicIcon from "@assets/roentgen_fork-and-knife_1763917839169.png";
+import cameraIcon from "@assets/mdi_camera3_1763917839155.png";
+import biryaniImage1 from '@assets/stock_images/indian_biryani_dish__60e99e80.jpg';
+import idliImage1 from '@assets/stock_images/indian_idli_sambar_s_c6bb3ca9.jpg';
+import vadaImage1 from '@assets/stock_images/indian_vada_d82fc29e.jpg';
+import thaliImage from '@assets/stock_images/indian_thali_meal_3a645a6d.jpg';
+import samosaImage from '@assets/stock_images/samosa_snacks_indian_0946aa28.jpg';
+import platterImage from '@assets/stock_images/indian_food_platter__b34d03e7.jpg';
+
+// Helper function to filter categories by meal_type from database
+// The database meal_type column contains comma-separated values like "tiffins, snacks, lunch-dinner"
+const filterCategoriesByMealType = (categories: any[], mealTypeFilter: string): any[] => {
+  return categories.filter(cat => {
+    const mealType = (cat as any).meal_type || cat.mealType || '';
+    // Check if the category's meal_type contains the selected filter
+    return mealType.toLowerCase().includes(mealTypeFilter.toLowerCase());
+  });
+};
+
+// Fallback images for categories
+const CATEGORY_IMAGES: Record<string, string> = {
+  'all': idliImage1,
+  'south-indian-tiffins': thaliImage,
+  'north-indian-tiffins': thaliImage,
+  'quick-bites': vadaImage1,
+  'fried-snacks': vadaImage1,
+  'baked-snacks': idliImage1,
+  'chaats': vadaImage1,
+  'rice-items': biryaniImage1,
+  'breads-curries': thaliImage,
+  'biryani': biryaniImage1,
+  'sides-and-accompaniments': idliImage1,
+  'bakery': idliImage1,
+  'sweets': idliImage1,
+  'beverages': idliImage1,
+  'desserts': idliImage1,
+  'salads': idliImage1,
+  'breakfast': idliImage1,
+  'snacks': idliImage1,
+  'starters': idliImage1,
+  'main-course': idliImage1,
+  'soup': idliImage1,
+  'after-meal': idliImage1,
+};
+
+// Dish type images for sidebar
+const DISH_TYPE_IMAGES: Record<string, string> = {
+  // Beverages
+  'Juice': idliImage1,
+  'Beverage': idliImage1,
+  'ColdDrink': idliImage1,
+  'HotDrink': idliImage1,
+  'Alcoholic': idliImage1,
+  'Milkshake': idliImage1,
+  'Smoothie': idliImage1,
+
+  // Breakfast items
+  'Bread': thaliImage,
+  'EggPlate': idliImage1,
+  'GrainBowl': thaliImage,
+  'Handheld': thaliImage,
+  'HotFry': vadaImage1,
+  'PanFry': idliImage1,
+  'SavoryBakery': samosaImage,
+  'Steamed': idliImage1,
+  'SweetGriddle': idliImage1,
+
+  // Snacks
+  'Chips': samosaImage,
+  'Namkeen': samosaImage,
+  'Pizza': samosaImage,
+
+  // Chaats
+  'CurdChaat': vadaImage1,
+  'DryChaat': vadaImage1,
+  'FusionChaat': vadaImage1,
+  'StuffedDough': samosaImage,
+  'WetChaat': vadaImage1,
+
+  // Desserts & Sweets
+  'Cake': samosaImage,
+  'Pastry': samosaImage,
+  'BreadMithai': thaliImage,
+  'ColostrumMithai': thaliImage,
+  'FriedMithai': vadaImage1,
+  'GrainMithai': thaliImage,
+
+  // Salads
+  'FruitSalad': platterImage,
+  'LeafySalad': platterImage,
+  'LegumeSalad': platterImage,
+
+  // Lunch/Dinner
+  'Soup': thaliImage,
+  'ClearSoup': thaliImage,
+  'CreamySoup': thaliImage,
+  'ClearBroth': thaliImage,
+  'Starters': vadaImage1,
+  'ColdBite': platterImage,
+  'DryFry': vadaImage1,
+  'Grill': vadaImage1,
+
+  // Default fallback
+  'default': idliImage1,
+};
+
+// Helper function to get subcategory (dish type) image URL from Supabase with local fallback
+const getSubcategoryImage = (dishType: string): string => {
+  // Try to find image in manually fetched subcategories
+  // Using global subcategories if available (will be captured from component scope once moved)
+  // Since this function is defined outside component, it can't access component state 'subcategories'.
+  // We need to move this function INSIDE component or pass subcategories map to it.
+
+  // WAIT: This function is currently defined outside the component (lines 1195).
+  // I must move it inside the component or pass data to it.
+  // It uses DISH_TYPE_IMAGES which is global.
+
+  const fallbackImage = DISH_TYPE_IMAGES[dishType] || DISH_TYPE_IMAGES['default'];
+  return getDishTypeImage(dishType, fallbackImage);
+};
+
+// Helper to get dish image - handles both camelCase and snake_case from Supabase
+const getDishImage = (dish: Dish): string => {
+  // Handle both camelCase (imageUrl) and snake_case (image_url) from Supabase
+  const imageUrlFromDb = dish.imageUrl || (dish as any).image_url;
+
+  // First, try to use the Supabase image URL from the database if it exists
+  if (imageUrlFromDb && imageUrlFromDb.trim() !== '') {
+    const supabaseUrl = getSupabaseImageUrl(imageUrlFromDb);
+    // If it's a valid Supabase URL (not a placeholder), use it
+    if (supabaseUrl && !supabaseUrl.includes('placeholder') && supabaseUrl.startsWith('http')) {
+      return supabaseUrl;
+    }
+  }
+
+  // Otherwise, fall back to local assets based on dish name
+  const name = dish.name.toLowerCase();
+
+  // Paneer dishes
+  if (name.includes('paneer tikka') || name.includes('achari paneer')) return platterImage;
+  if (name.includes('paneer')) return platterImage;
+  if (name.includes('tikka')) return platterImage;
+
+  // South Indian
+  if (name.includes('dosa')) return thaliImage;
+  if (name.includes('idli') || name.includes('idly')) return idliImage1;
+  if (name.includes('vada') || name.includes('medu')) return vadaImage1;
+  if (name.includes('uttapam')) return idliImage1;
+  if (name.includes('pongal')) return thaliImage;
+
+  // North Indian Tiffins
+  if (name.includes('aloo paratha') || name.includes('paratha')) return thaliImage;
+  if (name.includes('chole bhature') || name.includes('bhature')) return thaliImage;
+  if (name.includes('poha')) return thaliImage;
+  if (name.includes('upma')) return thaliImage;
+  if (name.includes('bread toast') || name.includes('toast')) return thaliImage;
+
+  // Snacks
+  if (name.includes('samosa')) return samosaImage;
+  if (name.includes('pakora') || name.includes('bajji')) return vadaImage1;
+
+  // Lunch/Dinner
+  if (name.includes('biryani')) return biryaniImage1;
+  if (name.includes('thali') || name.includes('meal')) return thaliImage;
+  if (name.includes('curry') || name.includes('masala')) return platterImage;
+
+  // Default fallback
+  return platterImage;
+};
+
+// Map meal category to meal_type filter for Supabase
+const getMealTypeFilter = (mealType: MealType): string => {
+  switch (mealType) {
+    case "hi-tea":
+      return "snacks";
+    case "breakfast":
+      return "breakfast";
+    case "lunch":
+    case "dinner":
+      return "lunch-dinner";
+    default:
+      return "lunch-dinner";
+  }
+};
+
+type ServiceType = "bulk-meals" | "mealbox" | "catering" | "corporate";
+type PortionSize = 3 | 5 | 6 | 8;
+type MealPreference = "veg" | "egg" | "non-veg";
+type MealType = "hi-tea" | "breakfast" | "lunch" | "dinner";
+type FoodCategory = "all" | "appetizers" | "rice" | "entree" | "roti" | "biryani" | "dessert";
+type NavigateFn = (path: string, options?: { replace?: boolean }) => void;
+
+interface FoodItem {
+  id: string;
+  name: string;
+  price: number;
+  rating: number;
+  reviewCount: number;
+  category: FoodCategory;
+  type: "veg" | "egg" | "non-veg";
+  image: string;
+}
+
+interface PortionSelection {
+  slot: number;
+  itemId: string | null;
+  item?: FoodItem;
+}
+
+interface MealBoxProps {
+  onNavigate?: NavigateFn;
+}
+
+const LOCATION_STORAGE_KEY = "activeLocation";
+
+export default function MealBox({ onNavigate }: MealBoxProps = {}) {
+  const [, setLocation] = useLocation();
+  const navigate: NavigateFn = (path, options) => {
+    if (onNavigate) {
+      onNavigate(path, options);
+    } else {
+      setLocation(path, options);
+    }
+  };
+  const { toast } = useToast();
+  const { enterCategory, mealBoxProgress, saveMealBoxProgress, clearMealBoxProgress } = useCart();
+  const [isCreatingOrder, setIsCreatingOrder] = useState(false);
+  const hasInteractedRef = useRef(false);
+  const isRestoringRef = useRef(false);
+  const completedTabsRef = useRef<Set<string>>(new Set());
+  const [activeTab, setActiveTab] = useState<"home" | "menu" | "profile">("home");
+  const [selectedService, setSelectedService] = useState<ServiceType>("mealbox");
+  const [scrollY, setScrollY] = useState(0);
+  const [locationLabel, setLocationLabel] = useState("Select Address");
+
+  // Read location from localStorage on mount and when page regains focus
+  useEffect(() => {
+    const readLocationFromStorage = () => {
+      const savedLocation = localStorage.getItem(LOCATION_STORAGE_KEY);
+      if (savedLocation) {
+        try {
+          const parsed = JSON.parse(savedLocation);
+          setLocationLabel(parsed.label || "Select Address");
+        } catch (e) {
+          console.error("Error parsing saved location:", e);
+          setLocationLabel("Select Address");
+        }
+      } else {
+        setLocationLabel("Select Address");
+      }
+    };
+
+    readLocationFromStorage();
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === LOCATION_STORAGE_KEY && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          setLocationLabel(parsed.label || "Select Address");
+        } catch (error) {
+          console.error("Error parsing location from storage event:", error);
+        }
+      } else if (e.key === LOCATION_STORAGE_KEY && !e.newValue) {
+        setLocationLabel("Select Address");
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        readLocationFromStorage();
+      }
+    };
+
+    const handleFocus = () => {
+      readLocationFromStorage();
+    };
+
+    const handleLocationChange = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail?.label) {
+        setLocationLabel(customEvent.detail.label);
+      } else {
+        readLocationFromStorage();
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleFocus);
+    window.addEventListener("locationchange", handleLocationChange);
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("locationchange", handleLocationChange);
+    };
+  }, []);
+
+  // Scroll to top on page load
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+  // Track scroll position for sticky header
+  useEffect(() => {
+    const handleScroll = () => setScrollY(window.scrollY);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const handleInteraction = () => {
+    if (!hasInteractedRef.current) {
+      hasInteractedRef.current = true;
+      enterCategory("mealbox");
+    }
+  };
+  const [currentStep, setCurrentStep] = useState<number>(1);
+  const [selectedPortions, setSelectedPortions] = useState<PortionSize>(3);
+  const [mealPreference, setMealPreference] = useState<MealPreference>("veg");
+  const [vegBoxes, setVegBoxes] = useState<string>("");
+  const [eggBoxes, setEggBoxes] = useState<string>("");
+  const [nonVegBoxes, setNonVegBoxes] = useState<string>("");
+  const [selectedMealType, setSelectedMealType] = useState<MealType>("lunch");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedDishType, setSelectedDishType] = useState<string>("all");
+  const [selectedSubcategory, setSelectedSubcategory] = useState<"all" | "grilled" | "fried" | "stuffed">("all");
+  const [currentDietaryTab, setCurrentDietaryTab] = useState<"veg" | "egg" | "non-veg">("veg");
+  const [selectedSlotIndex, setSelectedSlotIndex] = useState<number>(0);
+  const [showSortDropdown, setShowSortDropdown] = useState<boolean>(false);
+  const [showFilterDropdown, setShowFilterDropdown] = useState<boolean>(false);
+  const [selectedSort, setSelectedSort] = useState<string>("popular");
+  const [selectedFilter, setSelectedFilter] = useState<string>("all");
+  const [dietaryMode, setDietaryMode] = useState<'all' | 'veg' | 'egg' | 'non-veg'>('all');
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 500]);
+  const [sortOption, setSortOption] = useState<'price-low' | 'price-high' | 'name-az' | 'name-za'>('price-low');
+  const [filterDialogOpen, setFilterDialogOpen] = useState(false);
+  const [sortDialogOpen, setSortDialogOpen] = useState(false);
+  const [platterPlannerOpen, setPlatterPlannerOpen] = useState(false);
+  const [dishDetailOpen, setDishDetailOpen] = useState(false);
+  const [detailDish, setDetailDish] = useState<Dish | null>(null);
+
+  // Fetch subcategories for images
+  const { data: subcategories = [] } = useQuery<any[]>({
+    queryKey: ['/api/subcategories'],
+    staleTime: 1000 * 60 * 60, // 1 hour
+  });
+
+  // Separate selections for each dietary type
+  const [vegPlateSelections, setVegPlateSelections] = useState<PortionSelection[]>([]);
+  const [eggPlateSelections, setEggPlateSelections] = useState<PortionSelection[]>([]);
+  const [nonVegPlateSelections, setNonVegPlateSelections] = useState<PortionSelection[]>([]);
+
+  // Add-ons selection
+  const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
+
+  // Search state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchOverlayOpen, setSearchOverlayOpen] = useState(false);
+
+  // Address form state
+  const [selectedAddressId, setSelectedAddressId] = useState("");
+  const [addressLine1, setAddressLine1] = useState("");
+  const [addressLine2, setAddressLine2] = useState("");
+  const [city, setCity] = useState("");
+  const [addressState, setAddressState] = useState("");
+  const [pincode, setPincode] = useState("");
+  const [saveAddressForFuture, setSaveAddressForFuture] = useState(false);
+  
+  // Calculate T+12 hours for default date/time
+  const getMinDateTime = () => {
+    const minTime = new Date(Date.now() + 12 * 60 * 60 * 1000);
+    return {
+      date: minTime.toISOString().split('T')[0],
+      time: `${minTime.getHours().toString().padStart(2, '0')}:00`
+    };
+  };
+
+  const minDateTime = getMinDateTime();
+
+  // Event date/time state with T+12 default
+  const [eventDate, setEventDate] = useState(minDateTime.date);
+  const [eventTime, setEventTime] = useState(minDateTime.time);
+
+  // Contact info - prefilled from localStorage (logged in user)
+  const [phone, setPhone] = useState(() => {
+    const savedPhone = localStorage.getItem('phone');
+    return savedPhone ? `+91 ${savedPhone}` : "";
+  });
+  const [email, setEmail] = useState(() => localStorage.getItem('email') || "");
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
+
+  // Coupon state
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    id: string;
+    code: string;
+    discount: number;
+    discountType: 'percentage' | 'fixed' | 'free_delivery';
+    discountValue: number;
+    isFreeDelivery?: boolean;
+  } | null>(null);
+
+  const handleCouponApply = (result: CouponValidationResult) => {
+    if (result.valid && result.coupon && result.discount !== undefined) {
+      setAppliedCoupon({
+        id: result.coupon.id,
+        code: result.coupon.code,
+        discount: result.discount,
+        discountType: result.coupon.discountType,
+        discountValue: result.coupon.discountValue,
+        isFreeDelivery: result.isFreeDelivery,
+      });
+      toast({
+        title: "Coupon Applied!",
+        description: result.isFreeDelivery ? "Free delivery applied!" : `You saved ₹${result.discount}`,
+      });
+    }
+  };
+
+  const handleCouponRemove = () => {
+    setAppliedCoupon(null);
+  };
+
+  // Function to get current location and reverse geocode
+  const getCurrentLocation = async () => {
+    if (!navigator.geolocation) {
+      toast({ title: "Error", description: "Geolocation is not supported by your browser", variant: "destructive" });
+      return;
+    }
+
+    setIsGettingLocation(true);
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        });
+      });
+
+      const { latitude, longitude } = position.coords;
+      
+      // Reverse geocode using Nominatim
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`
+      );
+      const data = await response.json();
+
+      if (data && data.address) {
+        const addr = data.address;
+        const newAddressLine1 = data.display_name?.split(',').slice(0, 2).join(', ') || "";
+        const newAddressLine2 = addr.suburb || addr.neighbourhood || addr.road || addr.residential || "";
+        const newCity = addr.city || addr.town || addr.village || addr.county || addr.state_district || "";
+        const newState = addr.state || addr.region || "";
+        const newPincode = addr.postcode || "";
+        
+        // Only update fields that have valid data, keep previous values otherwise
+        if (newAddressLine1) setAddressLine1(newAddressLine1);
+        if (newAddressLine2) setAddressLine2(newAddressLine2);
+        if (newCity) setCity(newCity);
+        if (newState) setAddressState(newState);
+        if (newPincode) setPincode(newPincode);
+        
+        // Clear saved address selection to enable manual editing
+        setSelectedAddressId("");
+        toast({ title: "Location Found", description: "Address filled from your current location" });
+      } else {
+        toast({ title: "Location Error", description: "Could not get address details", variant: "destructive" });
+      }
+    } catch (error: any) {
+      console.error('Location error:', error);
+      toast({ 
+        title: "Location Error", 
+        description: error.code === 1 ? "Please allow location access" : "Could not get your location", 
+        variant: "destructive" 
+      });
+    } finally {
+      setIsGettingLocation(false);
+    }
+  };
+
+  // Fetch saved addresses
+  const { data: savedAddresses = [] } = useQuery({
+    queryKey: ["addresses"],
+    queryFn: () => addressService.getAll(),
+  });
+
+  const handleSavedAddressChange = (addressId: string) => {
+    setSelectedAddressId(addressId);
+    setAddressLine1("");
+    setAddressLine2("");
+    setCity("");
+    setAddressState("");
+    setPincode("");
+  };
+
+  const selectedAddress = savedAddresses.find(addr => addr.id === selectedAddressId);
+  const isAddressFieldsDisabled = !!selectedAddressId;
+
+  // Restore MealBox progress on mount (only once)
+  useEffect(() => {
+    if (mealBoxProgress && !isRestoringRef.current && currentStep === 1) {
+      isRestoringRef.current = true;
+      // Only restore step if it's less than 7 (don't restore if already on payment step)
+      const stepToRestore = mealBoxProgress.currentStep < 7 ? mealBoxProgress.currentStep : 6;
+      console.log("Restoring mealbox progress, step:", stepToRestore);
+      setCurrentStep(stepToRestore);
+      setSelectedPortions(mealBoxProgress.selectedPortions);
+      setMealPreference(mealBoxProgress.mealPreference);
+      setSelectedMealType(mealBoxProgress.selectedMealType as MealType);
+      setVegBoxes(mealBoxProgress.vegBoxes);
+      setEggBoxes(mealBoxProgress.eggBoxes);
+      setNonVegBoxes(mealBoxProgress.nonVegBoxes);
+
+      // Restore selections, but resize to match selectedPortions if they don't match
+      const restoredPortions = mealBoxProgress.selectedPortions;
+      const resizeSelections = (selections: PortionSelection[]) => {
+        if (selections.length === restoredPortions) {
+          return selections;
+        }
+        // Resize to match restoredPortions
+        return Array.from({ length: restoredPortions }, (_, i) =>
+          i < selections.length
+            ? selections[i]
+            : { slot: i, itemId: null, item: undefined }
+        ).slice(0, restoredPortions);
+      };
+
+      setVegPlateSelections(resizeSelections((mealBoxProgress.vegPlateSelections || []) as PortionSelection[]));
+      setEggPlateSelections(resizeSelections((mealBoxProgress.eggPlateSelections || []) as PortionSelection[]));
+      setNonVegPlateSelections(resizeSelections((mealBoxProgress.nonVegPlateSelections || []) as PortionSelection[]));
+      setSelectedAddOns(mealBoxProgress.selectedAddons || []);
+      setCurrentDietaryTab(mealBoxProgress.currentDietaryTab || "veg");
+      hasInteractedRef.current = true;
+    }
+  }, [mealBoxProgress]);
+
+  // Debug: Log step changes
+  useEffect(() => {
+    console.log("Current step changed to:", currentStep);
+  }, [currentStep]);
+
+  // Save MealBox progress when key state changes
+  // Use JSON.stringify to create stable dependencies and prevent infinite loops
+  const vegPlateSelectionsStr = JSON.stringify(vegPlateSelections);
+  const eggPlateSelectionsStr = JSON.stringify(eggPlateSelections);
+  const nonVegPlateSelectionsStr = JSON.stringify(nonVegPlateSelections);
+
+  useEffect(() => {
+    if (currentStep > 1 && !isRestoringRef.current) {
+      saveMealBoxProgress({
+        currentStep,
+        selectedPortions,
+        mealPreference,
+        selectedMealType,
+        vegBoxes,
+        eggBoxes,
+        nonVegBoxes,
+        vegPlateSelections,
+        eggPlateSelections,
+        nonVegPlateSelections,
+        selectedAddons: selectedAddOns,
+        currentDietaryTab,
+      });
+    }
+    if (isRestoringRef.current && currentStep > 1) {
+      isRestoringRef.current = false;
+    }
+  }, [currentStep, selectedPortions, mealPreference, selectedMealType, vegBoxes, eggBoxes, nonVegBoxes, vegPlateSelectionsStr, eggPlateSelectionsStr, nonVegPlateSelectionsStr, selectedAddOns, currentDietaryTab]);
+
+  // Track selected item IDs based on current dietary tab to prevent duplicates
+  const getExcludedItemIds = useMemo(() => {
+    return () => {
+      const ids = new Set<string>();
+
+      if (currentDietaryTab === "veg") {
+        // VEG tab: exclude only VEG selections
+        vegPlateSelections.forEach(sel => {
+          if (sel.itemId) ids.add(sel.itemId);
+        });
+      } else if (currentDietaryTab === "egg") {
+        // EGG tab: exclude VEG and EGG selections
+        [...vegPlateSelections, ...eggPlateSelections].forEach(sel => {
+          if (sel.itemId) ids.add(sel.itemId);
+        });
+      } else {
+        // NON-VEG tab: exclude only VEG selections (not EGG)
+        vegPlateSelections.forEach(sel => {
+          if (sel.itemId) ids.add(sel.itemId);
+        });
+      }
+
+      return ids;
+    };
+  }, [currentDietaryTab, vegPlateSelections, eggPlateSelections]);
+
+  // Handle browser back button
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      if (currentStep > 1) {
+        event.preventDefault();
+        handleBackStep();
+        // Push state back to maintain URL
+        window.history.pushState(null, '', window.location.pathname);
+      }
+    };
+
+    // Add a history entry when entering multi-step flow
+    if (currentStep > 1) {
+      window.history.pushState(null, '', window.location.pathname);
+    }
+
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [currentStep]);
+
+  // Initialize and resize plate selections based on selectedPortions
+  // The same template will be applied to all boxes of that dietary type
+  useEffect(() => {
+    if (currentStep === 4 && !isRestoringRef.current) {
+      const vegCount = parseInt(vegBoxes) || 0;
+      const eggCount = parseInt(eggBoxes) || 0;
+      const nonVegCount = parseInt(nonVegBoxes) || 0;
+
+      // Resize or initialize veg selections to match selectedPortions
+      if (vegCount > 0) {
+        if (vegPlateSelections.length !== selectedPortions) {
+          // Resize existing selections or create new ones
+          if (vegPlateSelections.length > 0) {
+            // Resize: keep existing items up to new length, or pad with empty slots
+            const resized = Array.from({ length: selectedPortions }, (_, i) =>
+              i < vegPlateSelections.length
+                ? vegPlateSelections[i]
+                : { slot: i, itemId: null, item: undefined }
+            );
+            setVegPlateSelections(resized.slice(0, selectedPortions));
+          } else {
+            // Initialize new
+            const vegSlots = Array.from({ length: selectedPortions }, (_, i) => ({
+              slot: i,
+              itemId: null,
+              item: undefined
+            }));
+            setVegPlateSelections(vegSlots);
+          }
+        }
+      }
+
+      // Resize or initialize egg selections to match selectedPortions
+      if (eggCount > 0) {
+        if (eggPlateSelections.length !== selectedPortions) {
+          if (eggPlateSelections.length > 0) {
+            const resized = Array.from({ length: selectedPortions }, (_, i) =>
+              i < eggPlateSelections.length
+                ? eggPlateSelections[i]
+                : { slot: i, itemId: null, item: undefined }
+            );
+            setEggPlateSelections(resized.slice(0, selectedPortions));
+          } else {
+            const eggSlots = Array.from({ length: selectedPortions }, (_, i) => ({
+              slot: i,
+              itemId: null,
+              item: undefined
+            }));
+            setEggPlateSelections(eggSlots);
+          }
+        }
+      }
+
+      // Resize or initialize non-veg selections to match selectedPortions
+      if (nonVegCount > 0) {
+        if (nonVegPlateSelections.length !== selectedPortions) {
+          if (nonVegPlateSelections.length > 0) {
+            const resized = Array.from({ length: selectedPortions }, (_, i) =>
+              i < nonVegPlateSelections.length
+                ? nonVegPlateSelections[i]
+                : { slot: i, itemId: null, item: undefined }
+            );
+            setNonVegPlateSelections(resized.slice(0, selectedPortions));
+          } else {
+            const nonVegSlots = Array.from({ length: selectedPortions }, (_, i) => ({
+              slot: i,
+              itemId: null,
+              item: undefined
+            }));
+            setNonVegPlateSelections(nonVegSlots);
+          }
+        }
+      }
+
+      // Ensure selectedSlotIndex is within bounds
+      if (selectedSlotIndex >= selectedPortions) {
+        setSelectedSlotIndex(Math.max(0, selectedPortions - 1));
+      }
+    }
+  }, [currentStep, vegBoxes, eggBoxes, nonVegBoxes, selectedPortions, vegPlateSelections.length, eggPlateSelections.length, nonVegPlateSelections.length, selectedSlotIndex]);
+
+  // Also resize selections when selectedPortions changes (even if not on step 4)
+  // This handles the case where user changes portion size after already being on step 4
+  useEffect(() => {
+    if (currentStep >= 4 && !isRestoringRef.current) {
+      const vegCount = parseInt(vegBoxes) || 0;
+      const eggCount = parseInt(eggBoxes) || 0;
+      const nonVegCount = parseInt(nonVegBoxes) || 0;
+
+      // Resize veg selections if they don't match selectedPortions
+      if (vegCount > 0 && vegPlateSelections.length !== selectedPortions) {
+        const resized = Array.from({ length: selectedPortions }, (_, i) =>
+          i < vegPlateSelections.length
+            ? vegPlateSelections[i]
+            : { slot: i, itemId: null, item: undefined }
+        );
+        setVegPlateSelections(resized);
+      }
+
+      // Resize egg selections if they don't match selectedPortions
+      if (eggCount > 0 && eggPlateSelections.length !== selectedPortions) {
+        const resized = Array.from({ length: selectedPortions }, (_, i) =>
+          i < eggPlateSelections.length
+            ? eggPlateSelections[i]
+            : { slot: i, itemId: null, item: undefined }
+        );
+        setEggPlateSelections(resized);
+      }
+
+      // Resize non-veg selections if they don't match selectedPortions
+      if (nonVegCount > 0 && nonVegPlateSelections.length !== selectedPortions) {
+        const resized = Array.from({ length: selectedPortions }, (_, i) =>
+          i < nonVegPlateSelections.length
+            ? nonVegPlateSelections[i]
+            : { slot: i, itemId: null, item: undefined }
+        );
+        setNonVegPlateSelections(resized);
+      }
+
+      // Ensure selectedSlotIndex is within bounds
+      if (selectedSlotIndex >= selectedPortions) {
+        setSelectedSlotIndex(Math.max(0, selectedPortions - 1));
+      }
+    }
+  }, [selectedPortions, currentStep]);
+
+  // Calculate which dietary preferences are active (have non-zero member counts)
+  const activeDietaryPreferences = useMemo(() => {
+    const active: ("veg" | "egg" | "non-veg")[] = [];
+
+    // Check if veg has a non-zero value
+    const vegCount = parseInt(vegBoxes) || 0;
+    if (vegCount > 0) {
+      active.push("veg");
+    }
+
+    // Check if egg has a non-zero value
+    const eggCount = parseInt(eggBoxes) || 0;
+    if (eggCount > 0) {
+      active.push("egg");
+    }
+
+    // Check if non-veg has a non-zero value
+    const nonVegCount = parseInt(nonVegBoxes) || 0;
+    if (nonVegCount > 0) {
+      active.push("non-veg");
+    }
+
+    return active;
+  }, [vegBoxes, eggBoxes, nonVegBoxes]);
+
+  // Clear box counts for inactive preferences when meal preference changes
+  useEffect(() => {
+    if (mealPreference === "veg") {
+      // If VEG selected, clear egg and non-veg boxes
+      setEggBoxes("");
+      setNonVegBoxes("");
+    } else if (mealPreference === "egg") {
+      // If EGG selected, clear non-veg boxes
+      setNonVegBoxes("");
+    }
+    // If NON-VEG selected, keep all boxes (user can enter values for all three)
+  }, [mealPreference]);
+
+  // Set initial dietary tab when entering Step 4
+  useEffect(() => {
+    if (currentStep === 4 && activeDietaryPreferences.length > 0) {
+      // Always set dietary tab to the first active dietary preference when entering Step 4
+      setCurrentDietaryTab(activeDietaryPreferences[0]);
+    }
+    // Reset completedTabs when leaving step 4 (going back)
+    if (currentStep < 4) {
+      completedTabsRef.current.clear();
+    }
+  }, [currentStep, activeDietaryPreferences]);
+
+  // Auto-progression: switch to next dietary tab when current tab's slots are all filled
+  useEffect(() => {
+    if (currentStep !== 4) return;
+    
+    // Skip if this tab has already been completed (prevent infinite loop)
+    if (completedTabsRef.current.has(currentDietaryTab)) return;
+    
+    // Get current selections based on dietary tab
+    const currentSelections = 
+      currentDietaryTab === "veg" ? vegPlateSelections :
+      currentDietaryTab === "egg" ? eggPlateSelections :
+      nonVegPlateSelections;
+    
+    // Check if all slots for current tab are filled
+    const allSlotsFilled = currentSelections.length > 0 && 
+      currentSelections.every(sel => sel.itemId !== null);
+    
+    if (!allSlotsFilled) return;
+    
+    // Mark this tab as completed to prevent re-triggering
+    completedTabsRef.current.add(currentDietaryTab);
+    
+    // Find the next dietary preference in the sequence
+    const currentIndex = activeDietaryPreferences.indexOf(currentDietaryTab);
+    const nextIndex = currentIndex + 1;
+    
+    // If there's a next dietary preference, switch to it
+    if (nextIndex < activeDietaryPreferences.length) {
+      const nextTab = activeDietaryPreferences[nextIndex];
+      setCurrentDietaryTab(nextTab);
+      setSelectedSlotIndex(0); // Reset to first slot of new tab
+      toast({
+        title: `${currentDietaryTab.toUpperCase()} box complete!`,
+        description: `Now select items for your ${nextTab.toUpperCase()} box.`,
+      });
+    }
+  }, [currentStep, currentDietaryTab, vegPlateSelections, eggPlateSelections, nonVegPlateSelections, activeDietaryPreferences]);
+
+  // Get current plate selections based on active dietary tab
+  const getCurrentPlateSelections = (): PortionSelection[] => {
+    if (currentDietaryTab === "veg") return vegPlateSelections;
+    if (currentDietaryTab === "egg") return eggPlateSelections;
+    return nonVegPlateSelections;
+  };
+
+  // Get allowed item types for current dietary tab
+  const getAllowedItemTypes = (): ("veg" | "egg" | "non-veg")[] => {
+    if (currentDietaryTab === "veg") return ["veg"];
+    if (currentDietaryTab === "egg") return ["veg", "egg"];
+    return ["veg", "egg", "non-veg"];
+  };
+
+  // Map UI meal type selection to database meal_type filter value
+  // Database meal_type column contains: "tiffins", "snacks", "lunch-dinner" (comma-separated)
+  // Note: "breakfast" tab maps to "tiffins" in database, "lunch" and "dinner" both map to "lunch-dinner"
+  const getMealTypeFilter = (mealType: MealType): string => {
+    const mapping: Record<MealType, string> = {
+      "hi-tea": "snacks",        // Hi-Tea tab → filter by "snacks" in meal_type
+      "breakfast": "tiffins",    // Breakfast tab → filter by "tiffins" in meal_type
+      "lunch": "lunch-dinner",   // Lunch tab → filter by "lunch-dinner" in meal_type
+      "dinner": "lunch-dinner",  // Dinner tab → filter by "lunch-dinner" in meal_type
+    };
+    return mapping[mealType] || "lunch-dinner";
+  };
+
+  const mealType = getMealTypeFilter(selectedMealType);
+
+  // Get priority category ID based on meal type
+  const getPriorityCategoryId = (mealTypeFilter: string): string => {
+    const priorityMap: Record<string, string> = {
+      "lunch-dinner": "main-course",
+      "tiffins": "breakfast",
+      "snacks": "snacks",
+    };
+    return priorityMap[mealTypeFilter] || "";
+  };
+
+  const priorityCategoryId = getPriorityCategoryId(mealType);
+
+  // Fetch ALL categories from database
+  const { data: allCategoriesFromDb = [] } = useQuery<CategoryType[]>({
+    queryKey: ['/api/categories', 'all'],
+  });
+
+  // Custom sidebar category order for Lunch/Dinner
+  const LUNCH_DINNER_CATEGORY_ORDER = [
+    'soup',
+    'starters',
+    'salads',
+    'main-course',
+    'beverages',
+    'snacks',
+    'bakery',
+    'chaats',
+    'sweets',
+    'desserts',
+    'sides-and-accompaniments',
+    'after-meal',
+  ];
+
+  // Custom sidebar category order for Breakfast/Tiffins
+  const BREAKFAST_CATEGORY_ORDER = [
+    'breakfast',
+    'salads',
+    'sides-and-accompaniments',
+    'beverages',
+    'snacks',
+    'bakery',
+    'sweets',
+    'desserts',
+  ];
+
+  // Get the appropriate category order based on meal type
+  const getCategoryOrder = (mealTypeFilter: string): string[] => {
+    if (mealTypeFilter === 'tiffins') {
+      return BREAKFAST_CATEGORY_ORDER;
+    }
+    return LUNCH_DINNER_CATEGORY_ORDER;
+  };
+
+  // OPTIMIZATION: Lazy-load category counts in background after page renders
+  // This query fetches all dishes for the meal type but is non-blocking
+  // Add 'sixtymin' filter when accessed from 60-min delivery flow (onNavigate present)
+  const { data: allDishesForCounts = [] } = useQuery<Dish[]>({
+    queryKey: onNavigate 
+      ? ['/api/dishes', mealType, 'all', 'all', 'sixtymin']
+      : ['/api/dishes', mealType, 'all', 'all'],
+    enabled: !!mealType && currentStep === 4,
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+    refetchOnWindowFocus: false,
+  });
+
+  // Filter categories dynamically from database meal_type column
+  // Categories are sorted by the custom category order based on meal type
+  // Also filter out categories that have no dishes (e.g., when 60-min filter is active)
+  const categories = useMemo(() => {
+    if (!mealType || allCategoriesFromDb.length === 0) return [];
+    const filtered = filterCategoriesByMealType(allCategoriesFromDb, mealType);
+    const categoryOrder = getCategoryOrder(mealType);
+    
+    // Build a set of category IDs that have at least one available dish
+    const categoriesWithDishes = new Set<string>();
+    allDishesForCounts.forEach(dish => {
+      const categoryId = (dish as any).category_id || dish.categoryId;
+      const isAvailable = (dish as any).is_available !== false && dish.isAvailable !== false;
+      if (categoryId && isAvailable) {
+        categoriesWithDishes.add(categoryId);
+      }
+    });
+    
+    // Filter to only categories that have at least one dish
+    // (skip this filter if allDishesForCounts hasn't loaded yet to prevent flickering)
+    const withDishes = allDishesForCounts.length > 0 
+      ? filtered.filter(cat => categoriesWithDishes.has(cat.id))
+      : filtered;
+    
+    return withDishes.sort((a, b) => {
+      const aIndex = categoryOrder.indexOf(a.id);
+      const bIndex = categoryOrder.indexOf(b.id);
+      // If both are in the custom order, sort by that order
+      if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+      // If only one is in the custom order, it comes first
+      if (aIndex !== -1) return -1;
+      if (bIndex !== -1) return 1;
+      // Otherwise sort by displayOrder
+      return (a.displayOrder || 0) - (b.displayOrder || 0);
+    }) as CategoryType[];
+  }, [allCategoriesFromDb, mealType, allDishesForCounts]);
+
+  // Set first category as selected when categories load or when meal type changes
+  // Keep 'all' as valid selection - only reset if it's an invalid category ID
+  useEffect(() => {
+    if (categories.length > 0 && currentStep === 4) {
+      // Don't reset if 'all' is selected - it's a valid filter option
+      if (selectedCategory === 'all') return;
+      // Only reset if the current selection is not found in available categories
+      if (!selectedCategory || !categories.find(c => c.id === selectedCategory)) {
+        setSelectedCategory('all');
+      }
+    }
+  }, [categories, selectedCategory, mealType, currentStep]);
+
+  // Filter to available dishes only
+  const allDishes = useMemo(() => {
+    return allDishesForCounts.filter(dish => {
+      const isAvailable = (dish as any).is_available !== false && dish.isAvailable !== false;
+      return isAvailable;
+    });
+  }, [allDishesForCounts]);
+
+  // Fetch dishes for selected category (for display)
+  // Add 'sixtymin' filter when accessed from 60-min delivery flow (onNavigate present)
+  const { data: dishes = [], isLoading: isLoadingDishes } = useQuery<Dish[]>({
+    queryKey: onNavigate
+      ? ['/api/dishes', mealType, selectedCategory, currentDietaryTab, 'sixtymin']
+      : ['/api/dishes', mealType, selectedCategory, currentDietaryTab],
+    enabled: !!selectedCategory && currentStep === 4,
+  });
+
+  // Transform dishes to match the FoodItem format
+  const foodItems: FoodItem[] = useMemo(() => {
+    return dishes
+      .filter(dish => dish.isAvailable !== false) // Only show available dishes
+      .map((dish) => {
+        // Map dietary type from database to FoodItem type
+        // Handle both camelCase and snake_case from database
+        const rawDietaryType = (dish as any).dietary_type || dish.dietaryType || '';
+        const dietaryType = rawDietaryType.toLowerCase();
+        const dishName = dish.name?.toLowerCase() || '';
+        
+        // Non-veg keywords to check in dish name (excluding egg - handled separately)
+        const nonVegKeywords = ['chicken', 'mutton', 'fish', 'prawn', 'shrimp', 'lamb', 'meat', 'keema', 'gosht', 'murgh', 'jhinga', 'machli', 'seafood', 'crab', 'lobster', 'beef', 'pork'];
+        const eggKeywords = ['egg', 'anda', 'omelette', 'omelet'];
+        
+        let type: "veg" | "egg" | "non-veg" = "veg";
+        
+        // First check explicit dietary type from database
+        if (dietaryType === 'non-veg' || dietaryType === 'nonveg' || dietaryType === 'non veg') {
+          type = "non-veg";
+        } else if (dietaryType === 'egg' || dietaryType === 'egg-veg' || dietaryType === 'eggetarian') {
+          type = "egg";
+        } else if (dietaryType === 'veg' || dietaryType === 'vegetarian') {
+          type = "veg";
+        } else {
+          // Fallback: check dish name for non-veg keywords (excluding egg-only items)
+          const hasNonVegKeyword = nonVegKeywords.some(keyword => dishName.includes(keyword));
+          const hasEggKeyword = eggKeywords.some(keyword => dishName.includes(keyword));
+          
+          if (hasNonVegKeyword && !hasEggKeyword) {
+            // Contains meat/fish keywords but not just egg
+            type = "non-veg";
+          } else if (hasEggKeyword && !hasNonVegKeyword) {
+            // Contains only egg keywords
+            type = "egg";
+          } else if (hasNonVegKeyword && hasEggKeyword) {
+            // Contains both - classify as non-veg
+            type = "non-veg";
+          }
+          // else stays as "veg" (default)
+        }
+
+        // Map dish_type to category
+        const dishType = dish.dishType?.toLowerCase() || '';
+        let category: FoodCategory = "all";
+        if (dishType.includes('appetizer') || dishType.includes('starter')) {
+          category = "appetizers";
+        } else if (dishType.includes('rice')) {
+          category = "rice";
+        } else if (dishType.includes('curry') || dishType.includes('sabzi') || dishType.includes('dal')) {
+          category = "entree";
+        } else if (dishType.includes('roti') || dishType.includes('naan') || dishType.includes('bread')) {
+          category = "roti";
+        } else if (dishType.includes('biryani')) {
+          category = "biryani";
+        } else if (dishType.includes('dessert') || dishType.includes('sweet')) {
+          category = "dessert";
+        }
+
+        return {
+          id: dish.id,
+          name: dish.name,
+          price: parseFloat(String(dish.price)),
+          rating: 4.5, // Default rating
+          reviewCount: 0, // Default review count
+          category,
+          type,
+          image: (dish.image_url || dish.imageUrl) ? getSupabaseImageUrl(dish.image_url || dish.imageUrl) : "",
+        };
+      });
+  }, [dishes]);
+
+  // Get dish count for a category (from all dishes, respecting filters)
+  const getDishCountForCategory = (categoryId: string): number => {
+    const count = allDishes.filter(d => {
+      // Handle both camelCase and snake_case from database
+      const dishCategoryId = (d as any).category_id || d.categoryId;
+
+      // Filter by category
+      if (dishCategoryId !== categoryId) return false;
+
+      // Apply dietary filter based on current dietary tab
+      // Handle both camelCase and snake_case from database
+      const rawDietaryType = (d as any).dietary_type || d.dietaryType || '';
+      const dietaryType = rawDietaryType.toLowerCase();
+      
+      if (currentDietaryTab === 'egg') {
+        // For egg tab, show only veg and egg items (exclude non-veg)
+        if (dietaryType === 'non-veg' || dietaryType === 'nonveg') {
+          return false;
+        }
+      } else if (currentDietaryTab === 'veg') {
+        // For veg tab, only show veg dishes
+        if (dietaryType === 'non-veg' || dietaryType === 'nonveg' || dietaryType === 'egg' || dietaryType === 'egg-veg') {
+          return false;
+        }
+      }
+      // For non-veg tab, show all (veg, egg, non-veg) - no filtering needed
+
+      return true;
+    }).length;
+
+    return count;
+  };
+
+  // Fetch dish types for selected category
+  const { data: fetchedDishTypes = [] } = useQuery<string[]>({
+    queryKey: ['/api/dish-types', selectedCategory],
+    enabled: !!selectedCategory && selectedCategory !== 'all' && currentStep === 4,
+  });
+
+  // When "All" is selected, compute all unique dish types from all dishes
+  const allUniqueDishTypes = useMemo(() => {
+    if (selectedCategory !== 'all') return [];
+    const types = new Set<string>();
+    dishes.forEach(dish => {
+      const dishType = (dish as any).dish_type || dish.dishType;
+      if (dishType && dishType.trim() !== '') {
+        types.add(dishType);
+      }
+    });
+    return Array.from(types).sort();
+  }, [dishes, selectedCategory]);
+
+  // Use allUniqueDishTypes when "All" is selected, otherwise use fetched dish types
+  // Filter out empty strings from fetched dish types (API may return [""] for categories with no dish types)
+  // Also filter out dish types that have 0 dishes (when 60-min filter is active)
+  const dishTypes = useMemo(() => {
+    const rawTypes = selectedCategory === 'all'
+      ? allUniqueDishTypes
+      : fetchedDishTypes.filter(dt => dt && dt.trim() !== '');
+    
+    // Filter to only dish types that have at least one dish in the current filtered set
+    return rawTypes.filter(dt => {
+      const count = foodItems.filter(item => {
+        const dish = dishes.find(d => d.id === item.id);
+        if (!dish) return false;
+        const dishDishType = (dish as any).dish_type || dish.dishType;
+        return dishDishType === dt;
+      }).length;
+      return count > 0;
+    });
+  }, [selectedCategory, allUniqueDishTypes, fetchedDishTypes, foodItems, dishes]);
+
+  // Reset dish type filter when category changes
+  useEffect(() => {
+    if (currentStep === 4) {
+      setSelectedDishType('all');
+    }
+  }, [selectedCategory, currentStep]);
+
+  // Get dish count for a specific dish type
+  const getDishCountForDishType = (dishType: string): number => {
+    if (dishType === 'all') return foodItems.length;
+    return foodItems.filter(item => {
+      const dish = dishes.find(d => d.id === item.id);
+      if (!dish) return false;
+      const dishDishType = (dish as any).dish_type || dish.dishType;
+      return dishDishType === dishType;
+    }).length;
+  };
+
+  // Filter items based on category, dish type, allowed types for current dietary tab, dietaryMode filter, and exclude already selected items
+  const filteredItems = useMemo(() => {
+    return foodItems
+      .filter(item => {
+        const dish = dishes.find(d => d.id === item.id);
+        if (!dish) return false;
+
+        // Category filter - check if dish belongs to selected category
+        // Skip category filter if 'all' is selected (show all categories)
+        if (selectedCategory && selectedCategory !== 'all') {
+          const dishCategoryId = (dish as any).category_id || dish.categoryId;
+          if (dishCategoryId !== selectedCategory) return false;
+        }
+
+        // Dish type filter
+        if (selectedDishType !== 'all') {
+          const dishDishType = (dish as any).dish_type || dish.dishType;
+          if (dishDishType !== selectedDishType) return false;
+        }
+
+        // Only show items allowed for current plate type (main tab: veg/egg/non-veg)
+        const allowedTypes = getAllowedItemTypes();
+        if (!allowedTypes.includes(item.type)) return false;
+
+        // Apply dietaryMode filter (the secondary filter buttons: All, Veg, Egg, Non-Veg)
+        if (dietaryMode !== 'all') {
+          if (item.type !== dietaryMode) return false;
+        }
+
+        // Filter by subcategory (grilled/fried/etc) if selected
+        if (selectedSubcategory !== 'all') {
+          const matchesSubcategory = dish.tags && dish.tags.includes(selectedSubcategory);
+          if (!matchesSubcategory) return false;
+        }
+
+        // Filter by search query
+        if (searchQuery) {
+          const query = searchQuery.toLowerCase();
+          if (!(dish.name.toLowerCase().includes(query) || (dish.description && dish.description.toLowerCase().includes(query)))) {
+            return false;
+          }
+        }
+
+        // Exclude already selected items (no duplicates) based on current dietary tab
+        const excludedIds = getExcludedItemIds();
+        if (excludedIds.has(item.id)) return false;
+
+        return true;
+      })
+      .sort((a, b) => {
+        // Apply sortOption first
+        if (sortOption === 'price-low') {
+          return a.price - b.price;
+        } else if (sortOption === 'price-high') {
+          return b.price - a.price;
+        } else if (sortOption === 'name-az') {
+          return a.name.localeCompare(b.name);
+        } else if (sortOption === 'name-za') {
+          return b.name.localeCompare(a.name);
+        }
+        
+        // Fallback: When viewing "All", priority category dishes come first
+        if (selectedCategory === 'all' && priorityCategoryId) {
+          const dishA = dishes.find(d => d.id === a.id);
+          const dishB = dishes.find(d => d.id === b.id);
+          const aCategoryId = dishA ? ((dishA as any).category_id || dishA.categoryId) : '';
+          const bCategoryId = dishB ? ((dishB as any).category_id || dishB.categoryId) : '';
+          const aIsPriority = aCategoryId === priorityCategoryId;
+          const bIsPriority = bCategoryId === priorityCategoryId;
+
+          if (aIsPriority && !bIsPriority) return -1;
+          if (!aIsPriority && bIsPriority) return 1;
+        }
+
+        // Default: sort by name
+        return a.name.localeCompare(b.name);
+      });
+  }, [foodItems, dishes, selectedCategory, selectedDishType, priorityCategoryId, searchQuery, selectedSubcategory, dietaryMode, sortOption]);
+
+  // Check if all slots for current dietary tab are filled
+  const currentPlateSelections = getCurrentPlateSelections();
+  const allSlotsFilled = currentPlateSelections.length > 0 && currentPlateSelections.every(sel => sel.itemId !== null);
+
+  // Check if ALL slots across ALL dietary types are filled
+  const allPlatesFilled =
+    vegPlateSelections.every(sel => sel.itemId !== null) &&
+    eggPlateSelections.every(sel => sel.itemId !== null) &&
+    nonVegPlateSelections.every(sel => sel.itemId !== null);
+
+  const handleTabChange = (tab: "home" | "menu" | "profile") => {
+    setActiveTab(tab);
+
+    if (tab === "home") {
+      navigate("/");
+    } else if (tab === "menu") {
+      navigate("/bulk-meals");
+    } else if (tab === "profile") {
+      navigate("/profile");
+    }
+  };
+
+  // Handle number input changes with validation
+  const handleVegBoxesChange = (value: string) => {
+    // Only allow numbers
+    if (value === "" || /^\d+$/.test(value)) {
+      setVegBoxes(value);
+    }
+  };
+
+  const handleEggBoxesChange = (value: string) => {
+    // Only allow numbers
+    if (value === "" || /^\d+$/.test(value)) {
+      setEggBoxes(value);
+    }
+  };
+
+  const handleNonVegBoxesChange = (value: string) => {
+    // Only allow numbers
+    if (value === "" || /^\d+$/.test(value)) {
+      setNonVegBoxes(value);
+    }
+  };
+
+  const handleNextStep = () => {
+    // Validate that all slots are filled for current dietary tab on Step 4 before proceeding
+    if (currentStep === 4) {
+      const currentSelections = getCurrentPlateSelections();
+      const allFilled = currentSelections.length > 0 && currentSelections.every(sel => sel.itemId !== null);
+      if (!allFilled) {
+        toast({
+          title: "Complete Your Selection",
+          description: `Please select all ${selectedPortions} items for your ${currentDietaryTab.toUpperCase()} box.`,
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
+    // Validate member counts on Step 2 before proceeding
+    if (currentStep === 2) {
+      const vegCount = parseInt(vegBoxes) || 0;
+      const eggCount = parseInt(eggBoxes) || 0;
+      const nonVegCount = parseInt(nonVegBoxes) || 0;
+
+      // Check if any active dietary preference has less than 5 members
+      if (mealPreference === "veg" && vegCount > 0 && vegCount < 5) {
+        toast({
+          title: "Minimum Order Required",
+          description: "Minimum serve is 5 boxes per dietary preference.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if ((mealPreference === "egg" || mealPreference === "non-veg")) {
+        if ((vegCount > 0 && vegCount < 5) || (eggCount > 0 && eggCount < 5)) {
+          toast({
+            title: "Minimum Order Required",
+            description: "Minimum serve is 5 boxes per dietary preference.",
+            variant: "destructive"
+          });
+          return;
+        }
+      }
+
+      if (mealPreference === "non-veg" && nonVegCount > 0 && nonVegCount < 5) {
+        toast({
+          title: "Minimum Order Required",
+          description: "Minimum serve is 5 boxes per dietary preference.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Check if at least one dietary preference has a value >= 5
+      const hasValidOrder = (vegCount >= 5) || (eggCount >= 5) || (nonVegCount >= 5);
+      if (!hasValidOrder) {
+        toast({
+          title: "Minimum Order Required",
+          description: "Please order at least 5 boxes for one dietary preference.",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
+    if (currentStep < 7) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const handleBackStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  const openDishDetail = (dish: Dish) => {
+    setDetailDish(dish);
+    setDishDetailOpen(true);
+  };
+
+  // Helper to get category image
+  const getCategoryImageUrl = (categoryId: string): string => {
+    const category = categories.find(c => c.id === categoryId);
+
+    // Check for DB image_url (snake_case) or imageUrl (camelCase)
+    const dbImage = (category as any)?.image_url || category?.imageUrl;
+
+    if (dbImage && !dbImage.startsWith('/images/')) {
+      return getSupabaseImageUrl(dbImage);
+    }
+    return CATEGORY_IMAGES[categoryId] || idliImage1;
+  };
+
+  // Helper to get subcategory (dish type) image URL from Supabase with local fallback
+  // Moved inside component to access subcategories state
+  const getSubcategoryImage = (dishType: string): string => {
+    // Try to find image in fetched subcategories
+    const subcat = subcategories.find((s: any) => s.name === dishType);
+    if (subcat?.image_url) {
+      return getSupabaseImageUrl(subcat.image_url);
+    }
+
+    const fallbackImage = DISH_TYPE_IMAGES[dishType] || DISH_TYPE_IMAGES['default'];
+    return getDishTypeImage(dishType, fallbackImage);
+  };
+
+  // Handle food item selection - allow selecting any item, fill next available slot
+  const handleItemSelection = (item: FoodItem) => {
+    const currentSelections = getCurrentPlateSelections();
+
+    // Check if item is already selected
+    const existingIndex = currentSelections.findIndex(sel => sel.itemId === item.id);
+    if (existingIndex !== -1) {
+      // Item already selected, remove it
+      const updatedSelections = currentSelections.map((sel, idx) =>
+        idx === existingIndex ? { slot: idx, itemId: null, item: undefined } : sel
+      );
+
+      if (currentDietaryTab === "veg") {
+        setVegPlateSelections(updatedSelections);
+      } else if (currentDietaryTab === "egg") {
+        setEggPlateSelections(updatedSelections);
+      } else {
+        setNonVegPlateSelections(updatedSelections);
+      }
+
+      // Update selected slot index to the removed slot
+      setSelectedSlotIndex(existingIndex);
+      return;
+    }
+
+    // Find the first empty slot
+    const emptySlotIndex = currentSelections.findIndex(sel => sel.itemId === null);
+    if (emptySlotIndex === -1) {
+      // All slots filled, replace the currently selected slot
+      const slotToReplace = selectedSlotIndex < currentSelections.length ? selectedSlotIndex : 0;
+      const updatedSelections = [...currentSelections];
+      updatedSelections[slotToReplace] = {
+        slot: slotToReplace,
+        itemId: item.id,
+        item: item
+      };
+
+      if (currentDietaryTab === "veg") {
+        setVegPlateSelections(updatedSelections);
+      } else if (currentDietaryTab === "egg") {
+        setEggPlateSelections(updatedSelections);
+      } else {
+        setNonVegPlateSelections(updatedSelections);
+      }
+
+      setSelectedSlotIndex(slotToReplace);
+      return;
+    }
+
+    // Fill the first empty slot
+    const updatedSelections = [...currentSelections];
+    updatedSelections[emptySlotIndex] = {
+      slot: emptySlotIndex,
+      itemId: item.id,
+      item: item
+    };
+
+    // Update the appropriate state based on current dietary tab
+    if (currentDietaryTab === "veg") {
+      setVegPlateSelections(updatedSelections);
+    } else if (currentDietaryTab === "egg") {
+      setEggPlateSelections(updatedSelections);
+    } else {
+      setNonVegPlateSelections(updatedSelections);
+    }
+
+    // Auto-advance to next empty slot if available
+    const nextEmptySlot = updatedSelections.findIndex((sel, idx) => idx > emptySlotIndex && sel.itemId === null);
+    if (nextEmptySlot !== -1) {
+      setSelectedSlotIndex(nextEmptySlot);
+    } else {
+      // All slots filled
+      setSelectedSlotIndex(emptySlotIndex);
+      toast({
+        title: "All portions filled!",
+        description: `All ${selectedPortions} items have been selected for your ${currentDietaryTab.toUpperCase()} box.`
+      });
+    }
+  };
+
+  // Handle slot click to edit a specific slot
+  const handleSlotClick = (slotIndex: number) => {
+    setSelectedSlotIndex(slotIndex);
+    // Clear only this specific slot, keep other slots intact
+    const currentSelections = getCurrentPlateSelections();
+    const updatedSelections = currentSelections.map((sel, idx) => {
+      if (idx === slotIndex) {
+        return { slot: idx, itemId: null, item: undefined };
+      }
+      return sel;
+    });
+
+    // Update the appropriate state based on current dietary tab
+    if (currentDietaryTab === "veg") {
+      setVegPlateSelections(updatedSelections);
+    } else if (currentDietaryTab === "egg") {
+      setEggPlateSelections(updatedSelections);
+    } else {
+      setNonVegPlateSelections(updatedSelections);
+    }
+  };
+
+  return (
+    <PageWithLoader>
+    <div className="min-h-screen pb-24 relative bg-gray-50" style={{ overflowX: 'clip' }}>
+      {/* Green Geometric Background Header */}
+      <div
+        className="absolute top-0 left-0 right-0 z-0"
+        style={{
+          backgroundImage: `url(${mealBoxHeroPattern})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center top",
+          backgroundRepeat: "no-repeat",
+          height: "300px",
+        }}
+      />
+      {/* Sticky Back Button Header */}
+      <div
+        className="sticky top-0 z-50 transition-all duration-200"
+        style={{
+          backgroundColor: scrollY > 50 ? 'white' : 'transparent',
+          boxShadow: scrollY > 50 ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+        }}
+      >
+        <div className="px-4 pt-12 pb-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            className={scrollY > 50 ? "text-[#06352A] hover:text-[#06352A] hover:bg-gray-100" : "text-white hover:text-white hover:bg-white/20"}
+            onClick={() => {
+              if (currentStep > 1) {
+                handleBackStep();
+              } else {
+                navigate("/");
+              }
+            }}
+            data-testid="button-back"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back
+          </Button>
+        </div>
+      </div>
+
+      {/* Header Section with Location and Cart */}
+      <div className="relative z-10 px-4 pt-4 pb-6">
+        {/* Location and Cart */}
+        <div className="flex items-center justify-between mb-6">
+          <button
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+            onClick={() => navigate("/location")}
+            data-testid="button-location"
+          >
+            <MapPin className="w-5 h-5 text-white" />
+            <span className="text-white font-semibold text-[18px] max-w-[120px] truncate" style={{ fontFamily: "Sweet Sans Pro" }}>
+              {locationLabel}
+            </span>
+          </button>
+          <button
+            onClick={() => navigate("/concierge")}
+            data-testid="button-ai-menu-planner"
+            className="flex items-center justify-center px-3 py-2 rounded-[10px] shadow-md hover:opacity-90 transition-opacity"
+            style={{
+              background: "linear-gradient(135deg, #06352A 0%, #1A9952 100%)",
+              fontFamily: "Sweet Sans Pro",
+              fontSize: "12px",
+              fontWeight: 500,
+              color: "#F5E9DB",
+              height: "40px",
+            }}
+          >
+            AI Menu Planner
+          </button>
+        </div>
+
+        {/* Service Navigation Tabs */}
+        <div className={onNavigate ? "grid grid-cols-2 gap-3 max-w-xs mx-auto" : "grid grid-cols-4 gap-2"}>
+          <button
+            onClick={() => {
+              setSelectedService("bulk-meals");
+              navigate("/bulk-meals");
+            }}
+            data-testid="service-tab-bulk-meals"
+            className="flex flex-col items-center justify-center p-3 transition-all hover-elevate active-elevate-2 aspect-square"
+            style={{
+              borderRadius: "10px",
+              backgroundColor: selectedService === "bulk-meals" ? "#06352A" : "#FFFFFF",
+              color: selectedService === "bulk-meals" ? "#F5E9DB" : "#06352A",
+            }}
+          >
+            <img 
+              src={selectedService === "bulk-meals" ? bulkMealsIconActive : bulkMealsIconInactive} 
+              alt="Bulk Meals" 
+              className="w-6 h-6 mb-1"
+            />
+            <span
+              className="text-[9px] xs:text-[10px] sm:text-xs font-semibold text-center leading-tight"
+              style={{ fontFamily: "Sweet Sans Pro" }}
+            >
+              Bulk Meals
+            </span>
+          </button>
+
+          <button
+            onClick={() => setSelectedService("mealbox")}
+            data-testid="service-tab-mealbox"
+            className="flex flex-col items-center justify-center p-3 transition-all hover-elevate active-elevate-2 aspect-square"
+            style={{
+              borderRadius: "10px",
+              backgroundColor: selectedService === "mealbox" ? "#06352A" : "#FFFFFF",
+              color: selectedService === "mealbox" ? "#F5E9DB" : "#06352A",
+            }}
+          >
+            <img 
+              src={selectedService === "mealbox" ? mealBoxIconActive : mealBoxIconInactive} 
+              alt="MealBox" 
+              className="w-6 h-6 mb-1"
+            />
+            <span
+              className="text-[9px] xs:text-[10px] sm:text-xs font-semibold text-center leading-tight"
+              style={{ fontFamily: "Sweet Sans Pro" }}
+            >
+              MealBox
+            </span>
+          </button>
+
+          {!onNavigate && (
+            <>
+              <button
+                onClick={() => {
+                  setSelectedService("catering");
+                  navigate("/catering");
+                }}
+                data-testid="service-tab-catering"
+                className="flex flex-col items-center justify-center p-3 transition-all hover-elevate active-elevate-2 aspect-square"
+                style={{
+                  borderRadius: "10px",
+                  backgroundColor: selectedService === "catering" ? "#06352A" : "#FFFFFF",
+                  color: selectedService === "catering" ? "#F5E9DB" : "#06352A",
+                }}
+              >
+                <img 
+                  src={selectedService === "catering" ? cateringIconActive : cateringIconInactive} 
+                  alt="Catering" 
+                  className="w-6 h-6 mb-1"
+                />
+                <span
+                  className="text-[9px] xs:text-[10px] sm:text-xs font-semibold text-center leading-tight"
+                  style={{ fontFamily: "Sweet Sans Pro" }}
+                >
+                  Catering
+                </span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setSelectedService("corporate");
+                  navigate("/corporate");
+                }}
+                data-testid="service-tab-corporate"
+                className="flex flex-col items-center justify-center p-3 transition-all hover-elevate active-elevate-2 aspect-square"
+                style={{
+                  borderRadius: "10px",
+                  backgroundColor: selectedService === "corporate" ? "#06352A" : "#FFFFFF",
+                  color: selectedService === "corporate" ? "#F5E9DB" : "#06352A",
+                }}
+              >
+                <img 
+                  src={selectedService === "corporate" ? corporateIconActive : corporateIconInactive} 
+                  alt="Corporate" 
+                  className="w-6 h-6 mb-1"
+                />
+                <span
+                  className="text-[9px] xs:text-[10px] sm:text-xs font-semibold text-center leading-tight"
+                  style={{ fontFamily: "Sweet Sans Pro" }}
+                >
+                  Corporate
+                </span>
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+      {/* Content below green background */}
+      <div className="relative z-10 px-4" style={{ marginTop: "20px" }}>
+
+        {/* Back Navigation - Sticky for steps 4 & 5, non-sticky for others */}
+        {currentStep > 1 && (
+          <div
+            className={`-mx-4 px-4 ${(currentStep === 4 || currentStep === 5) ? 'sticky top-0 z-50 bg-white py-2' : 'mb-4'}`}
+          >
+            <button
+              onClick={handleBackStep}
+              className="flex items-center justify-between text-gray-700 hover-elevate active-elevate-2 px-2 py-1 rounded-md w-full"
+              style={{ fontFamily: "Sweet Sans Pro" }}
+              data-testid="button-back-step"
+            >
+              <div className="flex items-center gap-2">
+                <ArrowLeft className="w-4 h-4" />
+                <span className="font-medium text-xs sm:text-sm">
+                  {currentStep === 2 ? "Choose Portion Size" :
+                    currentStep === 3 ? "Choose Meal Preference" :
+                      currentStep === 4 ? "Choose Meal Type" :
+                        currentStep === 5 ? "Build Your MealBox" :
+                          currentStep === 6 ? "Select Add-Ons" :
+                            currentStep === 7 ? "Proceed to Payment" :
+                              ""}
+                </span>
+              </div>
+              {(currentStep === 4 || currentStep === 5) && (
+                <Check className="w-4 h-4 text-green-600" />
+              )}
+            </button>
+          </div>
+        )}
+
+        {/* Header with Title and Box Image - Only show on step 1 */}
+        {currentStep === 1 && (
+          <div className="flex items-start justify-between mb-6 mt-16">
+            <div>
+              <h1
+                className="font-bold mb-2 text-lg sm:text-xl md:text-2xl"
+                style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}
+              >
+                Build Your MealBox
+              </h1>
+              <p
+                className="text-gray-600 text-xs sm:text-sm"
+                style={{ fontFamily: "Sweet Sans Pro" }}
+              >
+                Select your box size, set preferences,<br />
+                and fill it with the dishes you love.
+              </p>
+            </div>
+            <div className="w-24 h-24 flex-shrink-0">
+              <img
+                src={mealBoxImage}
+                alt="Meal Box"
+                className="w-full h-full object-contain"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Progress Bar - Show on steps 1-3 */}
+        {currentStep <= 3 && (
+          <div className="mb-8">
+            <div className="flex gap-2">
+              <div
+                className="h-1.5 flex-1 rounded-full"
+                style={{ backgroundColor: currentStep >= 1 ? "#1A9952" : "#E5E7EB" }}
+              />
+              <div
+                className="h-1.5 flex-1 rounded-full"
+                style={{ backgroundColor: currentStep >= 2 ? "#1A9952" : "#E5E7EB" }}
+              />
+              <div
+                className="h-1.5 flex-1 rounded-full"
+                style={{ backgroundColor: currentStep >= 3 ? "#1A9952" : "#E5E7EB" }}
+              />
+              <div
+                className="h-1.5 flex-1 rounded-full"
+                style={{ backgroundColor: currentStep >= 4 ? "#1A9952" : "#E5E7EB" }}
+              />
+              <div
+                className="h-1.5 flex-1 rounded-full"
+                style={{ backgroundColor: currentStep >= 5 ? "#1A9952" : "#E5E7EB" }}
+              />
+              <div
+                className="h-1.5 flex-1 rounded-full"
+                style={{ backgroundColor: currentStep >= 6 ? "#1A9952" : "#E5E7EB" }}
+              />
+              <div
+                className="h-1.5 flex-1 rounded-full"
+                style={{ backgroundColor: currentStep >= 7 ? "#1A9952" : "#E5E7EB" }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Step 1: Portion Selection */}
+        {currentStep === 1 && (
+          <div>
+            <h2
+              className="font-bold mb-2 text-sm sm:text-base md:text-lg"
+              style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}
+            >
+              How big should your meal box be?
+            </h2>
+            <p
+              className="text-gray-600 mb-6 text-xs sm:text-sm"
+              style={{ fontFamily: "Sweet Sans Pro" }}
+            >
+              Choose how many portions you'd like to include in each box.
+            </p>
+
+            {/* Portion Options Grid */}
+            <div className="grid grid-cols-2 gap-4 mb-8">
+              {/* 3 Portions */}
+              <button
+                onClick={() => { handleInteraction(); setSelectedPortions(3); }}
+                className="bg-white border-2 rounded-2xl p-4 transition-all hover-elevate active-elevate-2"
+                style={{
+                  borderColor: selectedPortions === 3 ? "#1A9952" : "#E5E7EB"
+                }}
+                data-testid="portion-option-3"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="flex flex-col gap-2">
+                    <div
+                      className="w-8 h-8 rounded-full border-2 flex items-center justify-center flex-shrink-0"
+                      style={{
+                        borderColor: "#1A9952",
+                        backgroundColor: selectedPortions === 3 ? "#1A9952" : "white"
+                      }}
+                    >
+                      {selectedPortions === 3 && (
+                        <Check className="w-5 h-5 text-white" />
+                      )}
+                    </div>
+                    <span
+                      className="font-bold text-sm sm:text-base text-left"
+                      style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}
+                    >
+                      3 portions
+                    </span>
+                  </div>
+                  <img src={plate3Portions} alt="3 portions" className="h-auto w-28" />
+                </div>
+              </button>
+
+              {/* 5 Portions */}
+              <button
+                onClick={() => { handleInteraction(); setSelectedPortions(5); }}
+                className="bg-white border-2 rounded-2xl p-4 transition-all hover-elevate active-elevate-2"
+                style={{
+                  borderColor: selectedPortions === 5 ? "#1A9952" : "#E5E7EB"
+                }}
+                data-testid="portion-option-5"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="flex flex-col gap-2">
+                    <div
+                      className="w-8 h-8 rounded-full border-2 flex items-center justify-center flex-shrink-0"
+                      style={{
+                        borderColor: "#1A9952",
+                        backgroundColor: selectedPortions === 5 ? "#1A9952" : "white"
+                      }}
+                    >
+                      {selectedPortions === 5 && (
+                        <Check className="w-5 h-5 text-white" />
+                      )}
+                    </div>
+                    <span
+                      className="font-bold text-sm sm:text-base text-left"
+                      style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}
+                    >
+                      5 portions
+                    </span>
+                  </div>
+                  <img src={plate5Portions} alt="5 portions" className="h-auto w-28" />
+                </div>
+              </button>
+
+              {/* 6 Portions */}
+              <button
+                onClick={() => { handleInteraction(); setSelectedPortions(6); }}
+                className="bg-white border-2 rounded-2xl p-4 transition-all hover-elevate active-elevate-2"
+                style={{
+                  borderColor: selectedPortions === 6 ? "#1A9952" : "#E5E7EB"
+                }}
+                data-testid="portion-option-6"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="flex flex-col gap-2">
+                    <div
+                      className="w-8 h-8 rounded-full border-2 flex items-center justify-center flex-shrink-0"
+                      style={{
+                        borderColor: "#1A9952",
+                        backgroundColor: selectedPortions === 6 ? "#1A9952" : "white"
+                      }}
+                    >
+                      {selectedPortions === 6 && (
+                        <Check className="w-5 h-5 text-white" />
+                      )}
+                    </div>
+                    <span
+                      className="font-bold text-sm sm:text-base text-left"
+                      style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}
+                    >
+                      6 portions
+                    </span>
+                  </div>
+                  <img src={plate6Portions} alt="6 portions" className="h-auto w-28" />
+                </div>
+              </button>
+
+              {/* 8 Portions */}
+              <button
+                onClick={() => { handleInteraction(); setSelectedPortions(8); }}
+                className="bg-white border-2 rounded-2xl p-4 transition-all hover-elevate active-elevate-2"
+                style={{
+                  borderColor: selectedPortions === 8 ? "#1A9952" : "#E5E7EB"
+                }}
+                data-testid="portion-option-8"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="flex flex-col gap-2">
+                    <div
+                      className="w-8 h-8 rounded-full border-2 flex items-center justify-center flex-shrink-0"
+                      style={{
+                        borderColor: "#1A9952",
+                        backgroundColor: selectedPortions === 8 ? "#1A9952" : "white"
+                      }}
+                    >
+                      {selectedPortions === 8 && (
+                        <Check className="w-5 h-5 text-white" />
+                      )}
+                    </div>
+                    <span
+                      className="font-bold text-sm sm:text-base text-left"
+                      style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}
+                    >
+                      8 portions
+                    </span>
+                  </div>
+                  <img src={plate8Portions} alt="8 portions" className="h-auto w-28" />
+                </div>
+              </button>
+            </div>
+
+            {/* Next Button */}
+            <div className="flex justify-end">
+              <Button
+                onClick={handleNextStep}
+                className="px-4 py-2 text-base font-semibold border-0"
+                style={{
+                  fontFamily: "Sweet Sans Pro",
+                  backgroundColor: "#1A9952",
+                  borderRadius: "10px"
+                }}
+                data-testid="button-next"
+              >
+                Next
+                <ChevronRight className="w-5 h-5 ml-2" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 2: Meal Preferences */}
+        {currentStep === 2 && (
+          <div>
+            {/* What's your meal preference? */}
+            <div className="mb-4">
+              <h2
+                className="font-bold mb-1.5 text-sm sm:text-base"
+                style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}
+              >
+                What's your meal preference?
+              </h2>
+              <p
+                className="text-gray-600 mb-3 text-xs"
+                style={{ fontFamily: "Sweet Sans Pro" }}
+              >
+                Tell us how you'd like your boxes prepared.
+              </p>
+
+              {/* Meal Preference Options */}
+              <div className="grid grid-cols-3 gap-2 mb-1.5">
+                <button
+                  onClick={() => { handleInteraction(); setMealPreference("veg"); }}
+                  className="flex items-center gap-1.5 px-2 py-2.5 rounded-lg border-2 hover-elevate active-elevate-2"
+                  style={{
+                    borderColor: mealPreference === "veg" ? "#1A9952" : "#E5E7EB",
+                    backgroundColor: mealPreference === "veg" ? "#F0F9F4" : "white"
+                  }}
+                  data-testid="preference-veg"
+                >
+                  <div
+                    className="w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0"
+                    style={{
+                      borderColor: "#1A9952",
+                      backgroundColor: mealPreference === "veg" ? "#1A9952" : "white"
+                    }}
+                  >
+                    {mealPreference === "veg" && <Check className="w-2.5 h-2.5 text-white" />}
+                  </div>
+                  <span className="font-semibold text-xs sm:text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                    VEG
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => { handleInteraction(); setMealPreference("egg"); }}
+                  className="flex items-center gap-1.5 px-2 py-2.5 rounded-lg border-2 hover-elevate active-elevate-2"
+                  style={{
+                    borderColor: mealPreference === "egg" ? "#F97316" : "#E5E7EB",
+                    backgroundColor: mealPreference === "egg" ? "#FFF7ED" : "white"
+                  }}
+                  data-testid="preference-egg"
+                >
+                  <div
+                    className="w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0"
+                    style={{
+                      borderColor: "#F97316",
+                      backgroundColor: mealPreference === "egg" ? "#F97316" : "white"
+                    }}
+                  >
+                    {mealPreference === "egg" && <Check className="w-2.5 h-2.5 text-white" />}
+                  </div>
+                  <span className="font-semibold text-xs sm:text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                    EGG
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => { handleInteraction(); setMealPreference("non-veg"); }}
+                  className="flex items-center gap-1.5 px-2 py-2.5 rounded-lg border-2 hover-elevate active-elevate-2"
+                  style={{
+                    borderColor: mealPreference === "non-veg" ? "#DC2626" : "#E5E7EB",
+                    backgroundColor: mealPreference === "non-veg" ? "#FEF2F2" : "white"
+                  }}
+                  data-testid="preference-non-veg"
+                >
+                  <div
+                    className="w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0"
+                    style={{
+                      borderColor: "#DC2626",
+                      backgroundColor: mealPreference === "non-veg" ? "#DC2626" : "white"
+                    }}
+                  >
+                    {mealPreference === "non-veg" && <Check className="w-2.5 h-2.5 text-white" />}
+                  </div>
+                  <span className="font-semibold text-xs sm:text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                    NON-VEG
+                  </span>
+                </button>
+              </div>
+
+              <p
+                className="text-gray-500 text-[9px] sm:text-[10px]"
+                style={{ fontFamily: "Sweet Sans Pro" }}
+              >Choose Egg to create a mix of Veg and Egg if needed. Choose Non-Veg to create a mix of all three if needed.</p>
+            </div>
+
+            {/* How many people are you ordering for? */}
+            <div className="mb-8">
+              <h2
+                className="font-bold mb-2 text-sm sm:text-base md:text-lg"
+                style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}
+              >
+                How many people are you ordering for?
+              </h2>
+              <p
+                className="text-gray-600 mb-4 text-xs sm:text-sm"
+                style={{ fontFamily: "Sweet Sans Pro" }}
+              >
+                Enter the number of boxes you'll need.
+              </p>
+
+              {/* Number Inputs - Conditional based on preference */}
+              <div className="flex gap-2 mb-2">
+                {/* VEG Box Input - Show for all preferences */}
+                {(mealPreference === "veg" || mealPreference === "egg" || mealPreference === "non-veg") && (
+                  <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                    <div
+                      className="w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0"
+                      style={{ borderColor: "#1A9952" }}
+                    >
+                      <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: "#1A9952" }}></div>
+                    </div>
+                    <input
+                      type="text"
+                      value={vegBoxes}
+                      onChange={(e) => handleVegBoxesChange(e.target.value)}
+                      className="w-full px-2 py-2 border-2 rounded-lg text-center font-bold text-xs sm:text-sm"
+                      style={{
+                        fontFamily: "Sweet Sans Pro",
+                        borderColor: "#1A9952",
+                        color: "#1A9952"
+                      }}
+                      placeholder="0"
+                      data-testid="input-veg-boxes"
+                    />
+                  </div>
+                )}
+
+                {/* EGG Box Input - Show for egg and non-veg */}
+                {(mealPreference === "egg" || mealPreference === "non-veg") && (
+                  <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                    <div
+                      className="w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0"
+                      style={{ borderColor: "#F97316" }}
+                    >
+                      <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: "#F97316" }}></div>
+                    </div>
+                    <input
+                      type="text"
+                      value={eggBoxes}
+                      onChange={(e) => handleEggBoxesChange(e.target.value)}
+                      className="w-full px-2 py-2 border-2 rounded-lg text-center font-bold text-xs sm:text-sm"
+                      style={{
+                        fontFamily: "Sweet Sans Pro",
+                        borderColor: "#F97316",
+                        color: "#F97316"
+                      }}
+                      placeholder="0"
+                      data-testid="input-egg-boxes"
+                    />
+                  </div>
+                )}
+
+                {/* NON-VEG Box Input - Show only for non-veg */}
+                {mealPreference === "non-veg" && (
+                  <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                    <div
+                      className="w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0"
+                      style={{ borderColor: "#DC2626" }}
+                    >
+                      <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: "#DC2626" }}></div>
+                    </div>
+                    <input
+                      type="text"
+                      value={nonVegBoxes}
+                      onChange={(e) => handleNonVegBoxesChange(e.target.value)}
+                      className="w-full px-2 py-2 border-2 rounded-lg text-center font-bold text-xs sm:text-sm"
+                      style={{
+                        fontFamily: "Sweet Sans Pro",
+                        borderColor: "#DC2626",
+                        color: "#DC2626"
+                      }}
+                      placeholder="0"
+                      data-testid="input-non-veg-boxes"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <p
+                className="text-gray-500 text-[10px] sm:text-xs mt-2"
+                style={{ fontFamily: "Sweet Sans Pro" }}
+              >Enter "0" for any dietary options not required.</p>
+            </div>
+
+            {/* Next Button */}
+            <div className="flex justify-end">
+              <Button
+                onClick={handleNextStep}
+                className="px-4 py-2 text-sm sm:text-base font-semibold border-0"
+                style={{
+                  fontFamily: "Sweet Sans Pro",
+                  backgroundColor: "#1A9952",
+                  borderRadius: "10px"
+                }}
+                data-testid="button-next"
+              >
+                Next
+                <ChevronRight className="w-5 h-5 ml-2" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 3: Meal Type Selection */}
+        {currentStep === 3 && (
+          <div>
+            {/* What kind of food are you serving? */}
+            <div className="mb-8">
+              <h2
+                className="font-bold mb-6 text-sm sm:text-base md:text-lg"
+                style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}
+              >
+                What kind of food are you serving for your event?
+              </h2>
+
+              {/* Meal Type Options Grid */}
+              <div className="grid grid-cols-2 gap-4">
+                {/* Hi-Tea */}
+                <button
+                  onClick={() => setSelectedMealType("hi-tea")}
+                  className="flex items-center gap-2 px-2 sm:px-3 md:px-4 py-3 sm:py-4 rounded-lg border-2 hover-elevate active-elevate-2"
+                  style={{
+                    borderColor: selectedMealType === "hi-tea" ? "#1A9952" : "#E5E7EB",
+                    backgroundColor: "white"
+                  }}
+                  data-testid="meal-type-hi-tea"
+                >
+                  <div
+                    className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0"
+                    style={{
+                      borderColor: "#1A9952",
+                      backgroundColor: selectedMealType === "hi-tea" ? "#1A9952" : "white"
+                    }}
+                  >
+                    {selectedMealType === "hi-tea" && <Check className="w-3 h-3 text-white" />}
+                  </div>
+                  <img src={hiTeaIcon} alt="Hi-Tea" className="w-7 h-7 sm:w-8 sm:h-8 object-contain flex-shrink-0" />
+                  <span className="font-semibold text-xs sm:text-sm whitespace-nowrap" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                    Hi-Tea
+                  </span>
+                </button>
+
+                {/* Breakfast */}
+                <button
+                  onClick={() => setSelectedMealType("breakfast")}
+                  className="flex items-center gap-2 px-2 sm:px-3 md:px-4 py-3 sm:py-4 rounded-lg border-2 hover-elevate active-elevate-2"
+                  style={{
+                    borderColor: selectedMealType === "breakfast" ? "#1A9952" : "#E5E7EB",
+                    backgroundColor: "white"
+                  }}
+                  data-testid="meal-type-breakfast"
+                >
+                  <div
+                    className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0"
+                    style={{
+                      borderColor: "#1A9952",
+                      backgroundColor: selectedMealType === "breakfast" ? "#1A9952" : "white"
+                    }}
+                  >
+                    {selectedMealType === "breakfast" && <Check className="w-3 h-3 text-white" />}
+                  </div>
+                  <img src={breakfastIcon} alt="Breakfast" className="w-7 h-7 sm:w-8 sm:h-8 object-contain flex-shrink-0" />
+                  <span className="font-semibold text-xs sm:text-sm whitespace-nowrap" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                    Breakfast
+                  </span>
+                </button>
+
+                {/* Lunch */}
+                <button
+                  onClick={() => setSelectedMealType("lunch")}
+                  className="flex items-center gap-2 px-2 sm:px-3 md:px-4 py-3 sm:py-4 rounded-lg border-2 hover-elevate active-elevate-2"
+                  style={{
+                    borderColor: selectedMealType === "lunch" ? "#1A9952" : "#E5E7EB",
+                    backgroundColor: "white"
+                  }}
+                  data-testid="meal-type-lunch"
+                >
+                  <div
+                    className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0"
+                    style={{
+                      borderColor: "#1A9952",
+                      backgroundColor: selectedMealType === "lunch" ? "#1A9952" : "white"
+                    }}
+                  >
+                    {selectedMealType === "lunch" && <Check className="w-3 h-3 text-white" />}
+                  </div>
+                  <img src={lunchIcon} alt="Lunch" className="w-7 h-7 sm:w-8 sm:h-8 object-contain flex-shrink-0" />
+                  <span className="font-semibold text-xs sm:text-sm whitespace-nowrap" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                    Lunch
+                  </span>
+                </button>
+
+                {/* Dinner */}
+                <button
+                  onClick={() => setSelectedMealType("dinner")}
+                  className="flex items-center gap-2 px-2 sm:px-3 md:px-4 py-3 sm:py-4 rounded-lg border-2 hover-elevate active-elevate-2"
+                  style={{
+                    borderColor: selectedMealType === "dinner" ? "#1A9952" : "#E5E7EB",
+                    backgroundColor: "white"
+                  }}
+                  data-testid="meal-type-dinner"
+                >
+                  <div
+                    className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0"
+                    style={{
+                      borderColor: "#1A9952",
+                      backgroundColor: selectedMealType === "dinner" ? "#1A9952" : "white"
+                    }}
+                  >
+                    {selectedMealType === "dinner" && <Check className="w-3 h-3 text-white" />}
+                  </div>
+                  <img src={dinnerIcon} alt="Dinner" className="w-7 h-7 sm:w-8 sm:h-8 object-contain flex-shrink-0" />
+                  <span className="font-semibold text-xs sm:text-sm whitespace-nowrap" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                    Dinner
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            {/* Next Button */}
+            <div className="flex justify-end">
+              <Button
+                onClick={handleNextStep}
+                className="px-4 py-2 text-base font-semibold border-0"
+                style={{
+                  fontFamily: "Sweet Sans Pro",
+                  backgroundColor: "#1A9952",
+                  borderRadius: "10px"
+                }}
+                data-testid="button-next"
+              >
+                Next
+                <ChevronRight className="w-5 h-5 ml-2" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 4: Choose Food Category */}
+        {currentStep === 4 && (
+          <div>
+            {/* Sticky Proceed Card Section - below back navigation (top: 92px) */}
+            <div className="sticky -mx-4 px-4 pt-0 pb-2 bg-white" style={{ top: "92px", zIndex: 55 }}>
+              <div className="flex items-center justify-between p-4 rounded-lg" style={{ backgroundColor: "#1A9952" }}>
+                <div className="flex items-center gap-3">
+                  <img src={mealBoxImage} alt="Meal Box" className="w-12 h-12 object-contain" />
+                  <div>
+                    <p className="text-white font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro" }}>
+                      Proceed By Creating
+                    </p>
+                    <p className="text-white font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro" }}>
+                      Your Meal Box
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  onClick={handleNextStep}
+                  disabled={!allSlotsFilled}
+                  className="px-4 py-2 text-sm font-semibold border-0"
+                  style={{
+                    fontFamily: "Sweet Sans Pro",
+                    color: allSlotsFilled ? "#1A9952" : "#9CA3AF",
+                    backgroundColor: allSlotsFilled ? "white" : "#E5E7EB",
+                    borderRadius: "8px",
+                    cursor: allSlotsFilled ? "pointer" : "not-allowed",
+                    opacity: allSlotsFilled ? 1 : 0.6
+                  }}
+                  data-testid="button-proceed"
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Sticky Search Bar Section - below proceed card (top: 180px) */}
+            <div className="sticky bg-white pb-3 pt-3 -mx-4 px-4" style={{ top: "180px", zIndex: 60 }}>
+              <div 
+                className="flex items-center gap-2 bg-white px-4 py-3 border border-gray-200 cursor-pointer"
+                style={{ borderRadius: "10px" }}
+                onClick={() => { handleInteraction(); setSearchOverlayOpen(true); }}
+                data-testid="button-open-search-step4"
+              >
+                <Search className="w-6 h-6 text-gray-500" />
+                <span
+                  className={`flex-1 text-base ${searchQuery ? 'text-gray-800' : 'text-gray-400'}`}
+                  style={{ fontFamily: "Sweet Sans Pro" }}
+                >
+                  {searchQuery || "Search for dishes..."}
+                </span>
+                {searchQuery && (
+                  <button 
+                    className="p-1 hover:bg-gray-100 rounded-full"
+                    onClick={(e) => { e.stopPropagation(); setSearchQuery(""); }}
+                  >
+                    <X className="w-4 h-4 text-gray-500" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Filters & Sort - Single Row */}
+            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide mb-4">
+              <button
+                onClick={() => { handleInteraction(); setDietaryMode('all'); }}
+                className={cn(
+                  "flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium transition-all flex-shrink-0",
+                  dietaryMode === 'all'
+                    ? "bg-[#06352A] text-white"
+                    : "bg-gray-100 text-gray-600"
+                )}
+                style={{ fontFamily: "Sweet Sans Pro" }}
+                data-testid="filter-dietary-all"
+              >
+                <Sparkles className="w-2.5 h-2.5" />
+                All
+              </button>
+              <button
+                onClick={() => { handleInteraction(); setDietaryMode('veg'); }}
+                className={cn(
+                  "flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium transition-all flex-shrink-0",
+                  dietaryMode === 'veg'
+                    ? "bg-[#1A9952] text-white"
+                    : "bg-gray-100 text-gray-600"
+                )}
+                style={{ fontFamily: "Sweet Sans Pro" }}
+                data-testid="filter-dietary-veg"
+              >
+                <Leaf className="w-2.5 h-2.5" />
+                Veg
+              </button>
+              <button
+                onClick={() => { handleInteraction(); setDietaryMode('egg'); }}
+                className={cn(
+                  "flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium transition-all flex-shrink-0",
+                  dietaryMode === 'egg'
+                    ? "bg-[#F59E0B] text-white"
+                    : "bg-gray-100 text-gray-600"
+                )}
+                style={{ fontFamily: "Sweet Sans Pro" }}
+                data-testid="filter-dietary-egg"
+              >
+                <Egg className="w-2.5 h-2.5" />
+                Egg
+              </button>
+              <button
+                onClick={() => { handleInteraction(); setDietaryMode('non-veg'); }}
+                className={cn(
+                  "flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium transition-all flex-shrink-0",
+                  dietaryMode === 'non-veg'
+                    ? "bg-[#DC2626] text-white"
+                    : "bg-gray-100 text-gray-600"
+                )}
+                style={{ fontFamily: "Sweet Sans Pro" }}
+                data-testid="filter-dietary-nonveg"
+              >
+                <Drumstick className="w-2.5 h-2.5" />
+                Non-Veg
+              </button>
+
+              {/* Sort Dropdown */}
+              <Select value={sortOption} onValueChange={(value) => setSortOption(value as typeof sortOption)}>
+                <SelectTrigger
+                  className="w-auto h-6 px-2 text-[10px] bg-white border-gray-200 rounded-full gap-0.5 flex-shrink-0"
+                  style={{ fontFamily: "Sweet Sans Pro" }}
+                  data-testid="select-sort"
+                >
+                  <ArrowUpDown className="w-2.5 h-2.5" />
+                  <SelectValue placeholder="Sort" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="price-low">Price: Low → High</SelectItem>
+                  <SelectItem value="price-high">Price: High → Low</SelectItem>
+                  <SelectItem value="name-az">Name: A → Z</SelectItem>
+                  <SelectItem value="name-za">Name: Z → A</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Helper text explaining template behavior */}
+            <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-gray-700 text-[12px]" style={{ fontFamily: "Sweet Sans Pro" }}>
+                {currentDietaryTab === "veg" && parseInt(vegBoxes) > 0 && (
+                  <>Select {selectedPortions} items for your VEG box. This selection will apply to all {vegBoxes} VEG boxes.</>
+                )}
+                {currentDietaryTab === "egg" && parseInt(eggBoxes) > 0 && (
+                  <>Select {selectedPortions} items for your EGG box. This selection will apply to all {eggBoxes} EGG boxes.</>
+                )}
+                {currentDietaryTab === "non-veg" && parseInt(nonVegBoxes) > 0 && (
+                  <>Select {selectedPortions} items for your NON-VEG box. This selection will apply to all {nonVegBoxes} NON-VEG boxes.</>
+                )}
+              </p>
+            </div>
+
+            {/* Veg/Egg/Non-Veg Filter - Only show active dietary preferences */}
+            <div className="flex gap-3 mb-4 px-4 py-3 bg-gray-50 rounded-full border-2 border-gray-200">
+              {activeDietaryPreferences.includes("veg") && (
+                <button
+                  onClick={() => { setCurrentDietaryTab("veg"); setSelectedSlotIndex(0); }}
+                  className="flex items-center justify-center gap-2 px-6 py-3 rounded-full flex-1 transition-all text-[14px]"
+                  style={{
+                    backgroundColor: currentDietaryTab === "veg" ? "white" : "transparent",
+                    boxShadow: currentDietaryTab === "veg" ? "0 2px 4px rgba(0,0,0,0.1)" : "none"
+                  }}
+                  data-testid="filter-veg"
+                >
+                  <div
+                    className="w-4 h-4 border-2 flex items-center justify-center"
+                    style={{
+                      borderColor: "#1A9952",
+                      backgroundColor: "white"
+                    }}
+                  >
+                    <div
+                      className="w-2 h-2"
+                      style={{ backgroundColor: "#1A9952" }}
+                    />
+                  </div>
+                  <span className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                    Veg
+                  </span>
+                </button>
+              )}
+              {activeDietaryPreferences.includes("egg") && (
+                <button
+                  onClick={() => { setCurrentDietaryTab("egg"); setSelectedSlotIndex(0); }}
+                  className="flex items-center justify-center gap-2 px-6 py-3 rounded-full flex-1 transition-all"
+                  style={{
+                    backgroundColor: currentDietaryTab === "egg" ? "white" : "transparent",
+                    boxShadow: currentDietaryTab === "egg" ? "0 2px 4px rgba(0,0,0,0.1)" : "none"
+                  }}
+                  data-testid="filter-egg"
+                >
+                  <div
+                    className="w-4 h-4 border-2 flex items-center justify-center"
+                    style={{
+                      borderColor: "#F97316",
+                      backgroundColor: "white"
+                    }}
+                  >
+                    <div
+                      className="w-2 h-2"
+                      style={{ backgroundColor: "#F97316" }}
+                    />
+                  </div>
+                  <span className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                    Egg
+                  </span>
+                </button>
+              )}
+              {activeDietaryPreferences.includes("non-veg") && (
+                <button
+                  onClick={() => { setCurrentDietaryTab("non-veg"); setSelectedSlotIndex(0); }}
+                  className="flex items-center justify-center gap-2 px-6 py-3 rounded-full flex-1 transition-all"
+                  style={{
+                    backgroundColor: currentDietaryTab === "non-veg" ? "white" : "transparent",
+                    boxShadow: currentDietaryTab === "non-veg" ? "0 2px 4px rgba(0,0,0,0.1)" : "none"
+                  }}
+                  data-testid="filter-non-veg"
+                >
+                  <div
+                    className="w-4 h-4 border-2 flex items-center justify-center"
+                    style={{
+                      borderColor: "#DC2626",
+                      backgroundColor: "white"
+                    }}
+                  >
+                    <div
+                      className="w-2 h-2"
+                      style={{ backgroundColor: "#DC2626" }}
+                    />
+                  </div>
+                  <span className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                    Non Veg
+                  </span>
+                </button>
+              )}
+            </div>
+
+            {/* Item Selection Slots - Dynamic based on current dietary tab */}
+            <div className="flex flex-row gap-3 mb-6 overflow-x-auto pb-2">
+              {currentPlateSelections.map((selection, idx) => {
+                const isActive = idx === selectedSlotIndex;
+                const isFilled = selection.itemId !== null;
+                const foodType = selection.item?.type;
+                const typeColor = foodType === "veg" ? "#1A9952" : foodType === "egg" ? "#F97316" : "#DC2626";
+
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => handleSlotClick(idx)}
+                    className="flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all hover-elevate active-elevate-2 flex-shrink-0"
+                    style={{
+                      borderColor: isActive ? "#1A9952" : isFilled ? "#E5E7EB" : "#D1D5DB",
+                      backgroundColor: isFilled ? "white" : isActive ? "#F0FDF4" : "white",
+                      boxShadow: isActive ? "0 2px 8px rgba(26, 153, 82, 0.2)" : "none",
+                      minWidth: "140px"
+                    }}
+                    data-testid={`slot-item-${idx + 1}`}
+                  >
+                    <div
+                      className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
+                      style={{ backgroundColor: isFilled ? "#F3F4F6" : "#E5E7EB" }}
+                    >
+                      {isFilled ? (
+                        <div
+                          className="w-4 h-4 border-2 flex items-center justify-center"
+                          style={{
+                            borderColor: typeColor,
+                            backgroundColor: "white"
+                          }}
+                        >
+                          <div
+                            className="w-2 h-2"
+                            style={{ backgroundColor: typeColor }}
+                          />
+                        </div>
+                      ) : (
+                        <Package className="w-6 h-6 text-gray-400" />
+                      )}
+                    </div>
+                    <div className="flex flex-col items-center text-center">
+                      <span className="text-xs font-semibold" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                        {isFilled ? selection.item?.name : `Item ${idx + 1}`}
+                      </span>
+                      {isFilled && selection.item && (
+                        <div className="flex items-center gap-1 mt-1">
+                          <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                          <span className="text-[9px] sm:text-[10px] text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
+                            {selection.item.rating}
+                          </span>
+                        </div>
+                      )}
+                      {!isFilled && isActive && (
+                        <span className="text-[9px] sm:text-[10px] text-gray-500" style={{ fontFamily: "Sweet Sans Pro" }}>
+                          Select below
+                        </span>
+                      )}
+                      {!isFilled && !isActive && (
+                        <span className="text-[9px] sm:text-[10px] text-gray-400" style={{ fontFamily: "Sweet Sans Pro" }}>
+                          0/1
+                        </span>
+                      )}
+                    </div>
+                    {isFilled && (
+                      <Check className="w-4 h-4 flex-shrink-0 absolute top-2 right-2" style={{ color: "#1A9952" }} />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* CategoryPage-style Layout */}
+            <div className="flex gap-0 flex-1 w-full max-w-full">
+              {/* Left Sidebar - Category Filters (Starters, Sides, Mains, etc.) - Sticky with internal scroll */}
+              <aside className="w-20 md:w-24 border-r bg-card/50 backdrop-blur-sm flex-shrink-0 sticky self-start" style={{ top: '244px', maxHeight: 'calc(100vh - 244px)', overflowY: 'auto' }}>
+                <div className="flex flex-col py-3 pb-32">
+                  {/* Always show "All" option */}
+                  <button
+                    onClick={() => { handleInteraction(); setSelectedCategory('all'); setSelectedDishType('all'); }}
+                    className={cn(
+                      "flex flex-col items-center gap-2 py-4 px-2 transition-all relative",
+                      selectedCategory === 'all'
+                        ? "bg-primary/10 before:absolute before:left-0 before:top-3 before:bottom-3 before:w-1.5 before:bg-primary before:rounded-r"
+                        : "hover-elevate"
+                    )}
+                    data-testid="filter-category-all"
+                  >
+                    <div className={cn(
+                      "relative w-12 h-12 md:w-14 md:h-14 rounded-full overflow-hidden border-2 transition-all flex items-center justify-center",
+                      selectedCategory === 'all'
+                        ? "border-primary shadow-lg scale-105 bg-primary/20"
+                        : "border-border bg-card"
+                    )}>
+                      <LayoutGrid className={cn(
+                        "w-8 h-8 md:w-10 md:h-10",
+                        selectedCategory === 'all' ? "text-primary" : "text-muted-foreground"
+                      )} />
+                    </div>
+                    <div className="text-center w-full px-1">
+                      <span className={cn(
+                        "text-xs md:text-sm font-semibold block line-clamp-1 leading-tight",
+                        selectedCategory === 'all' ? "text-primary" : "text-foreground"
+                      )}>
+                        All
+                      </span>
+                    </div>
+                  </button>
+
+                  {/* Show category options (Starters, Sides, Mains, etc.) */}
+                  {categories.map((cat) => (
+                    <button
+                      key={cat.id}
+                      onClick={() => { handleInteraction(); setSelectedCategory(cat.id); setSelectedDishType('all'); }}
+                      className={cn(
+                        "flex flex-col items-center gap-2 py-4 px-2 transition-all relative",
+                        selectedCategory === cat.id
+                          ? "bg-primary/10 before:absolute before:left-0 before:top-3 before:bottom-3 before:w-1.5 before:bg-primary before:rounded-r"
+                          : "hover-elevate"
+                      )}
+                      data-testid={`filter-category-${cat.id}`}
+                    >
+                      <div className={cn(
+                        "relative w-12 h-12 md:w-14 md:h-14 rounded-full overflow-hidden border-2 transition-all",
+                        selectedCategory === cat.id
+                          ? "border-primary shadow-lg scale-105"
+                          : "border-border"
+                      )}>
+                        <img
+                          src={getCategoryImageUrl(cat.id)}
+                          alt={cat.name}
+                          className="w-full h-full object-cover"
+                        />
+                        {selectedCategory === cat.id && (
+                          <div className="absolute inset-0 bg-gradient-to-t from-primary/30 to-transparent pointer-events-none" />
+                        )}
+                      </div>
+                      <div className="text-center w-full px-1">
+                        <span className={cn(
+                          "text-xs md:text-sm font-semibold block line-clamp-2 leading-tight",
+                          selectedCategory === cat.id ? "text-primary" : "text-foreground"
+                        )}>
+                          {cat.name}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </aside>
+
+              {/* Right Content - Dishes Grid */}
+              <div className="flex-1 px-3 md:px-4 py-4 md:py-6 min-w-0 overflow-y-auto overflow-x-hidden pb-20 md:pb-6">
+                {/* Horizontal Dish Type Tabs - Sticky (65's, Chilli, Fry, etc.) - Only show when there are dish types */}
+                {dishTypes.length > 0 && (
+                  <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm pb-3 mb-2 -mx-3 md:-mx-4 px-3 md:px-4" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+                    <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide px-1 pt-2">
+                      {/* Dish type options (65's, Chilli, Fry, etc.) - Compact pill design */}
+                      {dishTypes.map((dishType) => {
+                        return (
+                          <button
+                            key={dishType}
+                            onClick={() => { handleInteraction(); setSelectedDishType(dishType); }}
+                            className={cn(
+                              "flex items-center px-3 py-1.5 border transition-all flex-shrink-0",
+                              selectedDishType === dishType
+                                ? "border-[#1A9952] bg-white shadow-sm"
+                                : "border-gray-200 bg-white hover:border-gray-300"
+                            )}
+                            style={{ borderRadius: '10px' }}
+                            data-testid={`tab-dishtype-${dishType.toLowerCase()}`}
+                          >
+                            <span className={cn(
+                              "text-xs md:text-sm font-semibold whitespace-nowrap",
+                              selectedDishType === dishType ? "text-primary" : "text-foreground"
+                            )}>
+                              {dishType}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                <div className="mb-4">
+                  <h2 className="text-xl font-bold font-serif" data-testid="text-section-title">
+                    {categories.find(c => c.id === selectedCategory)?.name || 'All Categories'}
+                  </h2>
+                </div>
+
+                {isLoadingDishes ? (
+                  <div className="text-center py-12">
+                    <p className="text-muted-foreground">Loading dishes...</p>
+                  </div>
+                ) : filteredItems.length === 0 ? (
+                  <div className="text-center py-12">
+                    <p className="text-muted-foreground">No dishes match the selected filters</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {filteredItems.map((item) => {
+                      const currentSelections = getCurrentPlateSelections();
+                      const isSelected = currentSelections.some(sel => sel.itemId === item.id);
+                      const dish = dishes.find(d => d.id === item.id);
+
+                      return (
+                        <Card
+                          key={item.id}
+                          className={cn(
+                            "overflow-hidden hover-elevate group",
+                            isSelected && "ring-2 ring-primary"
+                          )}
+                          data-testid={`card-dish-${item.id}`}
+                        >
+                          <div
+                            className="relative h-40 md:h-48 overflow-hidden cursor-pointer"
+                            onClick={() => { handleInteraction(); if (dish) openDishDetail(dish); }}
+                            data-testid={`image-dish-${item.id}`}
+                          >
+                            <LazyImage
+                              src={dish ? getDishImage(dish) : item.image || idliImage1}
+                              alt={item.name}
+                              containerClassName="w-full h-full"
+                              className="transition-transform duration-500 group-hover:scale-110"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                            {isSelected && (
+                              <div className="absolute top-2 right-2 z-10">
+                                <div className="w-6 h-6 bg-[#1A9952] rounded-full flex items-center justify-center">
+                                  <Check className="w-4 h-4 text-white" />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          <div className="p-3 md:p-4 flex flex-col h-[140px]">
+                            <h3 className="font-bold text-sm md:text-base line-clamp-2 min-h-[40px] mb-2" data-testid={`text-dish-name-${item.id}`}>
+                              {item.name}
+                            </h3>
+                            <div className="flex items-center gap-1 mb-2">
+                              <span className="text-primary font-bold text-lg" data-testid={`text-dish-price-${item.id}`}>
+                                ₹{item.price.toFixed(0)}
+                              </span>
+                              <span className="text-[10px] text-gray-500" style={{ fontFamily: "Sweet Sans Pro" }}>per serve</span>
+                            </div>
+                            <div className="mt-auto">
+                              <Button
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleInteraction();
+                                  handleItemSelection(item);
+                                }}
+                                variant={isSelected ? "secondary" : "default"}
+                                className="w-full rounded-full px-4"
+                                data-testid={`button-add-${item.id}`}
+                              >
+                                {isSelected ? "SELECTED" : "ADD"}
+                              </Button>
+                            </div>
+                          </div>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Step 5: Cart Details */}
+        {currentStep === 5 && (
+          <div className="pb-4">
+            {/* Sticky Cart Total Bar Section - below back navigation (top: 40px) */}
+            <div
+              className="sticky z-40 bg-white border-b border-gray-200 -mx-4 px-4 py-3 mb-4"
+              style={{
+                boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+                top: "40px"
+              }}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="font-bold text-base sm:text-lg" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                    Cart Details
+                  </h2>
+                  <p className="text-xs text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
+                    For a {selectedPortions} Portion MealBox
+                  </p>
+                </div>
+                <button
+                  onClick={() => setCurrentStep(6)}
+                  className="px-3 sm:px-4 py-2 rounded-lg flex items-center gap-2 hover-elevate active-elevate-2 transition-all"
+                  style={{ backgroundColor: "#1A9952" }}
+                  data-testid="button-proceed-cart"
+                >
+                  <span className="text-white font-bold text-sm sm:text-base" style={{ fontFamily: "Sweet Sans Pro" }}>
+                    ₹{(() => {
+                      const vegCount = parseInt(vegBoxes) || 0;
+                      const eggCount = parseInt(eggBoxes) || 0;
+                      const nonVegCount = parseInt(nonVegBoxes) || 0;
+
+                      // Calculate total for each dietary type separately
+                      const vegTotal = vegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * vegCount;
+                      const eggTotal = eggPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * eggCount;
+                      const nonVegTotal = nonVegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * nonVegCount;
+
+                      const subtotal = vegTotal + eggTotal + nonVegTotal;
+                      const packagingFee = Math.round(subtotal * 0.06);
+                      const baseDeliveryCharges = 500;
+                      const deliveryCharges = appliedCoupon?.isFreeDelivery ? 0 : baseDeliveryCharges;
+                      const gst = Math.round(subtotal * 0.05);
+                      const discount = appliedCoupon?.isFreeDelivery ? 0 : (appliedCoupon?.discount || 0);
+                      const grandTotal = subtotal + packagingFee + deliveryCharges + gst - discount;
+                      return grandTotal.toLocaleString('en-IN');
+                    })()}
+                  </span>
+                  <ChevronRight className="w-4 h-4 text-white" />
+                </button>
+              </div>
+            </div>
+
+            {/* Receipt Container */}
+            <div
+              className="relative bg-white rounded-lg p-4 sm:p-6"
+              style={{
+                backgroundImage: `
+                  repeating-linear-gradient(
+                    0deg,
+                    transparent,
+                    transparent 20px,
+                    rgba(0,0,0,0.03) 20px,
+                    rgba(0,0,0,0.03) 21px
+                  )
+                `,
+                boxShadow: "0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06)"
+              }}
+            >
+              {/* Receipt Header */}
+              <div className="text-center mb-6 pb-4 border-b-2 border-dashed border-gray-300">
+                <h3 className="text-lg font-bold mb-1" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                  ORDER SUMMARY
+                </h3>
+                <p className="text-xs text-gray-500" style={{ fontFamily: "Sweet Sans Pro" }}>
+                  {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </p>
+              </div>
+
+              {/* Veg Section */}
+              {parseInt(vegBoxes) > 0 && vegPlateSelections.length > 0 && (
+                <div className="mb-6">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div
+                      className="w-4 h-4 border-2 flex items-center justify-center"
+                      style={{ borderColor: "#1A9952", backgroundColor: "white" }}
+                    >
+                      <div className="w-2 h-2" style={{ backgroundColor: "#1A9952" }} />
+                    </div>
+                    <span className="font-semibold text-sm sm:text-base" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                      Veg
+                    </span>
+                    <span className="font-bold text-sm sm:text-base ml-auto" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                      ×{vegBoxes}
+                    </span>
+                  </div>
+
+                  {/* Veg Items */}
+                  <div className="space-y-3 mb-3">
+                    {vegPlateSelections.map((selection, index) => (
+                      <div key={index} className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
+                          <LazyImage
+                            src={selection.item?.image || "/images/placeholder.jpg"}
+                            alt={selection.item?.name || "Dish"}
+                            containerClassName="w-full h-full"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-xs sm:text-sm truncate" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                            {selection.item?.name || "Item"}
+                          </p>
+                          <p className="text-[10px] sm:text-xs text-gray-500" style={{ fontFamily: "Sweet Sans Pro" }}>
+                            Item {index + 1}
+                          </p>
+                        </div>
+                        <span className="font-semibold text-xs sm:text-sm flex-shrink-0" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                          ₹{selection.item?.price || 0}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Total per MealBox */}
+                  <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg mb-2">
+                    <div className="w-12 h-12 rounded-lg bg-white flex items-center justify-center">
+                      <Package className="w-6 h-6 text-green-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                        Total
+                      </p>
+                      <p className="text-xs text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
+                        per MealBox
+                      </p>
+                    </div>
+                    <span className="font-bold text-base" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                      ₹{vegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0)}
+                    </span>
+                  </div>
+
+                  {/* Total for All Veg MealBoxes */}
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <p className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                        Total
+                      </p>
+                      <span className="font-bold text-lg" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                        ₹{(vegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * parseInt(vegBoxes)).toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
+                      For {vegBoxes} Veg MealBoxes
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Egg Section */}
+              {parseInt(eggBoxes) > 0 && eggPlateSelections.length > 0 && (
+                <div className="mb-6">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div
+                      className="w-4 h-4 border-2 flex items-center justify-center"
+                      style={{ borderColor: "#F97316", backgroundColor: "white" }}
+                    >
+                      <div className="w-2 h-2" style={{ backgroundColor: "#F97316" }} />
+                    </div>
+                    <span className="font-semibold text-sm sm:text-base" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                      Egg
+                    </span>
+                    <span className="font-bold text-sm sm:text-base ml-auto" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                      ×{eggBoxes}
+                    </span>
+                  </div>
+
+                  {/* Egg Items */}
+                  <div className="space-y-3 mb-3">
+                    {eggPlateSelections.map((selection, index) => (
+                      <div key={index} className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
+                          <LazyImage
+                            src={selection.item?.image || "/images/placeholder.jpg"}
+                            alt={selection.item?.name || "Dish"}
+                            containerClassName="w-full h-full"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-xs sm:text-sm truncate" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                            {selection.item?.name || "Item"}
+                          </p>
+                          <p className="text-[10px] sm:text-xs text-gray-500" style={{ fontFamily: "Sweet Sans Pro" }}>
+                            Item {index + 1}
+                          </p>
+                        </div>
+                        <span className="font-semibold text-xs sm:text-sm flex-shrink-0" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                          ₹{selection.item?.price || 0}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Total per MealBox */}
+                  <div className="flex items-center gap-3 p-3 bg-orange-50 rounded-lg mb-2">
+                    <div className="w-12 h-12 rounded-lg bg-white flex items-center justify-center">
+                      <Package className="w-6 h-6 text-orange-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                        Total
+                      </p>
+                      <p className="text-xs text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
+                        per MealBox
+                      </p>
+                    </div>
+                    <span className="font-bold text-base" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                      ₹{eggPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0)}
+                    </span>
+                  </div>
+
+                  {/* Total for All Egg MealBoxes */}
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <p className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                        Total
+                      </p>
+                      <span className="font-bold text-lg" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                        ₹{(eggPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * parseInt(eggBoxes)).toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
+                      For {eggBoxes} Egg MealBoxes
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Non-Veg Section */}
+              {parseInt(nonVegBoxes) > 0 && nonVegPlateSelections.length > 0 && (
+                <div className="mb-6">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div
+                      className="w-4 h-4 border-2 flex items-center justify-center"
+                      style={{ borderColor: "#DC2626", backgroundColor: "white" }}
+                    >
+                      <div className="w-2 h-2" style={{ backgroundColor: "#DC2626" }} />
+                    </div>
+                    <span className="font-semibold text-sm sm:text-base" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                      Non-Veg
+                    </span>
+                    <span className="font-bold text-sm sm:text-base ml-auto" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                      ×{nonVegBoxes}
+                    </span>
+                  </div>
+
+                  {/* Non-Veg Items */}
+                  <div className="space-y-3 mb-3">
+                    {nonVegPlateSelections.map((selection, index) => (
+                      <div key={index} className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
+                          <LazyImage
+                            src={selection.item?.image || "/images/placeholder.jpg"}
+                            alt={selection.item?.name || "Dish"}
+                            containerClassName="w-full h-full"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-xs sm:text-sm truncate" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                            {selection.item?.name || "Item"}
+                          </p>
+                          <p className="text-[10px] sm:text-xs text-gray-500" style={{ fontFamily: "Sweet Sans Pro" }}>
+                            Item {index + 1}
+                          </p>
+                        </div>
+                        <span className="font-semibold text-xs sm:text-sm flex-shrink-0" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                          ₹{selection.item?.price || 0}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Total per MealBox */}
+                  <div className="flex items-center gap-3 p-3 bg-red-50 rounded-lg mb-2">
+                    <div className="w-12 h-12 rounded-lg bg-white flex items-center justify-center">
+                      <Package className="w-6 h-6 text-red-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                        Total
+                      </p>
+                      <p className="text-xs text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
+                        per MealBox
+                      </p>
+                    </div>
+                    <span className="font-bold text-base" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                      ₹{nonVegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0)}
+                    </span>
+                  </div>
+
+                  {/* Total for All Non-Veg MealBoxes */}
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <p className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                        Total
+                      </p>
+                      <span className="font-bold text-lg" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                        ₹{(nonVegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * parseInt(nonVegBoxes)).toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
+                      For {nonVegBoxes} Non-Veg MealBoxes
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Total Amount Section */}
+              <div className="border-t-2 border-b-2 border-gray-200 py-4 mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-semibold text-base" style={{ fontFamily: "Sweet Sans Pro", color: "#1A9952" }}>
+                    Total Amount
+                  </span>
+                  <span className="font-bold text-lg" style={{ fontFamily: "Sweet Sans Pro", color: "#1A9952" }}>
+                    ₹{(() => {
+                      const vegCount = parseInt(vegBoxes) || 0;
+                      const eggCount = parseInt(eggBoxes) || 0;
+                      const nonVegCount = parseInt(nonVegBoxes) || 0;
+                      const vegTotal = vegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * vegCount;
+                      const eggTotal = eggPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * eggCount;
+                      const nonVegTotal = nonVegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * nonVegCount;
+                      return (vegTotal + eggTotal + nonVegTotal).toLocaleString('en-IN');
+                    })()}
+                  </span>
+                </div>
+              </div>
+
+              {/* Fees Breakdown */}
+              <div className="space-y-3 mb-6">
+                {(() => {
+                  const vegCount = parseInt(vegBoxes) || 0;
+                  const eggCount = parseInt(eggBoxes) || 0;
+                  const nonVegCount = parseInt(nonVegBoxes) || 0;
+                  const vegTotal = vegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * vegCount;
+                  const eggTotal = eggPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * eggCount;
+                  const nonVegTotal = nonVegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * nonVegCount;
+                  const subtotal = vegTotal + eggTotal + nonVegTotal;
+                  const gstAmount = Math.round(subtotal * 0.18);
+                  const packagingFee = Math.round(subtotal * 0.06);
+                  const baseDeliveryCharges = 500;
+                  const deliveryCharges = appliedCoupon?.isFreeDelivery ? 0 : baseDeliveryCharges;
+                  const gst = Math.round(subtotal * 0.05);
+                  const discount = appliedCoupon?.isFreeDelivery ? 0 : (appliedCoupon?.discount || 0);
+                  
+                  return (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-700" style={{ fontFamily: "Sweet Sans Pro" }}>
+                          GST
+                        </span>
+                        <span className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                          ₹{gstAmount.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-700" style={{ fontFamily: "Sweet Sans Pro" }}>
+                          Packaging (6%)
+                        </span>
+                        <span className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                          6%
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-700" style={{ fontFamily: "Sweet Sans Pro" }}>
+                          Delivery Charges
+                        </span>
+                        <span className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: appliedCoupon?.isFreeDelivery ? "#1A9952" : "#06352A" }}>
+                          {appliedCoupon?.isFreeDelivery ? (
+                            <><s className="text-gray-400 mr-1">₹{baseDeliveryCharges}</s> FREE</>
+                          ) : (
+                            `₹${deliveryCharges.toLocaleString('en-IN')}`
+                          )}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-700" style={{ fontFamily: "Sweet Sans Pro" }}>
+                          GST (5%)
+                        </span>
+                        <span className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                          5%
+                        </span>
+                      </div>
+                      {discount > 0 && (
+                        <div className="flex items-center justify-between text-green-600">
+                          <span className="text-sm" style={{ fontFamily: "Sweet Sans Pro" }}>
+                            Discount ({appliedCoupon?.code})
+                          </span>
+                          <span className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro" }}>
+                            -₹{discount.toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+
+              {/* Coupon Input */}
+              <div className="mb-6">
+                <label className="block text-sm font-semibold mb-2" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                  Coupons & Offers
+                </label>
+                <CouponInput
+                  subtotal={(() => {
+                    const vegCount = parseInt(vegBoxes) || 0;
+                    const eggCount = parseInt(eggBoxes) || 0;
+                    const nonVegCount = parseInt(nonVegBoxes) || 0;
+                    const vegTotal = vegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * vegCount;
+                    const eggTotal = eggPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * eggCount;
+                    const nonVegTotal = nonVegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * nonVegCount;
+                    return vegTotal + eggTotal + nonVegTotal;
+                  })()}
+                  orderType="mealbox"
+                  deliveryFee={500}
+                  onCouponApply={handleCouponApply}
+                  onCouponRemove={handleCouponRemove}
+                  appliedCoupon={appliedCoupon}
+                />
+              </div>
+
+              {/* Grand Total */}
+              <div className="bg-green-50 p-4 rounded-lg mb-6">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-lg" style={{ fontFamily: "Sweet Sans Pro", color: "#1A9952" }}>
+                    Grand Total
+                  </span>
+                  <span className="font-bold text-2xl" style={{ fontFamily: "Sweet Sans Pro", color: "#1A9952" }}>
+                    ₹{(() => {
+                      const vegCount = parseInt(vegBoxes) || 0;
+                      const eggCount = parseInt(eggBoxes) || 0;
+                      const nonVegCount = parseInt(nonVegBoxes) || 0;
+                      const vegTotal = vegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * vegCount;
+                      const eggTotal = eggPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * eggCount;
+                      const nonVegTotal = nonVegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * nonVegCount;
+                      const subtotal = vegTotal + eggTotal + nonVegTotal;
+                      const packagingFee = Math.round(subtotal * 0.06);
+                      const baseDeliveryCharges = 500;
+                      const deliveryCharges = appliedCoupon?.isFreeDelivery ? 0 : baseDeliveryCharges;
+                      const gst = Math.round(subtotal * 0.05);
+                      const discount = appliedCoupon?.isFreeDelivery ? 0 : (appliedCoupon?.discount || 0);
+                      return (subtotal + packagingFee + deliveryCharges + gst - discount).toLocaleString('en-IN');
+                    })()}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Select Add-Ons Button */}
+            <Button
+              onClick={() => {
+                console.log("Select Add-Ons clicked, setting step to 6");
+                isRestoringRef.current = false; // Ensure we're not in restore mode
+                setCurrentStep(6);
+              }}
+              className="w-full mt-4 py-6 text-lg font-semibold border-0 flex items-center justify-between"
+              style={{
+                fontFamily: "Sweet Sans Pro",
+                backgroundColor: "#1A9952",
+                color: "white",
+                borderRadius: "10px"
+              }}
+              data-testid="button-select-addons"
+            >
+              <span>Select Add-Ons</span>
+              <span className="flex items-center gap-2">
+                ₹{(() => {
+                  const vegCount = parseInt(vegBoxes) || 0;
+                  const eggCount = parseInt(eggBoxes) || 0;
+                  const nonVegCount = parseInt(nonVegBoxes) || 0;
+                  const vegTotal = vegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * vegCount;
+                  const eggTotal = eggPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * eggCount;
+                  const nonVegTotal = nonVegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * nonVegCount;
+                  const subtotal = vegTotal + eggTotal + nonVegTotal;
+                  const packagingFee = Math.round(subtotal * 0.06);
+                  const deliveryCharges = 500;
+                  const gst = Math.round(subtotal * 0.05);
+                  return (subtotal + packagingFee + deliveryCharges + gst).toLocaleString('en-IN');
+                })()}
+                <ChevronRight className="w-5 h-5" />
+              </span>
+            </Button>
+          </div>
+        )}
+
+        {/* Step 6: Add-Ons */}
+        {currentStep === 6 && (
+          <div className="pb-4" data-testid="step-6-addons">
+            {/* Progress Bar */}
+            <div className="mb-6">
+              <div className="flex gap-2">
+                <div className="h-1.5 flex-1 rounded-full" style={{ backgroundColor: "#1A9952" }} />
+                <div className="h-1.5 flex-1 rounded-full" style={{ backgroundColor: "#1A9952" }} />
+              </div>
+            </div>
+
+            {/* Header with Skip Button */}
+            <div className="flex items-start justify-between mb-6">
+              <div>
+                <h2 className="text-xl sm:text-2xl font-bold mb-2" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                  Select Add-Ons
+                </h2>
+                <p className="text-sm text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
+                  For a {selectedPortions} Portion MealBox
+                </p>
+              </div>
+              <Button
+                onClick={() => setCurrentStep(7)}
+                variant="ghost"
+                className="text-sm font-semibold px-4 py-2"
+                style={{ fontFamily: "Sweet Sans Pro", color: "#1A9952" }}
+                data-testid="button-skip-addons"
+              >
+                SKIP →
+              </Button>
+            </div>
+
+            {/* Add-Ons List */}
+            <div className="space-y-4 mb-6">
+              {/* Live Cooking Counters */}
+              <div
+                className="flex items-start gap-4 p-4 border-2 rounded-lg"
+                style={{
+                  borderColor: selectedAddOns.includes('cooking') ? "#1A9952" : "#E5E7EB",
+                  backgroundColor: selectedAddOns.includes('cooking') ? "#F0F9F4" : "white"
+                }}
+              >
+                <img src={chefHatIcon} alt="Chef" className="w-12 h-12 object-contain flex-shrink-0" />
+                <div className="flex-1">
+                  <h3 className="font-semibold text-base mb-1" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                    Live Cooking Counters
+                  </h3>
+                  <p className="text-xs text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
+                    Professional chefs prepare food live at your event location, offering a unique culinary experience.
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setSelectedAddOns(prev =>
+                      prev.includes('cooking')
+                        ? prev.filter(id => id !== 'cooking')
+                        : [...prev, 'cooking']
+                    );
+                  }}
+                  className="w-6 h-6 rounded border-2 flex items-center justify-center flex-shrink-0"
+                  style={{
+                    borderColor: "#1A9952",
+                    backgroundColor: selectedAddOns.includes('cooking') ? "#1A9952" : "white"
+                  }}
+                  data-testid="addon-cooking"
+                >
+                  {selectedAddOns.includes('cooking') && <Check className="w-4 h-4 text-white" />}
+                </button>
+              </div>
+
+              {/* Serving Staff */}
+              <div
+                className="flex items-start gap-4 p-4 border-2 rounded-lg"
+                style={{
+                  borderColor: selectedAddOns.includes('staff') ? "#1A9952" : "#E5E7EB",
+                  backgroundColor: selectedAddOns.includes('staff') ? "#F0F9F4" : "white"
+                }}
+              >
+                <img src={servingStaffIcon} alt="Staff" className="w-12 h-12 object-contain flex-shrink-0" />
+                <div className="flex-1">
+                  <h3 className="font-semibold text-base mb-1" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                    Serving Staff
+                  </h3>
+                  <p className="text-xs text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
+                    Professional serving staff to help set up, serve, and manage your food during the event.
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setSelectedAddOns(prev =>
+                      prev.includes('staff')
+                        ? prev.filter(id => id !== 'staff')
+                        : [...prev, 'staff']
+                    );
+                  }}
+                  className="w-6 h-6 rounded border-2 flex items-center justify-center flex-shrink-0"
+                  style={{
+                    borderColor: "#1A9952",
+                    backgroundColor: selectedAddOns.includes('staff') ? "#1A9952" : "white"
+                  }}
+                  data-testid="addon-staff"
+                >
+                  {selectedAddOns.includes('staff') && <Check className="w-4 h-4 text-white" />}
+                </button>
+              </div>
+
+              {/* Decor */}
+              <div
+                className="flex items-start gap-4 p-4 border-2 rounded-lg"
+                style={{
+                  borderColor: selectedAddOns.includes('decor') ? "#1A9952" : "#E5E7EB",
+                  backgroundColor: selectedAddOns.includes('decor') ? "#F0F9F4" : "white"
+                }}
+              >
+                <img src={decorIcon} alt="Decor" className="w-12 h-12 object-contain flex-shrink-0" />
+                <div className="flex-1">
+                  <h3 className="font-semibold text-base mb-1" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                    Decor
+                  </h3>
+                  <p className="text-xs text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
+                    Transform your event space with professional theme-based decoration.
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setSelectedAddOns(prev =>
+                      prev.includes('decor')
+                        ? prev.filter(id => id !== 'decor')
+                        : [...prev, 'decor']
+                    );
+                  }}
+                  className="w-6 h-6 rounded border-2 flex items-center justify-center flex-shrink-0"
+                  style={{
+                    borderColor: "#1A9952",
+                    backgroundColor: selectedAddOns.includes('decor') ? "#1A9952" : "white"
+                  }}
+                  data-testid="addon-decor"
+                >
+                  {selectedAddOns.includes('decor') && <Check className="w-4 h-4 text-white" />}
+                </button>
+              </div>
+
+              {/* Tableware & Crockery */}
+              <div
+                className="flex items-start gap-4 p-4 border-2 rounded-lg"
+                style={{
+                  borderColor: selectedAddOns.includes('tableware') ? "#1A9952" : "#E5E7EB",
+                  backgroundColor: selectedAddOns.includes('tableware') ? "#F0F9F4" : "white"
+                }}
+              >
+                <img src={tablewareIcon} alt="Tableware" className="w-12 h-12 object-contain flex-shrink-0" />
+                <div className="flex-1">
+                  <h3 className="font-semibold text-base mb-1" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                    Tableware & Crockery
+                  </h3>
+                  <p className="text-xs text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
+                    Premium biodegradable tableware and cutlery for a sustainable event.
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setSelectedAddOns(prev =>
+                      prev.includes('tableware')
+                        ? prev.filter(id => id !== 'tableware')
+                        : [...prev, 'tableware']
+                    );
+                  }}
+                  className="w-6 h-6 rounded border-2 flex items-center justify-center flex-shrink-0"
+                  style={{
+                    borderColor: "#1A9952",
+                    backgroundColor: selectedAddOns.includes('tableware') ? "#1A9952" : "white"
+                  }}
+                  data-testid="addon-tableware"
+                >
+                  {selectedAddOns.includes('tableware') && <Check className="w-4 h-4 text-white" />}
+                </button>
+              </div>
+
+              {/* Live Music */}
+              <div
+                className="flex items-start gap-4 p-4 border-2 rounded-lg"
+                style={{
+                  borderColor: selectedAddOns.includes('music') ? "#1A9952" : "#E5E7EB",
+                  backgroundColor: selectedAddOns.includes('music') ? "#F0F9F4" : "white"
+                }}
+              >
+                <img src={musicIcon} alt="Music" className="w-12 h-12 object-contain flex-shrink-0" />
+                <div className="flex-1">
+                  <h3 className="font-semibold text-base mb-1" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                    Live Music
+                  </h3>
+                  <p className="text-xs text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
+                    Music performance that entertains your guests.
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setSelectedAddOns(prev =>
+                      prev.includes('music')
+                        ? prev.filter(id => id !== 'music')
+                        : [...prev, 'music']
+                    );
+                  }}
+                  className="w-6 h-6 rounded border-2 flex items-center justify-center flex-shrink-0"
+                  style={{
+                    borderColor: "#1A9952",
+                    backgroundColor: selectedAddOns.includes('music') ? "#1A9952" : "white"
+                  }}
+                  data-testid="addon-music"
+                >
+                  {selectedAddOns.includes('music') && <Check className="w-4 h-4 text-white" />}
+                </button>
+              </div>
+
+              {/* Photography */}
+              <div
+                className="flex items-start gap-4 p-4 border-2 rounded-lg"
+                style={{
+                  borderColor: selectedAddOns.includes('photography') ? "#1A9952" : "#E5E7EB",
+                  backgroundColor: selectedAddOns.includes('photography') ? "#F0F9F4" : "white"
+                }}
+              >
+                <img src={cameraIcon} alt="Photography" className="w-12 h-12 object-contain flex-shrink-0" />
+                <div className="flex-1">
+                  <h3 className="font-semibold text-base mb-1" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                    Photography
+                  </h3>
+                  <p className="text-xs text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
+                    Professional photography to capture memories.
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setSelectedAddOns(prev =>
+                      prev.includes('photography')
+                        ? prev.filter(id => id !== 'photography')
+                        : [...prev, 'photography']
+                    );
+                  }}
+                  className="w-6 h-6 rounded border-2 flex items-center justify-center flex-shrink-0"
+                  style={{
+                    borderColor: "#1A9952",
+                    backgroundColor: selectedAddOns.includes('photography') ? "#1A9952" : "white"
+                  }}
+                  data-testid="addon-photography"
+                >
+                  {selectedAddOns.includes('photography') && <Check className="w-4 h-4 text-white" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Enter Delivery Details Button */}
+            <Button
+              onClick={() => setCurrentStep(7)}
+              className="w-full py-6 text-lg font-semibold border-0"
+              style={{
+                fontFamily: "Sweet Sans Pro",
+                backgroundColor: "#1A9952",
+                color: "white",
+                borderRadius: "10px"
+              }}
+              data-testid="button-enter-delivery-details"
+            >
+              Enter Delivery Details →
+            </Button>
+          </div>
+        )}
+
+        {/* Step 7: Proceed to Payment */}
+        {currentStep === 7 && (
+          <div className="pb-24">
+            {/* Header */}
+            <h2 className="text-xl sm:text-2xl font-bold mb-6" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+              Proceed to Payment
+            </h2>
+
+            {/* Total Amount Card */}
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6 flex items-center justify-between">
+              <span className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#1A9952" }}>
+                Total Amount to be Paid
+              </span>
+              <span className="font-bold text-xl" style={{ fontFamily: "Sweet Sans Pro", color: "#1A9952" }}>
+                ₹{(() => {
+                  const vegCount = parseInt(vegBoxes) || 0;
+                  const eggCount = parseInt(eggBoxes) || 0;
+                  const nonVegCount = parseInt(nonVegBoxes) || 0;
+                  const vegTotal = vegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * vegCount;
+                  const eggTotal = eggPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * eggCount;
+                  const nonVegTotal = nonVegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * nonVegCount;
+                  const subtotal = vegTotal + eggTotal + nonVegTotal;
+                  const packagingFee = Math.round(subtotal * 0.06);
+                  const baseDeliveryCharges = 500;
+                  const deliveryCharges = appliedCoupon?.isFreeDelivery ? 0 : baseDeliveryCharges;
+                  const gst = Math.round(subtotal * 0.05);
+                  const discount = appliedCoupon?.isFreeDelivery ? 0 : (appliedCoupon?.discount || 0);
+                  return (subtotal + packagingFee + deliveryCharges + gst - discount).toLocaleString('en-IN');
+                })()}
+              </span>
+            </div>
+
+            {/* Form */}
+            <div className="space-y-4 mb-6">
+              {/* When - Date Selection */}
+              <div className="bg-white rounded-xl p-4 border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-5 h-5 text-gray-500" />
+                    <span 
+                      className="font-medium text-gray-800"
+                      style={{ fontFamily: "Sweet Sans Pro" }}
+                    >
+                      When
+                    </span>
+                  </div>
+                  <input
+                    type="date"
+                    value={eventDate}
+                    onChange={(e) => setEventDate(e.target.value)}
+                    min={minDateTime.date}
+                    className="text-gray-700 bg-transparent border-0 focus:outline-none cursor-pointer"
+                    style={{ fontFamily: "Sweet Sans Pro" }}
+                    data-testid="input-event-date"
+                  />
+                </div>
+              </div>
+
+              {/* Delivery Time Selection */}
+              <DeliveryTimePicker
+                mealType="all"
+                value={eventTime}
+                onChange={setEventTime}
+                selectedDate={eventDate}
+              />
+
+              {/* Phone Number */}
+              <div>
+                <label className="block text-sm font-semibold mb-2" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                  Enter Your Phone Number
+                </label>
+                <input
+                  type="tel"
+                  placeholder="+91 98552 12375"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  style={{ fontFamily: "Sweet Sans Pro" }}
+                  data-testid="input-phone"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                />
+              </div>
+
+              {/* Email Address */}
+              <div>
+                <label className="block text-sm font-semibold mb-2" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                  Enter Your Email Address
+                </label>
+                <input
+                  type="email"
+                  placeholder="test@gmail.com"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  style={{ fontFamily: "Sweet Sans Pro" }}
+                  data-testid="input-email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+
+              {/* Choose Saved Address */}
+              <div>
+                <label className="block text-sm font-semibold mb-2" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                  Choose Saved Address (Optional)
+                </label>
+                <select
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  style={{ fontFamily: "Sweet Sans Pro", color: selectedAddressId ? "#06352A" : "#9CA3AF" }}
+                  data-testid="select-saved-address"
+                  value={selectedAddressId}
+                  onChange={(e) => handleSavedAddressChange(e.target.value)}
+                >
+                  <option value="">Select Address (Optional)</option>
+                  {savedAddresses.map((address) => (
+                    <option key={address.id} value={address.id}>
+                      {address.label} {address.isDefault ? "(Default)" : ""}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Show selected address details */}
+                {selectedAddress && (
+                  <div
+                    className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg"
+                    data-testid="selected-address-display"
+                  >
+                    <p className="text-sm font-semibold mb-1" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                      {selectedAddress.label}
+                    </p>
+                    <p className="text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#4B5563" }}>
+                      {selectedAddress.address}
+                      {selectedAddress.landmark && `, ${selectedAddress.landmark}`}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Use Current Location Button */}
+              <button
+                type="button"
+                onClick={getCurrentLocation}
+                disabled={isGettingLocation}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-50 border-2 border-dashed border-green-500 rounded-lg hover:bg-green-100 transition-colors disabled:opacity-50"
+                style={{ fontFamily: "Sweet Sans Pro" }}
+                data-testid="button-use-location"
+              >
+                <MapPin className="w-5 h-5 text-green-600" />
+                <span className="text-green-700 font-medium">
+                  {isGettingLocation ? "Getting Location..." : "Use Current Location"}
+                </span>
+              </button>
+
+              {/* Manual Address Entry - Only show when no saved address selected */}
+              {!isAddressFieldsDisabled && (
+                <>
+                  {/* Address Line 1 */}
+                  <div>
+                    <label className="block text-sm font-semibold mb-2" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                      Address Line 1
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Door No. 32, Jaya Prakash Nagar"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      style={{ fontFamily: "Sweet Sans Pro" }}
+                      data-testid="input-address-line1"
+                      value={addressLine1}
+                      onChange={(e) => setAddressLine1(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Address Line 2 */}
+                  <div>
+                    <label className="block text-sm font-semibold mb-2" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                      Address Line 2
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Near Metro Station, JP Nagar"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      style={{ fontFamily: "Sweet Sans Pro" }}
+                      data-testid="input-address-line2"
+                      value={addressLine2}
+                      onChange={(e) => setAddressLine2(e.target.value)}
+                    />
+                  </div>
+
+                  {/* City */}
+                  <div>
+                    <label className="block text-sm font-semibold mb-2" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                      City
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Bengaluru"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      style={{ fontFamily: "Sweet Sans Pro" }}
+                      data-testid="input-city"
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                    />
+                  </div>
+
+                  {/* State */}
+                  <div>
+                    <label className="block text-sm font-semibold mb-2" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                      State
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Karnataka"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      style={{ fontFamily: "Sweet Sans Pro" }}
+                      data-testid="input-state"
+                      value={addressState}
+                      onChange={(e) => setAddressState(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Pincode */}
+                  <div>
+                    <label className="block text-sm font-semibold mb-2" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                      Pincode
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="450003"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      style={{ fontFamily: "Sweet Sans Pro" }}
+                      data-testid="input-pincode"
+                      value={pincode}
+                      onChange={(e) => setPincode(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Save Address Checkbox */}
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={saveAddressForFuture}
+                      onChange={(e) => setSaveAddressForFuture(e.target.checked)}
+                      className="w-5 h-5 rounded border-2 border-gray-300"
+                      style={{ accentColor: "#1A9952" }}
+                      data-testid="checkbox-save-address"
+                    />
+                    <span className="text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                      Save Address for future use
+                    </span>
+                  </label>
+                </>
+              )}
+            </div>
+
+            {/* Select Payment Method Button */}
+            <Button
+              onClick={async () => {
+                try {
+                  setIsCreatingOrder(true);
+
+                  // Calculate totals
+                  const vegCount = parseInt(vegBoxes) || 0;
+                  const eggCount = parseInt(eggBoxes) || 0;
+                  const nonVegCount = parseInt(nonVegBoxes) || 0;
+                  const vegTotal = vegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * vegCount;
+                  const eggTotal = eggPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * eggCount;
+                  const nonVegTotal = nonVegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * nonVegCount;
+                  const subtotal = vegTotal + eggTotal + nonVegTotal;
+                  const packagingFee = Math.round(subtotal * 0.06);
+                  const baseDeliveryCharges = 500;
+                  const deliveryCharges = appliedCoupon?.isFreeDelivery ? 0 : baseDeliveryCharges;
+                  const gst = Math.round(subtotal * 0.05);
+                  const discount = appliedCoupon?.isFreeDelivery ? 0 : (appliedCoupon?.discount || 0);
+                  const total = subtotal + packagingFee + deliveryCharges + gst - discount;
+
+                  // Get form values - use state variables directly
+                  const deliveryDate = eventDate || null;
+                  const deliveryTime = eventTime || null;
+                  const selectedAddressId = (document.querySelector('[data-testid="select-saved-address"]') as HTMLSelectElement)?.value || "";
+
+                  // Check 12-hour minimum advance booking
+                  if (deliveryDate) {
+                    const selectedDateTime = new Date(`${deliveryDate}T${deliveryTime || '12:00'}`);
+                    const now = new Date();
+                    const hoursDiff = (selectedDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+                    
+                    if (hoursDiff < 12) {
+                      toast({
+                        title: "Invalid Date/Time",
+                        description: "Please select a date and time at least 12 hours from now.",
+                        variant: "destructive",
+                      });
+                      setIsCreatingOrder(false);
+                      return;
+                    }
+                  }
+
+                  // Validate addressId - only use if it's a valid UUID (not empty string or invalid value)
+                  let validAddressId: string | undefined = undefined;
+                  if (selectedAddressId && selectedAddressId.trim() !== "" && selectedAddressId !== "home" && selectedAddressId !== "office") {
+                    // Check if it's a valid UUID format
+                    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+                    if (uuidRegex.test(selectedAddressId)) {
+                      validAddressId = selectedAddressId;
+                    }
+                  }
+
+                  // Save address if checkbox is checked and manual address was entered
+                  if (saveAddressForFuture && !validAddressId && addressLine1) {
+                    try {
+                      const fullAddress = [addressLine1, addressLine2, city, addressState, pincode].filter(Boolean).join(', ');
+                      await addressService.create({
+                        label: "Saved Address",
+                        address: fullAddress,
+                        landmark: addressLine2 || undefined,
+                        isDefault: false,
+                      });
+                      toast({
+                        title: "Address Saved",
+                        description: "Your address has been saved for future use.",
+                      });
+                    } catch (err) {
+                      console.error("Failed to save address:", err);
+                    }
+                  }
+
+                  // Create order - use 60-min service if accessed from ExploreMenuPage (onNavigate passed)
+                  const isSixtyMinOrder = !!onNavigate;
+                  
+                  // Build delivery address text for 60-min orders
+                  let deliveryAddressText: string | undefined = undefined;
+                  if (isSixtyMinOrder && !validAddressId && addressLine1) {
+                    deliveryAddressText = [addressLine1, addressLine2, city, addressState, pincode].filter(Boolean).join(', ');
+                  }
+                  
+                  // Calculate delivery fee for order record (use existing baseDeliveryCharges from line 4944)
+                  const deliveryFeeCharged = appliedCoupon?.isFreeDelivery ? 0 : baseDeliveryCharges;
+                  const discountApplied = appliedCoupon?.isFreeDelivery 
+                    ? baseDeliveryCharges 
+                    : (appliedCoupon?.discount || 0);
+                  
+                  if (isSixtyMinOrder) {
+                    await sixtyMinMealboxOrderService.create({
+                      portions: `${selectedPortions}-portions`,
+                      mealPreference: mealPreference,
+                      selectedMealType: selectedMealType,
+                      vegBoxes: vegCount,
+                      eggBoxes: eggCount,
+                      nonVegBoxes: nonVegCount,
+                      vegPlateSelections: vegPlateSelections,
+                      eggPlateSelections: eggPlateSelections,
+                      nonVegPlateSelections: nonVegPlateSelections,
+                      selectedAddons: selectedAddOns,
+                      subtotal: subtotal,
+                      deliveryFee: deliveryFeeCharged,
+                      tax: gst,
+                      total: total,
+                      deliveryDate: deliveryDate || undefined,
+                      deliveryTime: deliveryTime || undefined,
+                      addressId: validAddressId,
+                      deliveryAddress: deliveryAddressText,
+                      couponId: appliedCoupon?.id || undefined,
+                      couponCode: appliedCoupon?.code || undefined,
+                      discountApplied: discountApplied > 0 ? discountApplied : undefined,
+                    });
+                  } else {
+                    await mealboxOrderService.create({
+                      portions: `${selectedPortions}-portions`,
+                      mealPreference: mealPreference,
+                      selectedMealType: selectedMealType,
+                      vegBoxes: vegCount,
+                      eggBoxes: eggCount,
+                      nonVegBoxes: nonVegCount,
+                      vegPlateSelections: vegPlateSelections,
+                      eggPlateSelections: eggPlateSelections,
+                      nonVegPlateSelections: nonVegPlateSelections,
+                      selectedAddons: selectedAddOns,
+                      subtotal: subtotal,
+                      deliveryFee: deliveryFeeCharged,
+                      tax: gst,
+                      total: total,
+                      deliveryDate: deliveryDate || undefined,
+                      deliveryTime: deliveryTime || undefined,
+                      addressId: validAddressId,
+                      couponId: appliedCoupon?.id || undefined,
+                      couponCode: appliedCoupon?.code || undefined,
+                      discountApplied: discountApplied > 0 ? discountApplied : undefined,
+                    });
+                  }
+
+                  // Clear mealbox progress when order is placed
+                  clearMealBoxProgress();
+
+                  toast({
+                    title: "Order Created!",
+                    description: "Your MealBox order has been placed successfully.",
+                  });
+
+                  navigate("/mealbox-thank-you");
+                } catch (error: any) {
+                  console.error("Error creating order:", error);
+                  toast({
+                    variant: "destructive",
+                    title: "Order Failed",
+                    description: error.message || "Failed to create order. Please try again.",
+                  });
+                } finally {
+                  setIsCreatingOrder(false);
+                }
+              }}
+              disabled={isCreatingOrder}
+              className="w-full py-6 text-lg font-semibold border-0 flex items-center justify-between"
+              style={{
+                fontFamily: "Sweet Sans Pro",
+                backgroundColor: "#1A9952",
+                color: "white",
+                borderRadius: "10px"
+              }}
+              data-testid="button-submit"
+            >
+              <span>Submit</span>
+              <span className="font-bold text-xl">
+                ₹{(() => {
+                  const vegCount = parseInt(vegBoxes) || 0;
+                  const eggCount = parseInt(eggBoxes) || 0;
+                  const nonVegCount = parseInt(nonVegBoxes) || 0;
+                  const vegTotal = vegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * vegCount;
+                  const eggTotal = eggPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * eggCount;
+                  const nonVegTotal = nonVegPlateSelections.reduce((sum, sel) => sum + (sel.item?.price || 0), 0) * nonVegCount;
+                  const subtotal = vegTotal + eggTotal + nonVegTotal;
+                  const packagingFee = Math.round(subtotal * 0.06);
+                  const baseDeliveryCharges = 500;
+                  const deliveryCharges = appliedCoupon?.isFreeDelivery ? 0 : baseDeliveryCharges;
+                  const gst = Math.round(subtotal * 0.05);
+                  const discount = appliedCoupon?.isFreeDelivery ? 0 : (appliedCoupon?.discount || 0);
+                  return (subtotal + packagingFee + deliveryCharges + gst - discount).toLocaleString('en-IN');
+                })()}
+              </span>
+            </Button>
+          </div>
+        )}
+      </div>
+      {/* Continue Order Banner */}
+      <ContinueOrderBanner />
+      {/* Floating Call Button */}
+      <a
+        href="tel:+917026644556"
+        className="fixed right-4 bottom-40 z-50 w-14 h-14 bg-[#1A9952] rounded-full flex items-center justify-center shadow-lg hover:bg-[#158043] transition-colors"
+        data-testid="button-call"
+        aria-label="Call us"
+      >
+        <Phone className="w-6 h-6 text-white" />
+      </a>
+      {/* Floating Bottom Navigation */}
+      <FloatingNav activeTab={activeTab} onTabChange={handleTabChange} />
+      
+      {/* Search Overlay */}
+      <SearchOverlay
+        isOpen={searchOverlayOpen}
+        onClose={() => setSearchOverlayOpen(false)}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        onSearch={(query) => {
+          setSearchQuery(query);
+          setSearchOverlayOpen(false);
+        }}
+        placeholder="Search for dishes..."
+      />
+    </div>
+    </PageWithLoader>
+  );
+}
+

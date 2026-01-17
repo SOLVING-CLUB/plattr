@@ -47,6 +47,11 @@ import BulkMealAddons from "@/pages/BulkMealAddons";
 import BulkMealDelivery from "@/pages/BulkMealDelivery";
 import BulkMealThankyouPage from "@/pages/BulkMealThankyouPage";
 import MealBoxThankyouPage from "@/pages/MealBoxThankyouPage";
+import SnackBoxPage from "@/pages/SnackBoxPage";
+import SnackBoxCart from "@/pages/SnackBoxCart";
+import SnackBoxAddons from "@/pages/SnackBoxAddons";
+import SnackBoxDelivery from "@/pages/SnackBoxDelivery";
+import SnackBoxThankYouPage from "@/pages/SnackBoxThankYouPage";
 import VerificationScreen from "@/pages/VerificationScreen";
 import PhoneScreen from "@/pages/PhoneScreen";
 import NameScreen from "@/pages/NameScreen";
@@ -230,6 +235,11 @@ function Router() {
   const GuardedBulkMealAddons = withAuthGuard(BulkMealAddons);
   const GuardedBulkMealDelivery = withAuthGuard(BulkMealDelivery);
   const GuardedBulkMealThankyouPage = withAuthGuard(BulkMealThankyouPage);
+  const GuardedSnackBoxPage = withAuthGuard(SnackBoxPage);
+  const GuardedSnackBoxCart = withAuthGuard(SnackBoxCart);
+  const GuardedSnackBoxAddons = withAuthGuard(SnackBoxAddons);
+  const GuardedSnackBoxDelivery = withAuthGuard(SnackBoxDelivery);
+  const GuardedSnackBoxThankYouPage = withAuthGuard(SnackBoxThankYouPage);
   const GuardedCartRedirect = withAuthGuard(() => {
     const [, setLocation] = useLocation();
     useEffect(() => { setLocation('/checkout'); }, [setLocation]);
@@ -300,6 +310,11 @@ function Router() {
       <Route path="/bulk-meals-addons" component={GuardedBulkMealAddons} />
       <Route path="/bulk-meals-delivery" component={GuardedBulkMealDelivery} />
       <Route path="/bulk-meals-thank-you" component={GuardedBulkMealThankyouPage} />
+      <Route path="/snack-box" component={GuardedSnackBoxPage} />
+      <Route path="/snack-box-cart" component={GuardedSnackBoxCart} />
+      <Route path="/snack-box-addons" component={GuardedSnackBoxAddons} />
+      <Route path="/snack-box-delivery" component={GuardedSnackBoxDelivery} />
+      <Route path="/snack-box-thank-you" component={GuardedSnackBoxThankYouPage} />
       <Route path="/admin" component={GuardedAdminDashboard} />
         <Route component={NotFound} />
       </Switch>

@@ -3,6 +3,8 @@ import mealBoxImage from "@assets/Tiffin_1764989484948.png";
 import cateringImage from "@assets/Tiffin5_1764990291688.png";
 import bulkMealImage from "@assets/Tiffin8_1764990094179.png";
 import corporateImage from "@assets/Tiffin10_1764990422090.png";
+// TODO: Request snackbox image from group - placeholder for now
+import snackboxCardImage from "@assets/snackbox_card.png";
 
 interface ServicesWeOfferSectionProps {
   onServiceClick?: (serviceId: string) => void;
@@ -18,7 +20,7 @@ export default function ServicesWeOfferSection({ onServiceClick }: ServicesWeOff
         </h2>
 
         {/* Mobile-First Grid Layout */}
-        <div className="grid grid-cols-2 gap-4" style={{ gridTemplateRows: 'auto auto auto' }}>
+        <div className="grid grid-cols-2 gap-4" style={{ gridTemplateRows: 'auto auto auto auto' }}>
           {/* MealBox - Top Left */}
           <ServiceCardSection
             serviceId="mealbox"
@@ -39,14 +41,14 @@ export default function ServicesWeOfferSection({ onServiceClick }: ServicesWeOff
             backgroundImage={bulkMealImage}
           />
 
-          {/* Catering - Bottom Left */}
+          {/* Snack-box - Bottom Left (replaces Catering position) */}
           <ServiceCardSection
-            serviceId="catering"
-            title="Catering"
-            description="End-to-end service"
-            onClick={() => onServiceClick?.("catering")}
+            serviceId="snack-box"
+            title="Snack-box"
+            description="Everyday snack packs"
+            onClick={() => onServiceClick?.("snack-box")}
             className="h-[160px]"
-            backgroundImage={cateringImage}
+            backgroundImage={snackboxCardImage}
           />
 
           {/* Daily Corporate - Bottom, spans full width */}
@@ -57,6 +59,16 @@ export default function ServicesWeOfferSection({ onServiceClick }: ServicesWeOff
             onClick={() => onServiceClick?.("corporate")}
             className="col-span-2 h-[160px]"
             backgroundImage={corporateImage}
+          />
+
+          {/* Catering - Below Daily Corporate, spans full width */}
+          <ServiceCardSection
+            serviceId="catering"
+            title="Catering"
+            description="End-to-end service"
+            onClick={() => onServiceClick?.("catering")}
+            className="col-span-2 h-[160px]"
+            backgroundImage={cateringImage}
           />
         </div>
       </div>

@@ -9,37 +9,6 @@ import { supabaseAuth } from './supabase-auth';
 const supabase = supabaseAuth;
 
 /**
- * Convert time slot (e.g., "9:00 AM - 10:00 AM") to 24-hour format (e.g., "09:00")
- * Returns the START time of the slot
- */
-function parseTimeSlotTo24Hour(timeSlot: string): string {
-  if (!timeSlot) return '12:00';
-  
-  // If already in 24-hour format (HH:MM), return as-is
-  if (/^\d{1,2}:\d{2}$/.test(timeSlot)) {
-    const [hours, mins] = timeSlot.split(':');
-    return `${hours.padStart(2, '0')}:${mins}`;
-  }
-  
-  // Extract the first time from a slot like "9:00 AM - 10:00 AM"
-  const timeMatch = timeSlot.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
-  if (!timeMatch) return '12:00';
-  
-  let hours = parseInt(timeMatch[1]);
-  const mins = timeMatch[2];
-  const period = timeMatch[3].toUpperCase();
-  
-  // Convert to 24-hour format
-  if (period === 'PM' && hours !== 12) {
-    hours += 12;
-  } else if (period === 'AM' && hours === 12) {
-    hours = 0;
-  }
-  
-  return `${hours.toString().padStart(2, '0')}:${mins}`;
-}
-
-/**
  * Ensure user exists in public.users table (auto-create if missing)
  * This handles the case where Supabase Auth user exists but no corresponding DB record
  */
@@ -900,7 +869,6 @@ export const mealboxOrderService = {
         delivery_time: orderData.deliveryTime || null,
         address_id: orderData.addressId || null,
         status: 'pending',
-        created_at: new Date().toISOString(),
       })
       .select()
       .single();
@@ -990,7 +958,6 @@ export const bulkMealOrderService = {
         delivery_time: orderData.deliveryTime || null,
         address_id: orderData.addressId || null,
         status: 'pending',
-        created_at: new Date().toISOString(),
       })
       .select()
       .single();
@@ -1107,12 +1074,11 @@ export const sixtyMinBulkOrderService = {
         delivery_fee: orderData.platformFee.toFixed(2),
         total_amount: orderData.total.toFixed(2),
         requested_delivery_time: orderData.deliveryDate && orderData.deliveryTime 
-          ? `${orderData.deliveryDate}T${parseTimeSlotTo24Hour(orderData.deliveryTime)}:00` 
+          ? `${orderData.deliveryDate}T${orderData.deliveryTime}:00` 
           : null,
         delivery_address: finalDeliveryAddress,
         order_status: 'pending',
         payment_status: 'pending',
-        created_at: new Date().toISOString(),
       })
       .select()
       .single();
@@ -1262,12 +1228,11 @@ export const sixtyMinMealboxOrderService = {
         delivery_fee: orderData.deliveryFee.toFixed(2),
         total_amount: orderData.total.toFixed(2),
         requested_delivery_time: orderData.deliveryDate && orderData.deliveryTime 
-          ? `${orderData.deliveryDate}T${parseTimeSlotTo24Hour(orderData.deliveryTime)}:00` 
+          ? `${orderData.deliveryDate}T${orderData.deliveryTime}:00` 
           : null,
         delivery_address: finalDeliveryAddress,
         order_status: 'pending',
         payment_status: 'pending',
-        created_at: new Date().toISOString(),
       })
       .select()
       .single();
@@ -1688,32 +1653,19 @@ export const couponService = {
   },
 
   /**
-   * Get all coupons with eligibility status for a user and order type
-   * Returns both eligible and non-eligible coupons with reasons
+   * Get eligible coupons for a user and order type
+   * Returns coupons that could be applied to the order
    */
-  async getAllCouponsWithEligibility(orderType: string = 'regular', orderTotal: number = 0): Promise<{
-    eligible: Array<{
-      id: string;
-      code: string;
-      description: string | null;
-      discountType: 'percentage' | 'fixed' | 'free_delivery';
-      discountValue: number;
-      minOrderAmount: number;
-      maxDiscount?: number;
-      savingsText: string;
-    }>;
-    ineligible: Array<{
-      id: string;
-      code: string;
-      description: string | null;
-      discountType: 'percentage' | 'fixed' | 'free_delivery';
-      discountValue: number;
-      minOrderAmount: number;
-      maxDiscount?: number;
-      savingsText: string;
-      reason: string;
-    }>;
-  }> {
+  async getEligibleCoupons(orderType: string = 'regular', orderTotal: number = 0): Promise<Array<{
+    id: string;
+    code: string;
+    description: string | null;
+    discountType: 'percentage' | 'fixed' | 'free_delivery';
+    discountValue: number;
+    minOrderAmount: number;
+    maxDiscount?: number;
+    savingsText: string;
+  }>> {
     const now = new Date().toISOString();
     const user = await getAuthenticatedUser();
 
@@ -1727,10 +1679,10 @@ export const couponService = {
 
     if (error || !coupons) {
       console.error('Error fetching coupons:', error);
-      return { eligible: [], ineligible: [] };
+      return [];
     }
 
-    const eligible: Array<{
+    const eligibleCoupons: Array<{
       id: string;
       code: string;
       description: string | null;
@@ -1741,24 +1693,55 @@ export const couponService = {
       savingsText: string;
     }> = [];
 
-    const ineligible: Array<{
-      id: string;
-      code: string;
-      description: string | null;
-      discountType: 'percentage' | 'fixed' | 'free_delivery';
-      discountValue: number;
-      minOrderAmount: number;
-      maxDiscount?: number;
-      savingsText: string;
-      reason: string;
-    }> = [];
+    for (const coupon of coupons) {
+      // Check usage limit
+      if (coupon.usage_limit && coupon.usage_count >= coupon.usage_limit) {
+        continue;
+      }
 
-    // Helper to build coupon object
-    const buildCouponObj = (coupon: any) => {
+      // Check order type
+      if (coupon.applicable_order_types && coupon.applicable_order_types.length > 0) {
+        const orderTypes = coupon.applicable_order_types as string[];
+        if (!orderTypes.includes('all') && !orderTypes.includes(orderType)) {
+          continue;
+        }
+      }
+
+      // Check per-user limit
+      if (user && coupon.per_user_limit) {
+        const { count } = await supabase
+          .from('coupon_usages')
+          .select('*', { count: 'exact', head: true })
+          .eq('coupon_id', coupon.id)
+          .eq('user_id', user.id);
+
+        if (count && count >= coupon.per_user_limit) {
+          continue;
+        }
+      }
+
+      // Check first-time user only
+      if (coupon.first_time_user_only && user) {
+        const { count: orderCount } = await supabase
+          .from('orders')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id);
+        
+        const { count: bulkCount } = await supabase
+          .from('bulk_meal_orders')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id);
+
+        if ((orderCount || 0) + (bulkCount || 0) > 0) {
+          continue;
+        }
+      }
+
       const discountValue = parseFloat(coupon.discount_value);
       const minOrderAmount = parseFloat(coupon.min_order_amount || '0');
       const maxDiscount = coupon.max_discount ? parseFloat(coupon.max_discount) : undefined;
 
+      // Generate savings text
       let savingsText = '';
       if (coupon.discount_type === 'free_delivery') {
         savingsText = 'Free Delivery';
@@ -1775,7 +1758,7 @@ export const couponService = {
         savingsText += ` on orders above ₹${minOrderAmount}`;
       }
 
-      return {
+      eligibleCoupons.push({
         id: coupon.id,
         code: coupon.code,
         description: coupon.description,
@@ -1784,124 +1767,10 @@ export const couponService = {
         minOrderAmount,
         maxDiscount,
         savingsText,
-      };
-    };
-
-    for (const coupon of coupons) {
-      let ineligibleReason: string | null = null;
-
-      // Check usage limit
-      if (coupon.usage_limit && coupon.usage_count >= coupon.usage_limit) {
-        ineligibleReason = 'Coupon limit reached';
-      }
-
-      // Check valid days of week (0=Sunday, 6=Saturday)
-      if (!ineligibleReason && coupon.valid_days_of_week && coupon.valid_days_of_week.length > 0) {
-        const currentDay = new Date().getDay();
-        if (!coupon.valid_days_of_week.includes(currentDay)) {
-          const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-          const validDays = coupon.valid_days_of_week.map((d: number) => dayNames[d]).join(', ');
-          ineligibleReason = `Only valid on ${validDays}`;
-        }
-      }
-
-      // Check order type
-      if (!ineligibleReason && coupon.applicable_order_types && coupon.applicable_order_types.length > 0) {
-        const orderTypes = coupon.applicable_order_types as string[];
-        if (!orderTypes.includes('all') && !orderTypes.includes(orderType)) {
-          const typeLabels: Record<string, string> = {
-            'bulk_meal': 'Bulk Meals',
-            'mealbox': 'Meal Box',
-            'catering': 'Catering',
-            'corporate': 'Corporate',
-          };
-          const validFor = orderTypes.map(t => typeLabels[t] || t).join(', ');
-          ineligibleReason = `Only for ${validFor}`;
-        }
-      }
-
-      // Check per-user limit
-      if (!ineligibleReason && user && coupon.per_user_limit) {
-        const { count } = await supabase
-          .from('coupon_usages')
-          .select('*', { count: 'exact', head: true })
-          .eq('coupon_id', coupon.id)
-          .eq('user_id', user.id);
-
-        if (count && count >= coupon.per_user_limit) {
-          ineligibleReason = 'Already used';
-        }
-      }
-
-      // Check first-time user only
-      if (!ineligibleReason && coupon.first_time_user_only && user) {
-        const { count: orderCount } = await supabase
-          .from('orders')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', user.id);
-        
-        const { count: bulkCount } = await supabase
-          .from('bulk_meal_orders')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', user.id);
-
-        if ((orderCount || 0) + (bulkCount || 0) > 0) {
-          ineligibleReason = 'For first-time users only';
-        }
-      }
-
-      // Check returning user only restriction
-      if (!ineligibleReason && coupon.returning_user_only && user) {
-        const { count: orderCount } = await supabase
-          .from('orders')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', user.id);
-
-        if (!orderCount || orderCount === 0) {
-          ineligibleReason = 'For returning customers';
-        }
-      }
-
-      // Check minimum previous orders requirement
-      if (!ineligibleReason && coupon.min_previous_orders && coupon.min_previous_orders > 0 && user) {
-        const { count: orderCount } = await supabase
-          .from('orders')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', user.id);
-
-        if (!orderCount || orderCount < coupon.min_previous_orders) {
-          ineligibleReason = `Need ${coupon.min_previous_orders}+ orders`;
-        }
-      }
-
-      const couponObj = buildCouponObj(coupon);
-
-      if (ineligibleReason) {
-        ineligible.push({ ...couponObj, reason: ineligibleReason });
-      } else {
-        eligible.push(couponObj);
-      }
+      });
     }
 
-    return { eligible, ineligible };
-  },
-
-  /**
-   * Get eligible coupons for a user and order type (backwards compatible)
-   * Returns coupons that could be applied to the order
-   */
-  async getEligibleCoupons(orderType: string = 'regular', orderTotal: number = 0): Promise<Array<{
-    id: string;
-    code: string;
-    description: string | null;
-    discountType: 'percentage' | 'fixed' | 'free_delivery';
-    discountValue: number;
-    minOrderAmount: number;
-    maxDiscount?: number;
-    savingsText: string;
-  }>> {
-    const result = await this.getAllCouponsWithEligibility(orderType, orderTotal);
-    return result.eligible;
+    return eligibleCoupons;
   },
 
   /**
@@ -1938,459 +1807,3 @@ export const couponService = {
   },
 };
 
-/**
- * Payment Operations
- * Store and manage payment transaction details
- */
-export const paymentService = {
-  /**
-   * Create a payment record
-   * Stores initial payment details with all order information
-   */
-  async create(paymentData: {
-    orderId: string;
-    orderType: 'bulk_meal' | 'mealbox' | 'sixty_min_bulk' | 'sixty_min_mealbox';
-    orderNumber: number;
-    userId: string;
-    paymentStage: 'initial' | 'second' | 'final' | 'full';
-    amount: number;
-    razorpayOrderId?: string;
-    razorpayPaymentId?: string;
-    razorpaySignature?: string;
-    razorpayReceipt?: string;
-    paymentStatus?: 'pending' | 'success' | 'failed' | 'refunded';
-    isTestPayment?: boolean;
-    orderItems: Array<{ dishId: string; name?: string; quantity: number; price: number }>;
-    subtotal: number;
-    gst: number;
-    platformFee: number;
-    packagingFee: number;
-    deliveryFee?: number;
-    discountApplied?: number;
-    totalOrderAmount: number;
-    deliveryDate?: string;
-    deliveryTime?: string;
-    metadata?: Record<string, any>;
-  }) {
-    const user = await getAuthenticatedUser();
-    if (!user) throw new Error('Not authenticated');
-
-    const itemsCount = paymentData.orderItems.length;
-    const totalItemsQuantity = paymentData.orderItems.reduce((sum, item) => sum + item.quantity, 0);
-
-    const insertData = {
-      order_id: paymentData.orderId,
-      order_type: paymentData.orderType,
-      order_number: paymentData.orderNumber,
-      user_id: paymentData.userId,
-      payment_stage: paymentData.paymentStage,
-      amount: paymentData.amount.toFixed(2),
-      currency: 'INR',
-      razorpay_order_id: paymentData.razorpayOrderId || null,
-      razorpay_payment_id: paymentData.razorpayPaymentId || null,
-      razorpay_signature: paymentData.razorpaySignature || null,
-      razorpay_receipt: paymentData.razorpayReceipt || null,
-      payment_status: paymentData.paymentStatus || 'success',
-      payment_method: 'razorpay',
-      is_test_payment: paymentData.isTestPayment || false,
-      order_items: JSON.stringify(paymentData.orderItems),
-      items_count: itemsCount,
-      total_items_quantity: totalItemsQuantity,
-      subtotal: paymentData.subtotal.toFixed(2),
-      gst: paymentData.gst.toFixed(2),
-      platform_fee: paymentData.platformFee.toFixed(2),
-      packaging_fee: paymentData.packagingFee.toFixed(2),
-      delivery_fee: paymentData.deliveryFee ? paymentData.deliveryFee.toFixed(2) : null,
-      discount_applied: paymentData.discountApplied ? paymentData.discountApplied.toFixed(2) : null,
-      total_order_amount: paymentData.totalOrderAmount.toFixed(2),
-      delivery_date: paymentData.deliveryDate || null,
-      delivery_time: paymentData.deliveryTime || null,
-      payment_date: new Date().toISOString(),
-      payment_time: new Date().toISOString(),
-      metadata: paymentData.metadata ? JSON.stringify(paymentData.metadata) : null,
-    };
-
-    console.log('[paymentService.create] Inserting payment record...');
-
-    const { data, error } = await supabase
-      .from('payments')
-      .insert(insertData)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('[paymentService.create] Database error:', error.message, error.code, error.details);
-      throw new Error(`Payment storage failed: ${error.message} (Code: ${error.code})`);
-    }
-    
-    console.log('[paymentService.create] Success! Payment ID:', data?.id);
-    return data;
-  },
-
-  /**
-   * Update payment status
-   */
-  async updateStatus(paymentId: string, status: 'pending' | 'success' | 'failed' | 'refunded') {
-    const user = await getAuthenticatedUser();
-    if (!user) throw new Error('Not authenticated');
-
-    const { data, error } = await supabase
-      .from('payments')
-      .update({
-        payment_status: status,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', paymentId)
-      .eq('user_id', user.id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
-  },
-
-  /**
-   * Get all payments for an order
-   */
-  async getByOrderId(orderId: string) {
-    const user = await getAuthenticatedUser();
-    if (!user) throw new Error('Not authenticated');
-
-    const { data, error } = await supabase
-      .from('payments')
-      .select('*')
-      .eq('order_id', orderId)
-      .eq('user_id', user.id)
-      .order('payment_date', { ascending: true });
-
-    if (error) throw error;
-    return data;
-  },
-
-  /**
-   * Get payment by Razorpay payment ID
-   */
-  async getByRazorpayPaymentId(razorpayPaymentId: string) {
-    const user = await getAuthenticatedUser();
-    if (!user) throw new Error('Not authenticated');
-
-    const { data, error } = await supabase
-      .from('payments')
-      .select('*')
-      .eq('razorpay_payment_id', razorpayPaymentId)
-      .eq('user_id', user.id)
-      .single();
-
-    if (error) throw error;
-    return data;
-  },
-
-  /**
-   * Add a new payment stage for an existing order
-   * Used when subsequent payments are made (second, final stages)
-   */
-  async addPaymentStage(paymentData: {
-    orderId: string;
-    orderType: 'bulk_meal' | 'mealbox' | 'sixty_min_bulk' | 'sixty_min_mealbox';
-    orderNumber: number;
-    userId: string;
-    paymentStage: 'second' | 'final';
-    amount: number;
-    razorpayOrderId?: string;
-    razorpayPaymentId?: string;
-    razorpaySignature?: string;
-    razorpayReceipt?: string;
-    paymentStatus?: 'pending' | 'success' | 'failed' | 'refunded';
-    isTestPayment?: boolean;
-    metadata?: Record<string, any>;
-  }) {
-    const user = await getAuthenticatedUser();
-    if (!user) throw new Error('Not authenticated');
-
-    const { supabaseAuth } = await import("@/lib/supabase-auth");
-    const tableName = paymentData.orderType === 'sixty_min_bulk'
-      ? 'sixty_min_bulk_orders'
-      : paymentData.orderType === 'sixty_min_mealbox'
-      ? 'sixty_min_mealbox_orders'
-      : paymentData.orderType === 'mealbox'
-      ? 'mealbox_orders'
-      : 'bulk_meal_orders';
-
-    const { data: order, error: orderError } = await supabaseAuth
-      .from(tableName)
-      .select('*')
-      .eq('id', paymentData.orderId)
-      .single();
-
-    if (orderError || !order) {
-      throw new Error('Order not found');
-    }
-
-    let orderItems: Array<{ dishId: string; name?: string; quantity: number; price: number }> = [];
-    try {
-      const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
-      orderItems = items.map((item: any) => ({
-        dishId: item.dishId || item.dish_id || String(item.id || ''),
-        name: item.name || item.dish_name || `Item ${item.dishId || item.id}`,
-        quantity: item.quantity || 1,
-        price: item.price || 0,
-      }));
-    } catch (e) {
-      console.error('Error parsing order items:', e);
-    }
-
-    const itemsCount = orderItems.length;
-    const totalItemsQuantity = orderItems.reduce((sum, item) => sum + item.quantity, 0);
-
-    const { data, error } = await supabase
-      .from('payments')
-      .insert({
-        order_id: paymentData.orderId,
-        order_type: paymentData.orderType,
-        order_number: paymentData.orderNumber,
-        user_id: paymentData.userId,
-        payment_stage: paymentData.paymentStage,
-        amount: paymentData.amount.toFixed(2),
-        currency: 'INR',
-        razorpay_order_id: paymentData.razorpayOrderId || null,
-        razorpay_payment_id: paymentData.razorpayPaymentId || null,
-        razorpay_signature: paymentData.razorpaySignature || null,
-        razorpay_receipt: paymentData.razorpayReceipt || null,
-        payment_status: paymentData.paymentStatus || 'success',
-        payment_method: 'razorpay',
-        is_test_payment: paymentData.isTestPayment || false,
-        order_items: JSON.stringify(orderItems),
-        items_count: itemsCount,
-        total_items_quantity: totalItemsQuantity,
-        subtotal: parseFloat(order.subtotal?.toString() || '0').toFixed(2),
-        gst: parseFloat(order.gst?.toString() || order.tax?.toString() || '0').toFixed(2),
-        platform_fee: parseFloat(order.platform_fee?.toString() || order.delivery_fee?.toString() || '0').toFixed(2),
-        packaging_fee: parseFloat(order.packaging_fee?.toString() || '0').toFixed(2),
-        delivery_fee: parseFloat(order.delivery_fee?.toString() || order.platform_fee?.toString() || '0').toFixed(2),
-        discount_applied: parseFloat(order.discount_applied?.toString() || '0').toFixed(2),
-        total_order_amount: parseFloat(order.total?.toString() || '0').toFixed(2),
-        delivery_date: order.delivery_date || order.deliveryDate || null,
-        delivery_time: order.delivery_time || order.deliveryTime || null,
-        payment_date: new Date().toISOString(),
-        payment_time: new Date().toISOString(),
-        metadata: paymentData.metadata ? JSON.stringify(paymentData.metadata) : null,
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
-  },
-};
-
-/**
- * SnackBox Order Operations
- * For snack box orders
- */
-export const snackBoxOrderService = {
-  /**
-   * Create a new SnackBox order
-   */
-  async create(orderData: {
-    items: Array<{ dishId: string; name: string; quantity: number; price: number; metadata?: any }>;
-    selectedAddons?: string[];
-    subtotal: number;
-    gst: number;
-    platformFee: number;
-    packagingFee: number;
-    total: number;
-    deliveryDate?: string;
-    deliveryTime?: string;
-    addressId?: string;
-    deliveryAddress?: string;
-    couponId?: string | null;
-    discountApplied?: number;
-  }) {
-    const user = await getAuthenticatedUser();
-    if (!user) throw new Error('Not authenticated');
-
-    // Generate unique order number (max 2147483647 for integer)
-    const timePart = Date.now() % 100000000;
-    const nextOrderNumber = Math.floor(timePart / 100) + Math.floor(Math.random() * 1000)
-
-    const { data, error } = await supabase
-      .from('snack_box_orders')
-      .insert({
-        user_id: user.id,
-        order_number: nextOrderNumber,
-        items: JSON.stringify(orderData.items),
-        selected_addons: orderData.selectedAddons && orderData.selectedAddons.length > 0
-          ? JSON.stringify(orderData.selectedAddons)
-          : null,
-        subtotal: orderData.subtotal.toFixed(2),
-        gst: orderData.gst.toFixed(2),
-        platform_fee: orderData.platformFee.toFixed(2),
-        packaging_fee: orderData.packagingFee.toFixed(2),
-        total: orderData.total.toFixed(2),
-        delivery_date: orderData.deliveryDate || null,
-        delivery_time: orderData.deliveryTime || null,
-        address_id: orderData.addressId || null,
-        delivery_address: orderData.deliveryAddress || null,
-        coupon_id: orderData.couponId || null,
-        discount_applied: orderData.discountApplied || 0,
-        status: 'pending',
-        created_at: new Date().toISOString(),
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.warn('Failed to insert into snack_box_orders, fallback to bulk_meal_orders', error);
-
-      const { data: fallbackData, error: fallbackError } = await supabase
-        .from('bulk_meal_orders')
-        .insert({
-          user_id: user.id,
-          order_number: nextOrderNumber,
-          items: JSON.stringify(orderData.items),
-          selected_addons: orderData.selectedAddons && orderData.selectedAddons.length > 0
-            ? JSON.stringify(orderData.selectedAddons)
-            : null,
-          subtotal: orderData.subtotal.toFixed(2),
-          gst: orderData.gst.toFixed(2),
-          platform_fee: orderData.platformFee.toFixed(2),
-          packaging_fee: orderData.packagingFee.toFixed(2),
-          total: orderData.total.toFixed(2),
-          delivery_date: orderData.deliveryDate || null,
-          delivery_time: orderData.deliveryTime || null,
-          address_id: orderData.addressId || null,
-          delivery_address: orderData.deliveryAddress || null,
-          coupon_id: orderData.couponId || null,
-          coupon_discount: orderData.discountApplied || 0,
-          status: 'pending',
-          created_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
-
-      if (fallbackError) throw error;
-
-      // Record coupon usage if applied (even in fallback)
-      if (orderData.couponId) {
-        const { error: usageError } = await supabase
-          .from('coupon_usages')
-          .insert({
-            coupon_id: orderData.couponId,
-            user_id: user.id,
-            order_id: fallbackData.id,
-            order_type: 'snack-box-fallback',
-            discount_applied: orderData.discountApplied || 0
-          });
-
-        if (usageError) {
-          console.warn('Failed to record coupon usage for fallback:', usageError);
-        }
-      }
-
-      return fallbackData;
-    }
-
-    // Record coupon usage if applied
-    if (orderData.couponId) {
-      const { error: usageError } = await supabase
-        .from('coupon_usages')
-        .insert({
-          coupon_id: orderData.couponId,
-          user_id: user.id,
-          order_id: data.id,
-          order_type: 'snack-box',
-          discount_applied: orderData.discountApplied || 0
-        });
-
-      if (usageError) {
-        console.warn('Failed to record coupon usage:', usageError);
-      }
-    }
-
-    return data;
-  },
-
-  /**
-   * Get all SnackBox orders for current user
-   */
-  async getAll() {
-    const user = await getAuthenticatedUser();
-    if (!user) throw new Error('Not authenticated');
-
-    const { data, error } = await supabase
-      .from('snack_box_orders')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.warn('Error fetching snack_box_orders:', error);
-      return [];
-    }
-    return data;
-  },
-
-  /**
-   * Get SnackBox order by ID
-   */
-  async getById(orderId: string) {
-    const user = await getAuthenticatedUser();
-    if (!user) throw new Error('Not authenticated');
-
-    const { data, error } = await supabase
-      .from('snack_box_orders')
-      .select('*')
-      .eq('id', orderId)
-      .eq('user_id', user.id)
-      .single();
-
-    if (error) throw error;
-    return data;
-  },
-};
-
-/**
- * SnackBox Dishes Service
- * Handles fetching available snack boxes for the menu
- */
-export const snackBoxService = {
-  /**
-   * Get all snack box dishes
-   */
-  async getAll() {
-    // Try 'snack-box' first
-    let result = await supabase
-      .from('snack-box')
-      .select('*')
-      .order('name', { ascending: true });
-
-    if (!result.data || result.data.length === 0) {
-      // Try 'snack - box' as suggested by the user's SQL
-      const alternative = await supabase
-        .from('snack - box')
-        .select('*')
-        .order('name', { ascending: true });
-
-      if (alternative.data && alternative.data.length > 0) {
-        result = alternative;
-      }
-    }
-
-    if (!result.data || result.data.length === 0) {
-      // Fallback to 'dishes' table with category filtering
-      const dishesFallback = await supabase
-        .from('dishes')
-        .select('*')
-        .eq('category_id', 'snack-box')
-        .order('name', { ascending: true });
-
-      if (dishesFallback.data && dishesFallback.data.length > 0) {
-        result = dishesFallback;
-      }
-    }
-
-    console.log("snackBoxService.getAll result:", result.data);
-    if (result.error) throw result.error;
-    return result.data;
-  },
-};

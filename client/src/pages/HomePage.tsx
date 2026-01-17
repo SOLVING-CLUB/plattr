@@ -507,7 +507,9 @@ import { useState, useCallback } from "react";
 import { useLocation } from "wouter";
 import AppHeader from "@/pages/AppHeader";
 import HeroSection from "@/pages/HeroSection";
+import FestiveBanner from "@/pages/FestiveBanner";
 import ServicesWeOfferSection from "@/pages/ServicesWeOfferSection";
+import SixtyMinSection from "@/pages/SixtyMinSection";
 import SpotlightFeaturesSection from "@/pages/SpotlightSection";
 import SmartMenuConciergeSection from "@/pages/SmartMenuSection";
 import FloatingNav from "@/pages/FloatingNav";
@@ -561,6 +563,8 @@ export default function Home() {
     } else if (serviceId === "bulk") {
       // Redirect to bulk meals page
       setLocation("/bulk-meals");
+    } else if (serviceId === "snack-box") {
+      setLocation("/snack-box");
     } else {
       toast({
         title: "Service Selected",
@@ -602,8 +606,16 @@ export default function Home() {
           onServiceAvailabilityChange={handleServiceAvailabilityChange}
         />
         
-        <HeroSection onExploreMenu={handleExploreMenu} />
+        {/* Hero Section with Festive Banner */}
+        <div className="relative">
+          <FestiveBanner />
+          <HeroSection onExploreMenu={handleExploreMenu} />
+        </div>
+        
         <ServicesWeOfferSection onServiceClick={handleServiceClick} />
+        
+        {/* 60 Mins Section */}
+        <SixtyMinSection onExplore={handleExploreMenu} />
         
         <div className="mt-4">
           <SpotlightFeaturesSection />
