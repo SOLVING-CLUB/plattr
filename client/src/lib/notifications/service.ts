@@ -9,6 +9,7 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { App } from '@capacitor/app';
 import { useLocation } from 'wouter';
+import { toast } from '@/hooks/use-toast';
 import type {
   NotificationPayload,
   NotificationPreferences,
@@ -55,11 +56,28 @@ class NotificationService {
     if (this.didInitialize) return;
     this.didInitialize = true;
 
-    console.log('[Notifications] Initializing...', { isNative: Capacitor.isNativePlatform(), platform: Capacitor.getPlatform() });
+    const platform = Capacitor.getPlatform();
+    const isNative = Capacitor.isNativePlatform();
     
-    if (!Capacitor.isNativePlatform()) {
+    console.log('[Notifications] Initializing...', { isNative, platform });
+    
+    // Show initialization status
+    if (isNative && platform === 'ios') {
+      toast({
+        variant: 'info',
+        title: 'Initializing Notifications',
+        description: 'Setting up iOS push notifications...',
+      });
+    }
+    
+    if (!isNative) {
       console.log('[Notifications] Web platform detected - push notifications only work on native (iOS/Android)');
       console.log('[Notifications] For testing, build and run on device/emulator');
+      toast({
+        variant: 'warning',
+        title: 'Web Platform',
+        description: 'Push notifications only work on iOS/Android devices.',
+      });
       return;
     }
 
@@ -76,13 +94,27 @@ class NotificationService {
       
       if (pushPermission.receive === 'granted') {
         console.log('[Notifications] Permission granted, registering for push...');
+        toast({
+          variant: 'success',
+          title: 'Notifications Enabled',
+          description: 'Registering for push notifications...',
+        });
         // Register for push
         await PushNotifications.register();
         console.log('[Notifications] Registration initiated, waiting for token...');
+        
         // On iOS, wait for APNs token first, then fetch FCM token.
-        await this.setupIOSFCMTokenHandling();
+        if (platform === 'ios') {
+          console.log('[Notifications] Setting up iOS FCM token handling...');
+          await this.setupIOSFCMTokenHandling();
+        }
       } else {
         console.warn('[Notifications] Push permission denied:', pushPermission);
+        toast({
+          variant: 'destructive',
+          title: 'Notifications Disabled',
+          description: 'Please enable notifications in Settings to receive updates.',
+        });
       }
       
       // Set up local notification action listener (when user taps local notification)
@@ -94,8 +126,13 @@ class NotificationService {
         }
       });
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('[Notifications] Initialization error:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Notification Setup Failed',
+        description: error?.message || 'Failed to initialize notifications. Please try again.',
+      });
     }
   }
 
@@ -120,24 +157,69 @@ class NotificationService {
       // - Android: token.value is an FCM registration token (usable by backend)
       // - iOS: token.value is an APNs token (NOT usable by backend FCM v1 sender)
       if (Capacitor.getPlatform() === 'ios') {
-        console.log('[Notifications] iOS APNs token (not stored as device token):', token.value);
+        console.log('[Notifications] ✅ iOS APNs token received:', token.value?.substring(0, 20) + '...');
         this.apnsToken = token.value;
         this.saveApnsToken(token.value);
+        
+        // Show APNs token received toast
+        toast({
+          variant: 'info',
+          title: 'APNs Token Received',
+          description: 'Waiting for FCM token...',
+        });
 
         // Now that APNs token exists, Firebase can mint an FCM token. Trigger a fetch.
-        this.fetchIOSFCMTokenOnceApnsReady();
+        // Add a small delay to ensure Firebase has processed the APNs token
+        setTimeout(() => {
+          console.log('[Notifications] Attempting to fetch FCM token after APNs registration...');
+          this.fetchIOSFCMTokenOnceApnsReady();
+        }, 1000);
+        
+        // Also retry after a longer delay in case Firebase needs more time
+        setTimeout(() => {
+          if (!this.deviceToken) {
+            console.log('[Notifications] Retrying FCM token fetch (delayed)...');
+            this.fetchIOSFCMTokenOnceApnsReady();
+          }
+        }, 3000);
+        
+        // Final retry after 5 seconds
+        setTimeout(() => {
+          if (!this.deviceToken) {
+            console.log('[Notifications] Final retry for FCM token fetch...');
+            this.fetchIOSFCMTokenOnceApnsReady();
+          }
+        }, 5000);
+        
         return;
       }
 
-      console.log('[Notifications] Device token:', token.value);
+      console.log('[Notifications] ✅ Device token (Android):', token.value?.substring(0, 20) + '...');
       this.deviceToken = token.value;
       this.saveDeviceToken(token.value);
+      
+      // Show success toast for Android
+      toast({
+        variant: 'success',
+        title: 'Device Token Registered',
+        description: 'Your device is now ready to receive notifications.',
+      });
+      
       this.sendTokenToBackend(token.value);
     });
 
     // Handle registration errors
     const registrationErrorListener = PushNotifications.addListener('registrationError', (error) => {
-      console.error('[Notifications] Registration error:', error);
+      console.error('[Notifications] ❌ Registration error:', error);
+      console.error('[Notifications] Error details:', JSON.stringify(error, null, 2));
+      
+      // Show error on screen
+      const errorMessage = error?.message || error?.toString() || 'Unknown error';
+      toast({
+        variant: 'destructive',
+        title: 'Push Notification Error',
+        description: `Failed to register for notifications: ${errorMessage}`,
+      });
     });
 
     // Handle notification received (foreground)
@@ -174,9 +256,27 @@ class NotificationService {
       const body = notification.body || notification.data?.body || '';
       const data = notification.data || {};
 
-      // On iOS, we present foreground banners via AppDelegate (willPresent).
-      // Scheduling a local notification here would cause duplicates.
+      // On iOS, Firebase Messaging might intercept notifications and not call willPresent.
+      // As a fallback, manually schedule a local notification to ensure it appears visually.
       if (Capacitor.getPlatform() === 'ios') {
+        // Schedule a local notification to ensure it appears (willPresent might not be called)
+        try {
+          const { LocalNotifications } = await import('@capacitor/local-notifications');
+          await LocalNotifications.schedule({
+            notifications: [{
+              id: Math.floor(Math.random() * 100000),
+              title: title,
+              body: body,
+              sound: 'default',
+              badge: 1,
+              extra: data,
+            }],
+          });
+          console.log('[Notifications] ✅ Local notification scheduled for iOS foreground');
+        } catch (error) {
+          console.error('[Notifications] ❌ Failed to schedule local notification:', error);
+        }
+        
         const payload = this.parseNotificationPayload(data);
         if (payload) {
           this.notifyListeners(payload);
@@ -496,10 +596,54 @@ class NotificationService {
    * Retry token registration (call after user logs in)
    */
   async retryTokenRegistration(): Promise<void> {
+    console.log('[Notifications] 🔄 retryTokenRegistration() called');
+    
+    // Wait a bit for userId to be available in localStorage (in case it's being set asynchronously)
+    let userId = localStorage.getItem('userId');
+    let retries = 0;
+    while (!userId && retries < 10) {
+      console.log(`[Notifications] Waiting for userId... (attempt ${retries + 1}/10)`);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      userId = localStorage.getItem('userId');
+      retries++;
+    }
+    
+    if (!userId) {
+      console.warn('[Notifications] ⚠️ No userId found after retries, cannot register token');
+      return;
+    }
+    
+    console.log('[Notifications] ✅ UserId found:', userId.substring(0, 8) + '...');
+    
+    // On iOS, try to fetch FCM token if we don't have it yet
+    if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios' && !this.deviceToken) {
+      console.log('[Notifications] No FCM token found, attempting to fetch...');
+      await this.fetchIOSFCMTokenOnceApnsReady(0);
+      // Wait a bit for token to be fetched
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+    
     const token = this.deviceToken || localStorage.getItem(DEVICE_TOKEN_STORAGE_KEY);
     if (token) {
-      console.log('[Notifications] Retrying token registration after login...');
+      console.log('[Notifications] ✅ Token available, registering with backend...');
+      console.log('[Notifications] Token preview:', token.substring(0, 30) + '...');
       await this.sendTokenToBackend(token, 0);
+    } else {
+      console.warn('[Notifications] ⚠️ No device token available for registration');
+      // On iOS, try one more time to fetch FCM token
+      if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios') {
+        console.log('[Notifications] Retrying FCM token fetch one more time...');
+        setTimeout(() => {
+          this.fetchIOSFCMTokenOnceApnsReady(0).then(() => {
+            // After fetching, try to register again
+            const newToken = this.deviceToken || localStorage.getItem(DEVICE_TOKEN_STORAGE_KEY);
+            if (newToken) {
+              console.log('[Notifications] ✅ Token fetched, registering now...');
+              this.sendTokenToBackend(newToken, 0);
+            }
+          });
+        }, 2000);
+      }
     }
   }
 
@@ -624,51 +768,223 @@ class NotificationService {
    * iOS: bridge Firebase Messaging FCM token into JS, and store that token for backend usage.
    */
   private async setupIOSFCMTokenHandling(): Promise<void> {
-    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'ios') return;
-    if (this.fcmListenerHandle) return;
+    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'ios') {
+      console.log('[Notifications] Not iOS platform, skipping FCM token setup');
+      return;
+    }
+    if (this.fcmListenerHandle) {
+      console.log('[Notifications] FCM listener already set up');
+      return;
+    }
 
     try {
+      console.log('[Notifications] Setting up iOS FCM token listener...');
+      console.log('[Notifications] FCMToken plugin object:', FCMToken ? 'Exists' : 'NULL');
+      
+      // Try to verify plugin is actually available by checking if methods exist
+      if (!FCMToken || typeof FCMToken.addListener !== 'function') {
+        console.error('[Notifications] ❌ FCMToken plugin not available or methods missing');
+        toast({
+          variant: 'destructive',
+          title: 'FCMToken Plugin Not Available',
+          description: 'Plugin not registered. Add FCMTokenPlugin to packageClassList and rebuild.',
+        });
+        return;
+      }
+      
+      console.log('[Notifications] ✅ FCMToken plugin verified, setting up listener...');
       this.fcmListenerHandle = await FCMToken.addListener('fcmToken', ({ token }) => {
-        if (!token) return;
-        if (token === this.deviceToken) return;
+        if (!token) {
+          console.warn('[Notifications] FCM token listener received empty token');
+          return;
+        }
+        if (token === this.deviceToken) {
+          console.log('[Notifications] FCM token unchanged, skipping');
+          return;
+        }
 
-        console.log('[Notifications] iOS FCM token received:', token.substring(0, 20) + '...');
+        console.log('[Notifications] ✅ iOS FCM token received via listener:', token.substring(0, 20) + '...');
         this.deviceToken = token;
         this.saveDeviceToken(token);
+        
+        // Show success toast
+        toast({
+          variant: 'success',
+          title: 'Device Token Registered',
+          description: 'Your device is now ready to receive notifications.',
+        });
+        
         this.sendTokenToBackend(token);
       });
-    } catch (error) {
+      console.log('[Notifications] ✅ FCM token listener set up successfully');
+    } catch (error: any) {
       // On non-iOS/native builds this plugin won't exist; fail silently.
-      console.warn('[Notifications] iOS FCM token bridge not available:', error);
+      console.error('[Notifications] ❌ iOS FCM token bridge not available:', error);
+      console.error('[Notifications] Error details:', error?.message || error);
+      console.error('[Notifications] Error stack:', error?.stack);
+      
+      // Show error on screen for iOS
+      if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios') {
+        const errorMsg = error?.message || 'Unknown error';
+        toast({
+          variant: 'destructive',
+          title: 'FCM Token Plugin Error',
+          description: `Failed to set up FCM token listener: ${errorMsg}. Check Xcode console for details.`,
+        });
+      }
     }
   }
 
-  private async fetchIOSFCMTokenOnceApnsReady(): Promise<void> {
-    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'ios') return;
+  private async fetchIOSFCMTokenOnceApnsReady(retryCount = 0): Promise<void> {
+    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'ios') {
+      console.log('[Notifications] Not iOS platform, skipping FCM token fetch');
+      return;
+    }
     
     // Ensure APNs token is set before fetching FCM token to avoid Firebase warning
     if (!this.apnsToken) {
-      console.log('[Notifications] Waiting for APNs token before fetching FCM token...');
+      console.log('[Notifications] ⏳ Waiting for APNs token before fetching FCM token...');
+      console.log('[Notifications] APNs token status: Not received yet');
       // APNs token will be set in the registration listener, which will call this again
       return;
     }
     
+    console.log('[Notifications] 🔍 Attempting to fetch FCM token (attempt ' + (retryCount + 1) + ')...');
+    console.log('[Notifications] APNs token present:', this.apnsToken ? `Yes (${this.apnsToken.substring(0, 20)}...)` : 'No');
+    
     try {
+      // Check if FCMToken plugin is available
+      if (!FCMToken) {
+        console.error('[Notifications] ❌ FCMToken plugin not available - plugin may not be registered');
+        console.error('[Notifications] Make sure FCMTokenPlugin.swift is in the Xcode project');
+        console.error('[Notifications] Make sure FCMTokenPlugin is in capacitor.config.json packageClassList');
+        
+        // Show error on screen
+        if (retryCount === 0) {
+          toast({
+            variant: 'destructive',
+            title: 'FCMToken Plugin Not Found',
+            description: 'FCMTokenPlugin not registered. Add to packageClassList and rebuild.',
+          });
+        }
+        
+        // Still try to retry in case plugin loads later
+        if (retryCount < 3) {
+          const delay = 3000 * (retryCount + 1);
+          console.log(`[Notifications] Will retry FCM token fetch in ${delay}ms (waiting for plugin to load)...`);
+          setTimeout(() => {
+            this.fetchIOSFCMTokenOnceApnsReady(retryCount + 1);
+          }, delay);
+        } else {
+          toast({
+            variant: 'destructive',
+            title: 'FCMToken Plugin Still Missing',
+            description: 'Plugin not found after retries. Rebuild app with FCMTokenPlugin in packageClassList.',
+          });
+        }
+        return;
+      }
+      
+      console.log('[Notifications] 📞 Calling FCMToken.getToken()...');
       const result = await FCMToken.getToken();
-      if (!result?.token) return;
-      if (result.token === this.deviceToken) return;
+      console.log('[Notifications] FCMToken.getToken() result:', result ? 'Received response' : 'No response');
+      console.log('[Notifications] Token in result:', result?.token ? `Yes (${result.token.substring(0, 20)}...)` : 'No');
+      
+      if (!result?.token) {
+        console.warn('[Notifications] ⚠️ FCM token is empty in response');
+        // Retry if we haven't tried too many times
+        if (retryCount < 5) {
+          const delay = 2000 * (retryCount + 1);
+          console.log(`[Notifications] Retrying FCM token fetch in ${delay}ms...`);
+          setTimeout(() => {
+            this.fetchIOSFCMTokenOnceApnsReady(retryCount + 1);
+          }, delay);
+        } else {
+          console.error('[Notifications] ❌ FCM token still empty after 5 attempts');
+          console.error('[Notifications] This might indicate:');
+          console.error('[Notifications] 1. Firebase is not properly configured');
+          console.error('[Notifications] 2. APNs token was not properly set in Firebase');
+          console.error('[Notifications] 3. Firebase project does not have iOS app configured');
+          
+          // Show error on screen
+          toast({
+            variant: 'destructive',
+            title: 'FCM Token Empty',
+            description: 'Firebase may not be configured correctly. Check GoogleService-Info.plist and Firebase Console.',
+          });
+        }
+        return;
+      }
+      
+      if (result.token === this.deviceToken) {
+        console.log('[Notifications] FCM token unchanged, already stored');
+        return;
+      }
 
-      console.log('[Notifications] iOS FCM token fetched:', result.token.substring(0, 20) + '...');
+      console.log('[Notifications] ✅ iOS FCM token fetched successfully!');
+      console.log('[Notifications] Token preview:', result.token.substring(0, 20) + '...');
+      console.log('[Notifications] Token length:', result.token.length);
+      console.log('[Notifications] Token format:', /^[a-zA-Z0-9_-]+$/.test(result.token) ? 'Valid FCM format' : 'Unexpected format');
+      
       this.deviceToken = result.token;
       this.saveDeviceToken(result.token);
-      this.sendTokenToBackend(result.token);
+      console.log('[Notifications] 💾 Token saved to localStorage');
+      
+      // Send to backend
+      console.log('[Notifications] 📤 Sending token to backend...');
+      await this.sendTokenToBackend(result.token);
     } catch (error: any) {
+      console.error('[Notifications] ❌ iOS FCM token fetch failed:', error);
+      console.error('[Notifications] Error type:', error?.constructor?.name);
+      console.error('[Notifications] Error message:', error?.message);
+      console.error('[Notifications] Error code:', error?.code);
+      console.error('[Notifications] Error stack:', error?.stack);
+      
       // Check if error is about APNs token not being set (Firebase warning)
-      if (error?.message?.includes('APNS') || error?.message?.includes('device token not set')) {
-        console.log('[Notifications] FCM token not ready yet (APNs token still being set), will retry...');
+      const errorMessage = error?.message || '';
+      if (errorMessage.includes('APNS') || errorMessage.includes('device token not set') || errorMessage.includes('APNs')) {
+        console.log('[Notifications] ⏳ FCM token not ready yet (APNs token still being set), will retry...');
+        // Retry after a delay
+        if (retryCount < 5) {
+          const delay = 2000 * (retryCount + 1);
+          setTimeout(() => {
+            this.fetchIOSFCMTokenOnceApnsReady(retryCount + 1);
+          }, delay);
+        }
+      } else if (errorMessage.includes('plugin') || errorMessage.includes('not found') || errorMessage.includes('undefined')) {
+        console.error('[Notifications] ❌ FCMToken plugin error - plugin may not be properly registered');
+        console.error('[Notifications] Check that FCMTokenPlugin.swift is:');
+        console.error('[Notifications] 1. Added to Xcode project');
+        console.error('[Notifications] 2. Included in build target');
+        console.error('[Notifications] 3. Properly compiled');
+        
+        // Show plugin error on screen
+        toast({
+          variant: 'destructive',
+          title: 'FCMToken Plugin Not Found',
+          description: 'FCMTokenPlugin.swift may not be properly registered. Check Xcode project.',
+        });
+      } else if (retryCount < 5) {
+        // Retry on other errors too
+        const delay = 2000 * (retryCount + 1);
+        console.log(`[Notifications] Retrying FCM token fetch in ${delay}ms (attempt ${retryCount + 1}/5)...`);
+        setTimeout(() => {
+          this.fetchIOSFCMTokenOnceApnsReady(retryCount + 1);
+        }, delay);
       } else {
-        // This will happen if APNs token is not ready yet; we'll retry when PushNotifications registration fires again.
-        console.warn('[Notifications] iOS FCM token fetch failed (will retry after APNs):', error);
+        console.error('[Notifications] ❌ Failed to fetch FCM token after 5 attempts');
+        console.error('[Notifications] Please check:');
+        console.error('[Notifications] 1. Firebase configuration (GoogleService-Info.plist)');
+        console.error('[Notifications] 2. APNs certificate/key in Firebase Console');
+        console.error('[Notifications] 3. Push Notifications capability in Xcode');
+        console.error('[Notifications] 4. App signing and provisioning profile');
+        
+        // Show comprehensive error on screen
+        toast({
+          variant: 'destructive',
+          title: 'FCM Token Registration Failed',
+          description: 'Failed to get FCM token. Check Firebase config, APNs key, and Xcode capabilities.',
+        });
       }
     }
   }

@@ -552,18 +552,16 @@ export default function Home() {
   };
 
   const handleServiceClick = (serviceId: string) => {
-    console.log(`Service clicked: ${serviceId}`);
-    
-    if (serviceId === "corporate") {
-      setLocation("/snack-box");
-    } else if (serviceId === "catering") {
+    const id = serviceId.toLowerCase().trim();
+    if (id === "corporate") {
+      setLocation("/corporate");
+    } else if (id === "catering") {
       setLocation("/catering");
-    } else if (serviceId === "mealbox") {
+    } else if (id === "mealbox") {
       setLocation("/mealbox");
-    } else if (serviceId === "bulk") {
-      // Redirect to bulk meals page
+    } else if (id === "bulk" || id === "bulk-meals") {
       setLocation("/bulk-meals");
-    } else if (serviceId === "snack-box") {
+    } else if (id === "snack-box" || id === "snackbox") {
       setLocation("/snack-box");
     } else {
       toast({

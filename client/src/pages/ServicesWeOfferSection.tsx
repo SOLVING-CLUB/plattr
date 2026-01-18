@@ -1,8 +1,9 @@
 import ServiceCardSection from "@/pages/ServiceCard";
 import mealBoxImage from "@assets/Tiffin_1764989484948.png";
-import cateringImage from "@assets/Tiffin5_1764990291688.png";
+import cateringImage from "@assets/meal_boxes_banner.png";
 import bulkMealImage from "@assets/Tiffin8_1764990094179.png";
 import snackboxCardImage from "@assets/snackbox_card.png";
+import corporateImage from "@assets/Tiffin10_1764990422090.png";
 
 interface ServicesWeOfferSectionProps {
   onServiceClick?: (serviceId: string) => void;
@@ -49,7 +50,17 @@ export default function ServicesWeOfferSection({ onServiceClick }: ServicesWeOff
             backgroundImage={snackboxCardImage}
           />
 
-          {/* Catering - Below Snack-box, spans full width */}
+          {/* Daily Corporate - Full width on mobile */}
+          <ServiceCardSection
+            serviceId="corporate"
+            title="Daily Corporate"
+            description="Customizations & more"
+            onClick={() => onServiceClick?.("corporate")}
+            className="col-span-2 h-[160px]"
+            backgroundImage={corporateImage}
+          />
+
+          {/* Catering - Below Corporate, spans full width */}
           <ServiceCardSection
             serviceId="catering"
             title="Catering"

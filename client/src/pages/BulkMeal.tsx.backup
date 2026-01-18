@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useIsDesktop } from "@/hooks/use-mobile";
 import { useInputFocus } from "@/hooks/useInputFocus";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -237,17 +238,8 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
     }
   };
   const { toast } = useToast();
-  const [isDesktop, setIsDesktop] = useState(false);
+  const isDesktop = useIsDesktop();
   const isInputFocused = useInputFocus();
-  
-  // Desktop detection
-  useEffect(() => {
-    const mql = window.matchMedia("(min-width: 768px)");
-    setIsDesktop(mql.matches);
-    const onChange = () => setIsDesktop(mql.matches);
-    mql.addEventListener("change", onChange);
-    return () => mql.removeEventListener("change", onChange);
-  }, []);
   const { cart, addedItems, addToCart, removeFromCart, enterCategory, setBulkMealType, bulkMealType } = useCart();
   const [selectedService, setSelectedService] = useState<ServiceType>("bulk-meals");
   const [locationLabel, setLocationLabel] = useState("Select Address");
@@ -1053,59 +1045,13 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
           />
         )}
 
-        {/* Sticky Back Button Header */}
-        {!isDesktop && (
-          <div
-            className="sticky top-0 z-50 px-4 pt-12 pb-3"
-            style={{
-              backgroundColor: scrollY > 50 ? 'white' : 'transparent',
-              boxShadow: scrollY > 50 ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-            }}
-          >
-            <Button
-              variant="ghost"
-              size="sm"
-              className={scrollY > 50 ? "text-[#06352A] hover:text-[#06352A] hover:bg-gray-100" : "text-white hover:text-white hover:bg-white/20"}
-              onClick={() => navigate("/")}
-              data-testid="button-back"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back
-            </Button>
-          </div>
-        )}
+        {/* Sticky Back Button Header - Hidden since unified header has hamburger menu */}
 
         {/* Header Section - Hidden on desktop */}
         {!isDesktop && (
           <div className="relative z-10 px-4 pt-4 pb-6">
-            {/* Home and AI Menu Planner */}
-            <div className="flex items-center justify-between mb-6">
-              <button
-                className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-                onClick={() => navigate("/")}
-                data-testid="button-home"
-              >
-                <MapPin className="w-5 h-5 text-white" />
-                <span className="text-white font-semibold text-[18px] max-w-[120px] truncate" style={{ fontFamily: "Sweet Sans Pro" }}>
-                  Home
-                </span>
-              </button>
-              <button
-                onClick={() => navigate("/concierge")}
-                data-testid="button-ai-menu-planner"
-                className="flex items-center justify-center px-3 py-2 rounded-[10px] shadow-md hover:opacity-90 transition-opacity"
-                style={{
-                  background: "linear-gradient(135deg, #06352A 0%, #1A9952 100%)",
-                  fontFamily: "Sweet Sans Pro",
-                  fontSize: "12px",
-                  fontWeight: 500,
-                  color: "#F5E9DB",
-                  height: "40px",
-                }}
-              >
-                AI Menu Planner
-              </button>
-            </div>
+            {/* Empty spacer to maintain layout (Location/AI Planner moved to navbar) */}
+            <div className="h-[40px] mb-6" />
 
             {/* Service Navigation Tabs */}
             <div className={onNavigate ? "grid grid-cols-2 gap-3 max-w-xs mx-auto" : "grid grid-cols-4 gap-2 lg:gap-4 max-w-2xl lg:max-w-4xl mx-auto"}>
@@ -1383,18 +1329,23 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
               Non-Veg
             </button>
 
-            {/* Tasting Menu Button */}
-            <Button
-              onClick={() => navigate("/tasting-menu")}
-              className="w-auto h-6 px-2 text-[10px] bg-white border border-gray-200 rounded-full gap-0.5 flex-shrink-0 hover:bg-gray-50"
-              style={{ fontFamily: "Sweet Sans Pro" }}
-              variant="outline"
-              size="sm"
-              data-testid="button-tasting-menu"
-            >
-              <Utensils className="w-2.5 h-2.5" />
-              Tasting Menu
-            </Button>
+            {/* Sort Dropdown */}
+            <Select value={sortOption} onValueChange={(value) => setSortOption(value as typeof sortOption)}>
+              <SelectTrigger
+                className="w-auto h-6 px-2 text-[10px] bg-white border-gray-200 rounded-full gap-0.5 flex-shrink-0"
+                style={{ fontFamily: "Sweet Sans Pro" }}
+                data-testid="select-sort"
+              >
+                <ArrowUpDown className="w-2.5 h-2.5" />
+                <SelectValue placeholder="Sort" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="price-low">Price: Low → High</SelectItem>
+                <SelectItem value="price-high">Price: High → Low</SelectItem>
+                <SelectItem value="name-az">Name: A → Z</SelectItem>
+                <SelectItem value="name-za">Name: Z → A</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Dish Type Categories (65's, Biryani, Breads, etc.) - Inside sticky container */}

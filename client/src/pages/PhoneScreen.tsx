@@ -36,7 +36,9 @@ export default function PhoneScreen() {
       try {
         console.log('📱 Sending OTP to:', phone);
         const data = await edgeFunctions.sendOTP(phone);
+        // Store in both localStorage (for persistence) and sessionStorage (for immediate access)
         sessionStorage.setItem('phoneNumber', phone);
+        localStorage.setItem('phoneNumber', phone);
 
         console.log('✅ OTP sent successfully!');
         return data;
@@ -59,6 +61,7 @@ export default function PhoneScreen() {
       console.error('OTP send error:', error);
       // Still save phone and navigate - test bypass OTP will work
       sessionStorage.setItem('phoneNumber', phoneNumber);
+      localStorage.setItem('phoneNumber', phoneNumber);
       toast({
         title: "Verification",
         description: "Please enter the verification code.",

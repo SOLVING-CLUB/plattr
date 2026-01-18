@@ -131,9 +131,13 @@ function initAuthListener() {
       case 'SIGNED_IN':
         console.log('✅ User signed in:', session?.user?.id);
         // Retry notification token registration now that user is logged in
-        import('@/lib/notifications/service').then(({ notificationService }) => {
+        import('@/lib/notifications/service').then(async ({ notificationService }) => {
           console.log('[Auth] Triggering notification token registration after sign in');
-          notificationService.retryTokenRegistration();
+          try {
+            await notificationService.retryTokenRegistration();
+          } catch (err) {
+            console.warn('[Auth] Could not retry notification registration:', err);
+          }
         }).catch(err => console.warn('[Auth] Could not retry notification registration:', err));
         break;
       case 'SIGNED_OUT':
@@ -172,7 +176,9 @@ function notifySubscribers() {
 // Function to refresh auth state (call after OTP verification)
 export function refreshAuthState() {
   const localUser = checkLocalAuth();
-  if (localUser && !globalAuthState.user) {
+  const wasAuthenticated = !!globalAuthState.user;
+  
+  if (localUser) {
     globalAuthState = {
       user: localUser,
       session: null,
@@ -181,11 +187,20 @@ export function refreshAuthState() {
     };
     notifySubscribers();
     
-    // Retry notification token registration now that user is logged in
-    import('@/lib/notifications/service').then(({ notificationService }) => {
-      console.log('[Auth] Triggering notification token registration after OTP verification');
-      notificationService.retryTokenRegistration();
-    }).catch(err => console.warn('[Auth] Could not retry notification registration:', err));
+    // Retry notification token registration if user just logged in (wasn't authenticated before)
+    // Add a small delay to ensure userId is set in localStorage
+    if (!wasAuthenticated) {
+      setTimeout(() => {
+        import('@/lib/notifications/service').then(async ({ notificationService }) => {
+          console.log('[Auth] Triggering notification token registration after OTP verification');
+          try {
+            await notificationService.retryTokenRegistration();
+          } catch (err) {
+            console.warn('[Auth] Could not retry notification registration:', err);
+          }
+        }).catch(err => console.warn('[Auth] Could not retry notification registration:', err));
+      }, 1000); // Wait 1 second for localStorage to be set
+    }
   }
 }
 

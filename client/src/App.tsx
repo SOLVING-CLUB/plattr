@@ -52,6 +52,7 @@ import SnackBoxCart from "@/pages/SnackBoxCart";
 import SnackBoxAddons from "@/pages/SnackBoxAddons";
 import SnackBoxDelivery from "@/pages/SnackBoxDelivery";
 import SnackBoxThankYouPage from "@/pages/SnackBoxThankYouPage";
+import TastingMenuPage from "@/pages/TastingMenuPage";
 import VerificationScreen from "@/pages/VerificationScreen";
 import PhoneScreen from "@/pages/PhoneScreen";
 import NameScreen from "@/pages/NameScreen";
@@ -60,6 +61,7 @@ import TestOtpPasswordPage from "@/pages/TestOtpPasswordPage";
 import LocationPage from "@/pages/LocationPage";
 import MapConfirmationPage from "@/pages/MapConfirmationPage";
 import NotificationSettingsPage from "@/pages/NotificationSettingsPage";
+import DebugLogsPage from "@/pages/DebugLogsPage";
 import SplashScreen from "@/components/SplashScreen";
 import { useAuth } from "@/hooks/useAuth";
 import { CartProvider } from "@/context/CartContex";
@@ -125,7 +127,8 @@ function RequireNeedsName({ children }: { children: ReactNode }) {
         return;
       }
 
-      const needsName = sessionStorage.getItem('needsName');
+      // Check both localStorage (for persistence across app restarts) and sessionStorage
+      const needsName = localStorage.getItem('needsName') || sessionStorage.getItem('needsName');
       if (needsName === 'true') {
         setShouldRender(true);
       } else {
@@ -209,6 +212,7 @@ function Router() {
   const GuardedProfilePage = withAuthGuard(ProfilePage);
   const GuardedEditProfile = withAuthGuard(EditProfile);
   const GuardedNotificationSettingsPage = withAuthGuard(NotificationSettingsPage);
+  const GuardedDebugLogsPage = withAuthGuard(DebugLogsPage);
   const GuardedSavedAddresses = withAuthGuard(SavedAddresses);
   const GuardedLocationPage = withAuthGuard(LocationPage);
   const GuardedMapConfirmationPage = withAuthGuard(MapConfirmationPage);
@@ -281,6 +285,7 @@ function Router() {
       <Route path="/profile" component={GuardedProfilePage} />
       <Route path="/edit-profile" component={GuardedEditProfile} />
       <Route path="/notification-settings" component={GuardedNotificationSettingsPage} />
+      <Route path="/debug-logs" component={GuardedDebugLogsPage} />
       <Route path="/saved-addresses" component={GuardedSavedAddresses} />
       <Route path="/location" component={GuardedLocationPage} />
       <Route path="/location/map" component={GuardedMapConfirmationPage} />
@@ -291,10 +296,11 @@ function Router() {
       <Route path="/privacy" component={GuardedPrivacyPage} />
       <Route path="/licenses" component={GuardedLicensesPage} />
       <Route path="/referral" component={GuardedReferralPage} />
-      <Route path="/corporate" component={GuardedSnackBoxPage} />
-      <Route path="/corporate-thank-you" component={SnackBoxThankYouPage} />
+      <Route path="/corporate" component={GuardedCorporatePage} />
+      <Route path="/corporate-thank-you" component={CorporateThankYouPage} />
       <Route path="/catering" component={GuardedCateringPage} />
       <Route path="/catering-thank-you" component={CateringThankYouPage} />
+      <Route path="/tasting-menu" component={TastingMenuPage} />
       <Route path="/concierge" component={GuardedConciergeWizardPage} />
       <Route path="/ai-planner" component={GuardedConciergeWizardPage} />
       <Route path="/concierge/results" component={GuardedConciergeResultsPage} />

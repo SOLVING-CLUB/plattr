@@ -1083,16 +1083,16 @@ import chefHatIcon from "@assets/tabler_chef-hat-filled_1763917839168.png";
 import servingStaffIcon from "@assets/ic_baseline-people_1763917839170.png";
 
 // Service category icons (cream/beige for active, dark green for inactive)
-import bulkMealsIconActive from "@assets/Group234_1765649076929.png";
-import bulkMealsIconInactive from "@assets/fi_809724162362_1765649112053.png";
-import mealBoxIconActive from "@assets/fi_116537845_1765649076928.png";
-import mealBoxIconInactive from "@assets/fi_1165378_1765649076929.png";
-import cateringIconActive from "@assets/streamline-plump_food-truck-event-fair-solid34_1765649076927.png";
-import cateringIconInactive from "@assets/streamline-plump_food-truck-event-fair-solid_1765649076929.png";
+import bulkMealsIconActive from "@assets/bulk_meals_active.png";
+import bulkMealsIconInactive from "@assets/BulkBox.png";
+import mealBoxIconActive from "@assets/BulkBox1.png";
+import mealBoxIconInactive from "@assets/BulkBox3.png";
+import cateringIconActive from "@assets/BulkBox7.png";
+import cateringIconInactive from "@assets/BulkBox6.png";
 import corporateIconActive from "@assets/fi_12471703678_1765649076915.png";
 import corporateIconInactive from "@assets/Vector34567_1765649076929.png";
-import snackBoxIconActive from "@assets/fi_116537845_1765649076928.png";
-import snackBoxIconInactive from "@assets/fi_1165378_1765649076929.png";
+import snackBoxIconActive from "@assets/BulkBox5.png";
+import snackBoxIconInactive from "@assets/BulkBox4.png";
 import decorIcon from "@assets/streamline-ultimate_party-decoration-bold_1763917839170.png";
 import tablewareIcon from "@assets/roentgen_fork-and-knife_1763917839169.png";
 import musicIcon from "@assets/roentgen_fork-and-knife_1763917839169.png";
@@ -2733,108 +2733,88 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
         </div>
 
         {/* Service Navigation Tabs */}
-        <div className={onNavigate ? "grid grid-cols-2 gap-3 max-w-xs mx-auto" : "grid grid-cols-4 gap-2"}>
+        <div className={onNavigate ? "grid grid-cols-2 gap-3 max-w-xs mx-auto" : "grid grid-cols-4 gap-2 lg:gap-4 max-w-2xl lg:max-w-4xl mx-auto"}>
           <button
             onClick={() => {
               setSelectedService("bulk-meals");
               navigate("/bulk-meals");
             }}
             data-testid="service-tab-bulk-meals"
-            className="flex flex-col items-center justify-center p-3 transition-all hover-elevate active-elevate-2 aspect-square"
+            className={cn(
+              "flex flex-col items-center justify-center transition-all hover-elevate active-elevate-2 aspect-square p-0"
+            )}
             style={{
               borderRadius: "10px",
               backgroundColor: selectedService === "bulk-meals" ? "#06352A" : "#FFFFFF",
               color: selectedService === "bulk-meals" ? "#F5E9DB" : "#06352A",
             }}
           >
-            <img 
-              src={selectedService === "bulk-meals" ? bulkMealsIconActive : bulkMealsIconInactive} 
-              alt="Bulk Meals" 
-              className="w-6 h-6 mb-1"
+            <img
+              src={selectedService === "bulk-meals" ? bulkMealsIconActive : bulkMealsIconInactive}
+              alt="Bulk Meals"
+              className="w-full h-full object-cover rounded-[10px]"
             />
-            <span
-              className="text-[9px] xs:text-[10px] sm:text-xs font-semibold text-center leading-tight"
-              style={{ fontFamily: "Sweet Sans Pro" }}
-            >
-              Bulk Meals
-            </span>
           </button>
 
           <button
             onClick={() => setSelectedService("mealbox")}
             data-testid="service-tab-mealbox"
-            className="flex flex-col items-center justify-center p-3 transition-all hover-elevate active-elevate-2 aspect-square"
+            className={cn(
+              "flex flex-col items-center justify-center transition-all hover-elevate active-elevate-2 aspect-square p-0"
+            )}
             style={{
               borderRadius: "10px",
               backgroundColor: selectedService === "mealbox" ? "#06352A" : "#FFFFFF",
               color: selectedService === "mealbox" ? "#F5E9DB" : "#06352A",
             }}
           >
-            <img 
-              src={selectedService === "mealbox" ? mealBoxIconActive : mealBoxIconInactive} 
-              alt="MealBox" 
-              className="w-6 h-6 mb-1"
+            <img
+              src={selectedService === "mealbox" ? mealBoxIconActive : mealBoxIconInactive}
+              alt="MealBox"
+              className="w-full h-full object-cover rounded-[10px]"
             />
-            <span
-              className="text-[9px] xs:text-[10px] sm:text-xs font-semibold text-center leading-tight"
-              style={{ fontFamily: "Sweet Sans Pro" }}
-            >
-              MealBox
-            </span>
           </button>
 
           {!onNavigate && (
             <>
               <button
                 onClick={() => {
-                  setSelectedService("catering");
-                  navigate("/catering");
-                }}
-                data-testid="service-tab-catering"
-                className="flex flex-col items-center justify-center p-3 transition-all hover-elevate active-elevate-2 aspect-square"
-                style={{
-                  borderRadius: "10px",
-                  backgroundColor: selectedService === "catering" ? "#06352A" : "#FFFFFF",
-                  color: selectedService === "catering" ? "#F5E9DB" : "#06352A",
-                }}
-              >
-                <img 
-                  src={selectedService === "catering" ? cateringIconActive : cateringIconInactive} 
-                  alt="Catering" 
-                  className="w-6 h-6 mb-1"
-                />
-                <span
-                  className="text-[9px] xs:text-[10px] sm:text-xs font-semibold text-center leading-tight"
-                  style={{ fontFamily: "Sweet Sans Pro" }}
-                >
-                  Catering
-                </span>
-              </button>
-
-              <button
-                onClick={() => {
                   setSelectedService("snack-box");
                   navigate("/snack-box");
                 }}
                 data-testid="service-tab-snack-box"
-                className="flex flex-col items-center justify-center p-3 transition-all hover-elevate active-elevate-2 aspect-square"
+                className="flex flex-col items-center justify-center transition-all hover-elevate active-elevate-2 aspect-square p-0"
                 style={{
                   borderRadius: "10px",
                   backgroundColor: selectedService === "snack-box" ? "#06352A" : "#FFFFFF",
                   color: selectedService === "snack-box" ? "#F5E9DB" : "#06352A",
                 }}
               >
-                <img 
-                  src={selectedService === "snack-box" ? snackBoxIconActive : snackBoxIconInactive} 
-                  alt="Snack-box" 
-                  className="w-6 h-6 mb-1"
+                <img
+                  src={selectedService === "snack-box" ? snackBoxIconActive : snackBoxIconInactive}
+                  alt="Snack-box"
+                  className="w-full h-full object-cover rounded-[10px]"
                 />
-                <span
-                  className="text-[9px] xs:text-[10px] sm:text-xs font-semibold text-center leading-tight"
-                  style={{ fontFamily: "Sweet Sans Pro" }}
-                >
-                  Snack-box
-                </span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setSelectedService("catering");
+                  navigate("/catering");
+                }}
+                data-testid="service-tab-catering"
+                className="flex flex-col items-center justify-center transition-all hover-elevate active-elevate-2 aspect-square p-0"
+                style={{
+                  borderRadius: "10px",
+                  backgroundColor: selectedService === "catering" ? "#06352A" : "#FFFFFF",
+                  color: selectedService === "catering" ? "#F5E9DB" : "#06352A",
+                }}
+              >
+                <img
+                  src={selectedService === "catering" ? cateringIconActive : cateringIconInactive}
+                  alt="Catering"
+                  className="w-full h-full object-cover rounded-[10px]"
+                />
               </button>
             </>
           )}
@@ -3580,7 +3560,7 @@ export default function MealBox({ onNavigate }: MealBoxProps = {}) {
 
               {/* Tasting Menu Button */}
               <Button
-                onClick={() => window.open("https://www.plattr.club/tasting-menu", "_blank")}
+                onClick={() => setLocation("/tasting-menu")}
                 className="w-auto h-6 px-2 text-[10px] bg-white border border-gray-200 rounded-full gap-0.5 flex-shrink-0 hover:bg-gray-50"
                 style={{ fontFamily: "Sweet Sans Pro" }}
                 variant="outline"

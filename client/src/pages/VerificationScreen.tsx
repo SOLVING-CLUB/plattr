@@ -16,11 +16,15 @@ export default function VerificationScreen() {
   const [otpError, setOtpError] = useState('');
 
 
-  // Get phone number from sessionStorage
+  // Get phone number from sessionStorage or localStorage (for persistence)
   useEffect(() => {
-    const storedPhone = sessionStorage.getItem('phoneNumber');
+    const storedPhone = sessionStorage.getItem('phoneNumber') || localStorage.getItem('phoneNumber');
     if (storedPhone) {
       setPhoneNumber(storedPhone);
+      // Also store in localStorage for persistence across app restarts
+      if (!localStorage.getItem('phoneNumber')) {
+        localStorage.setItem('phoneNumber', storedPhone);
+      }
     } else {
       // If no phone number, redirect back to phone screen
       toast({
@@ -117,6 +121,7 @@ export default function VerificationScreen() {
           }
         }
 
+        // Don't remove phoneNumber from localStorage - keep it for persistence
         sessionStorage.removeItem('phoneNumber');
 
         return data;
@@ -125,9 +130,22 @@ export default function VerificationScreen() {
         throw error;
       }
     },
-    onSuccess: (data: any) => {
+    onSuccess: async (data: any) => {
       // Refresh auth state to recognize the newly logged in user
       refreshAuthState();
+
+      // Register device token for notifications (both signup and signin)
+      // Add delay to ensure userId is set in localStorage
+      setTimeout(async () => {
+        try {
+          const { notificationService } = await import('@/lib/notifications/service');
+          console.log('[Verification] Registering device token after OTP verification...');
+          await notificationService.retryTokenRegistration();
+        } catch (error) {
+          console.warn('[Verification] Could not register device token:', error);
+          // Don't block navigation if token registration fails
+        }
+      }, 1500); // Wait 1.5 seconds for localStorage to be set
 
       const tempUsernamePattern = /^user_\d{4}(?:_\d+)?$/;
       const isTempUsername = tempUsernamePattern.test(data.user?.username || '');
@@ -137,9 +155,12 @@ export default function VerificationScreen() {
           title: "Verification Successful!",
           description: "Please enter your name to continue.",
         });
+        // Store in both localStorage (for persistence) and sessionStorage (for immediate access)
+        localStorage.setItem('needsName', 'true');
         sessionStorage.setItem('needsName', 'true');
         setLocation('/name', { replace: true });
       } else {
+        localStorage.removeItem('needsName');
         sessionStorage.removeItem('needsName');
         toast({
           title: "Welcome back!",
@@ -263,12 +284,25 @@ export default function VerificationScreen() {
 
         {/* Continue Button */}
         <button
-          onClick={handleContinue}
+          onClick={(e) => {
+            e.preventDefault();
+            handleContinue();
+          }}
+          onTouchStart={(e) => {
+            // iOS touch handling - prevent double-tap zoom and ensure click works
+            if (isComplete && !verifyOtpMutation.isPending) {
+              e.preventDefault();
+              handleContinue();
+            }
+          }}
           className="w-full py-3 rounded-md text-white font-semibold text-sm sm:text-base flex items-center justify-center gap-2 transition-all mb-4 sm:mb-6"
           style={{
             backgroundColor: (isComplete && !verifyOtpMutation.isPending) ? '#1A9952' : '#A5D6A7',
             cursor: (isComplete && !verifyOtpMutation.isPending) ? 'pointer' : 'not-allowed',
-            fontFamily: "Sweet Sans Pro, -apple-system, sans-serif"
+            fontFamily: "Sweet Sans Pro, -apple-system, sans-serif",
+            WebkitTapHighlightColor: 'transparent',
+            touchAction: 'manipulation',
+            userSelect: 'none'
           }}
           disabled={!isComplete || verifyOtpMutation.isPending}
         >

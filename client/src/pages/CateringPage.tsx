@@ -955,21 +955,22 @@ import lunchIcon from "@assets/9.png";
 import dinnerIcon from "@assets/Rectangle 34625261.png";
 
 // Service category icons (cream/beige for active, dark green for inactive)
-import bulkMealsIconActive from "@assets/Group234_1765649076929.png";
-import bulkMealsIconInactive from "@assets/fi_809724162362_1765649112053.png";
-import mealBoxIconActive from "@assets/fi_116537845_1765649076928.png";
-import mealBoxIconInactive from "@assets/fi_1165378_1765649076929.png";
-import cateringIconActive from "@assets/streamline-plump_food-truck-event-fair-solid34_1765649076927.png";
-import cateringIconInactive from "@assets/streamline-plump_food-truck-event-fair-solid_1765649076929.png";
+import bulkMealsIconActive from "@assets/bulk_meals_active.png";
+import bulkMealsIconInactive from "@assets/BulkBox.png";
+import mealBoxIconActive from "@assets/BulkBox1.png";
+import mealBoxIconInactive from "@assets/BulkBox3.png";
+import cateringIconActive from "@assets/BulkBox7.png";
+import cateringIconInactive from "@assets/BulkBox6.png";
 import corporateIconActive from "@assets/fi_12471703678_1765649076915.png";
 import corporateIconInactive from "@assets/Vector34567_1765649076929.png";
-import snackBoxIconActive from "@assets/fi_116537845_1765649076928.png";
-import snackBoxIconInactive from "@assets/fi_1165378_1765649076929.png";
+import snackBoxIconActive from "@assets/BulkBox5.png";
+import snackBoxIconInactive from "@assets/BulkBox4.png";
 import DeliveryTimePicker from "@/components/DeliveryTimePicker";
 import DeliveryDatePicker from "@/components/DeliveryDatePicker";
 import { validateBangaloreAddress, BANGALORE_VALIDATION_ERROR } from "@/lib/addressValidation";
 import { analytics } from "@/lib/analytics";
 import { facebookEvents } from "@/lib/facebook-capi";
+import { cn } from "@/lib/utils";
 
 type ServiceType = "bulk-meals" | "mealbox" | "catering" | "snack-box";
 
@@ -1443,11 +1444,13 @@ export default function CateringOrder() {
         </div>
 
         {/* Service Navigation Tabs */}
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-4 gap-2 lg:gap-4 max-w-2xl lg:max-w-4xl mx-auto">
           <button
             onClick={() => { setSelectedService("bulk-meals"); setLocation("/bulk-meals"); }}
             data-testid="service-tab-bulk-meals"
-            className="flex flex-col items-center justify-center p-3 transition-all hover-elevate active-elevate-2 aspect-square"
+            className={cn(
+              "flex flex-col items-center justify-center transition-all hover-elevate active-elevate-2 aspect-square p-0"
+            )}
             style={{
               borderRadius: "10px",
               backgroundColor:
@@ -1455,23 +1458,19 @@ export default function CateringOrder() {
               color: selectedService === "bulk-meals" ? "#F5E9DB" : "#06352A",
             }}
           >
-            <img 
-              src={selectedService === "bulk-meals" ? bulkMealsIconActive : bulkMealsIconInactive} 
-              alt="Bulk Meals" 
-              className="w-6 h-6 mb-1"
+            <img
+              src={selectedService === "bulk-meals" ? bulkMealsIconActive : bulkMealsIconInactive}
+              alt="Bulk Meals"
+              className="w-full h-full object-cover rounded-[10px]"
             />
-            <span
-              className="text-[10px] font-semibold text-center leading-tight"
-              style={{ fontFamily: "Sweet Sans Pro" }}
-            >
-              Bulk Meals
-            </span>
           </button>
 
           <button
             onClick={() => { setSelectedService("mealbox"); setLocation("/mealbox"); }}
             data-testid="service-tab-mealbox"
-            className="flex flex-col items-center justify-center p-3 transition-all hover-elevate active-elevate-2 aspect-square"
+            className={cn(
+              "flex flex-col items-center justify-center transition-all hover-elevate active-elevate-2 aspect-square p-0"
+            )}
             style={{
               borderRadius: "10px",
               backgroundColor:
@@ -1479,47 +1478,17 @@ export default function CateringOrder() {
               color: selectedService === "mealbox" ? "#F5E9DB" : "#06352A",
             }}
           >
-            <img 
-              src={selectedService === "mealbox" ? mealBoxIconActive : mealBoxIconInactive} 
-              alt="MealBox" 
-              className="w-6 h-6 mb-1"
+            <img
+              src={selectedService === "mealbox" ? mealBoxIconActive : mealBoxIconInactive}
+              alt="MealBox"
+              className="w-full h-full object-cover rounded-[10px]"
             />
-            <span
-              className="text-[10px] font-semibold text-center leading-tight"
-              style={{ fontFamily: "Sweet Sans Pro" }}
-            >
-              MealBox
-            </span>
-          </button>
-
-          <button
-            onClick={() => setSelectedService("catering")}
-            data-testid="service-tab-catering"
-            className="flex flex-col items-center justify-center p-3 transition-all hover-elevate active-elevate-2 aspect-square"
-            style={{
-              borderRadius: "10px",
-              backgroundColor:
-                selectedService === "catering" ? "#06352A" : "#FFFFFF",
-              color: selectedService === "catering" ? "#F5E9DB" : "#06352A",
-            }}
-          >
-            <img 
-              src={selectedService === "catering" ? cateringIconActive : cateringIconInactive} 
-              alt="Catering" 
-              className="w-6 h-6 mb-1"
-            />
-            <span
-              className="text-[10px] font-semibold text-center leading-tight"
-              style={{ fontFamily: "Sweet Sans Pro" }}
-            >
-              Catering
-            </span>
           </button>
 
           <button
             onClick={() => { setSelectedService("snack-box"); setLocation("/snack-box"); }}
             data-testid="service-tab-snack-box"
-            className="flex flex-col items-center justify-center p-3 transition-all hover-elevate active-elevate-2 aspect-square"
+            className="flex flex-col items-center justify-center transition-all hover-elevate active-elevate-2 aspect-square p-0"
             style={{
               borderRadius: "10px",
               backgroundColor:
@@ -1527,17 +1496,29 @@ export default function CateringOrder() {
               color: selectedService === "snack-box" ? "#F5E9DB" : "#06352A",
             }}
           >
-            <img 
-              src={selectedService === "snack-box" ? snackBoxIconActive : snackBoxIconInactive} 
-              alt="Snack-box" 
-              className="w-6 h-6 mb-1"
+            <img
+              src={selectedService === "snack-box" ? snackBoxIconActive : snackBoxIconInactive}
+              alt="Snack-box"
+              className="w-full h-full object-cover rounded-[10px]"
             />
-            <span
-              className="text-[10px] font-semibold text-center leading-tight"
-              style={{ fontFamily: "Sweet Sans Pro" }}
-            >
-              Snack-box
-            </span>
+          </button>
+
+          <button
+            onClick={() => setSelectedService("catering")}
+            data-testid="service-tab-catering"
+            className="flex flex-col items-center justify-center transition-all hover-elevate active-elevate-2 aspect-square p-0"
+            style={{
+              borderRadius: "10px",
+              backgroundColor:
+                selectedService === "catering" ? "#06352A" : "#FFFFFF",
+              color: selectedService === "catering" ? "#F5E9DB" : "#06352A",
+            }}
+          >
+            <img
+              src={selectedService === "catering" ? cateringIconActive : cateringIconInactive}
+              alt="Catering"
+              className="w-full h-full object-cover rounded-[10px]"
+            />
           </button>
         </div>
       </div>

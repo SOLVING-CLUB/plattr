@@ -192,6 +192,13 @@ serve(async (req) => {
       );
     }
 
+    console.log(`[Notification] Found ${tokens.length} device token(s) for user ${user_id}`);
+    
+    // Log token details for debugging
+    tokens.forEach((tokenData, index) => {
+      console.log(`[Notification] Token ${index + 1}: Platform=${tokenData.platform}, Length=${tokenData.device_token?.length || 0}, Created=${tokenData.created_at}`);
+    });
+
     // Check Firebase credentials
     if (!FIREBASE_SERVICE_ACCOUNT_JSON) {
       return new Response(
@@ -236,6 +243,12 @@ serve(async (req) => {
         // Use V1 FCM API
         // Include notification block for BACKGROUND notifications (shown by system)
         // Include data block for FOREGROUND notifications (handled by app)
+        // Detect platform from database field (most reliable)
+        const platform = tokenData.platform || tokenData.device_type || 'unknown';
+        const isIOS = platform === 'ios';
+        
+        console.log(`[Notification] Platform: ${platform}, Token length: ${tokenData.device_token?.length || 0}, Detected iOS: ${isIOS}`);
+        
         const v1Payload = {
           message: {
             token: tokenData.device_token,
@@ -269,25 +282,49 @@ serve(async (req) => {
                 visibility: "PUBLIC",
               },
             },
-            // iOS-specific settings
+            // iOS-specific settings - CRITICAL for iOS notifications to show
             apns: {
               headers: {
-                "apns-priority": "10", // High priority
-                "apns-push-type": "alert",
+                "apns-priority": "10", // High priority (required)
+                "apns-push-type": "alert", // Required for iOS 13+ (must be "alert" or "background")
               },
               payload: {
                 aps: {
+                  // CRITICAL: alert object with title/body is required for iOS to show notification
                   alert: {
-                    title,
-                    body,
+                    title: title,
+                    body: body,
                   },
                   sound: "default",
                   badge: 1,
+                  // DO NOT include content-available or mutable-content unless needed
+                  // These can cause iOS to treat it as a silent background notification
                 },
               },
             },
           },
         };
+        
+        // Log payload structure for debugging (sanitize token)
+        const payloadLog = JSON.stringify(v1Payload, null, 2)
+          .replace(new RegExp(tokenData.device_token.substring(0, 30), 'g'), 'TOKEN...');
+        console.log(`[Notification] 📤 Sending to ${isIOS ? 'iOS' : 'Android'} device:`);
+        
+        // Log full payload structure (especially important for iOS apns section)
+        if (isIOS) {
+          // Log just the apns section separately to ensure it's visible
+          if (v1Payload.message.apns) {
+            console.log(`[Notification] 🔍 APNs section (CRITICAL for iOS):`, JSON.stringify(v1Payload.message.apns, null, 2));
+            console.log(`[Notification] 🔍 APNs headers:`, JSON.stringify(v1Payload.message.apns.headers, null, 2));
+            console.log(`[Notification] 🔍 APNs payload.aps:`, JSON.stringify(v1Payload.message.apns.payload.aps, null, 2));
+          } else {
+            console.error(`[Notification] ❌ CRITICAL ERROR: APNs section is missing!`);
+          }
+          // Also log full payload (might be truncated)
+          console.log(`[Notification] Full iOS payload (first 2000 chars):`, payloadLog.substring(0, 2000));
+        } else {
+          console.log(`[Notification] Payload structure:`, payloadLog.substring(0, 1000)); // Limit for Android
+        }
         
         const fcmResponse = await fetch(
           `https://fcm.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/messages:send`,
@@ -301,27 +338,65 @@ serve(async (req) => {
           }
         );
 
+        const responseStatus = fcmResponse.status;
+        const responseText = await fcmResponse.text();
+        
+        console.log(`[Notification] FCM API Response Status: ${responseStatus}`);
+        
         if (!fcmResponse.ok) {
-          const errorData = await fcmResponse.json();
+          let errorData: any;
+          try {
+            errorData = JSON.parse(responseText);
+          } catch {
+            errorData = { error: { message: responseText } };
+          }
+          
           failed++;
           
           const errorMessage = errorData.error?.message || errorData.error?.status || "Unknown error";
+          const fullError = JSON.stringify(errorData);
+          console.error(`[Notification] ❌ FCM API Error for ${isIOS ? 'iOS' : 'Android'} device:`);
+          console.error(`[Notification] Token: ${tokenData.device_token.substring(0, 30)}...`);
+          console.error(`[Notification] Error details:`, fullError);
           errors.push(`Token ${tokenData.device_token.substring(0, 20)}...: ${errorMessage}`);
           
           // Remove invalid tokens
           const isInvalidToken = errorMessage.includes("INVALID") || 
                                  errorMessage.includes("UNREGISTERED") ||
-                                 errorMessage.includes("not found");
+                                 errorMessage.includes("not found") ||
+                                 errorMessage.includes("APNS") ||
+                                 errorMessage.includes("InvalidRegistration");
           if (isInvalidToken) {
             await supabase
               .from("device_tokens")
               .delete()
               .eq("id", tokenData.id);
-            console.log(`[Notification] Removed invalid token: ${tokenData.device_token.substring(0, 20)}...`);
+            console.log(`[Notification] 🗑️ Removed invalid token: ${tokenData.device_token.substring(0, 20)}...`);
           }
         } else {
-          const result = await fcmResponse.json();
-          console.log(`[Notification] Sent successfully:`, result.name);
+          let result: any;
+          try {
+            result = JSON.parse(responseText);
+          } catch {
+            result = { name: 'success' };
+          }
+          console.log(`[Notification] ✅ Sent successfully to ${isIOS ? 'iOS' : 'Android'} device`);
+          console.log(`[Notification] FCM Message ID:`, result.name);
+          
+          // For iOS, log additional info to help debug why notifications might not appear
+          if (isIOS) {
+            console.log(`[Notification] 🔍 iOS Debug Info:`);
+            console.log(`[Notification] - Token length: ${tokenData.device_token.length}`);
+            console.log(`[Notification] - Platform: ${tokenData.platform || 'unknown'}`);
+            console.log(`[Notification] - APNs headers present: ${!!v1Payload.message.apns?.headers}`);
+            console.log(`[Notification] - APNs payload.aps.alert present: ${!!v1Payload.message.apns?.payload?.aps?.alert}`);
+            console.log(`[Notification] - Notification block present: ${!!v1Payload.message.notification}`);
+            console.log(`[Notification] ⚠️ If notification doesn't appear, check:`);
+            console.log(`[Notification] 1. Is app in foreground? (Background app to test)`);
+            console.log(`[Notification] 2. Check Xcode console for "[Plattr] 📨 Notification received"`);
+            console.log(`[Notification] 3. Check iPhone Settings → Notifications → Plattr`);
+          }
+          
           sent++;
         }
       } catch (error: any) {

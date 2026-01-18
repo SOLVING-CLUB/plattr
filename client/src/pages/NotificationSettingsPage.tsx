@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { ChevronLeft, Bell, Copy, Check } from "lucide-react";
+import { ChevronLeft, Bell, Copy, Check, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -149,6 +149,10 @@ export default function NotificationSettingsPage() {
       });
 
       try {
+        console.log('[Test Notification] 📤 Calling Edge Function...');
+        console.log('[Test Notification] User ID:', userId);
+        console.log('[Test Notification] Device Token:', deviceToken?.substring(0, 30) + '...');
+        
         // Use Supabase Edge Function instead of Express backend
         const { data, error } = await supabaseAuth.functions.invoke('send-notification', {
           body: {
@@ -161,7 +165,11 @@ export default function NotificationSettingsPage() {
           }
         });
 
+        console.log('[Test Notification] 📥 Edge Function response:', JSON.stringify(data, null, 2));
+        console.log('[Test Notification] Error:', error);
+
         if (error) {
+          console.error('[Test Notification] ❌ Edge Function error:', error);
           throw new Error(error.message || "Failed to send notification");
         }
 
@@ -171,26 +179,28 @@ export default function NotificationSettingsPage() {
             const errorMsg = data.errors?.length > 0 
               ? `Failed: ${data.errors.join(', ')}`
               : 'No device tokens found. Make sure you\'re logged in and notifications are enabled.';
+            console.error('[Test Notification] ❌ No notifications sent:', data);
             toast({
               variant: "destructive",
               title: "No notifications sent",
               description: errorMsg,
             });
-            console.error('[Test Notification] Edge Function response:', data);
           } else if (data.failed > 0 && data.errors?.length > 0) {
+            console.warn('[Test Notification] ⚠️ Partial failure:', data);
             toast({
               variant: "destructive",
               title: "Partial failure",
               description: `Sent to ${data.sent} device(s), but ${data.failed} failed: ${data.errors.join(', ')}`,
             });
-            console.error('[Test Notification] Partial failure:', data.errors);
           } else {
-          toast({
-            title: "Test sent!",
+            console.log('[Test Notification] ✅ Success! Sent to', data.sent, 'device(s)');
+            toast({
+              title: "Test sent!",
               description: `Notification sent to ${data.sent} device(s). Check your notifications.`,
-          });
+            });
           }
         } else {
+          console.error('[Test Notification] ❌ Unexpected response:', data);
           throw new Error(data?.error || "Failed to send");
         }
       } catch (apiError: any) {
@@ -427,6 +437,21 @@ export default function NotificationSettingsPage() {
           </Button>
           <p className="text-xs text-gray-500 mt-2 text-center">
             Test if notifications are working on your device
+          </p>
+        </div>
+
+        {/* Debug Logs Button */}
+        <div className="bg-white rounded-lg p-4">
+          <Button
+            onClick={() => setLocation("/debug-logs")}
+            className="w-full bg-gray-900 text-white hover:bg-gray-800"
+            variant="default"
+          >
+            <FileText className="w-4 h-4 mr-2" />
+            View Debug Logs
+          </Button>
+          <p className="text-xs text-gray-500 mt-2 text-center">
+            View all console logs with copy functionality
           </p>
         </div>
 

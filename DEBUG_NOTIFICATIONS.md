@@ -1,191 +1,117 @@
-# Debugging Push Notifications
+# Debug iOS Notifications
 
-## 1. View Console Logs on Mobile (Android)
+## View Edge Function Logs
 
-### Method 1: Chrome DevTools Remote Debugging (Recommended)
+The Supabase CLI doesn't support `--tail` flag. Use the Dashboard instead:
 
-1. **Enable USB Debugging on your Android phone:**
-   - Go to Settings → About Phone
-   - Tap "Build Number" 7 times to enable Developer Options
-   - Go back to Settings → Developer Options
-   - Enable "USB Debugging"
+### Option 1: Supabase Dashboard (Recommended)
+1. Go to: https://supabase.com/dashboard/project/YOUR_PROJECT_ID/functions
+2. Click on **`send-notification`**
+3. Click **"Logs"** tab
+4. Send a test notification from the app
+5. Logs will appear in real-time
 
-2. **Connect your phone to your Mac via USB**
+### Option 2: Check Browser Console
+The app now logs detailed information:
+- `[Test Notification] 📤 Calling Edge Function...`
+- `[Test Notification] 📥 Edge Function response:`
+- `[Test Notification] ✅ Success!` or `❌ Error`
 
-3. **Open Chrome on your Mac:**
-   - Go to `chrome://inspect`
-   - You should see your device listed
-   - Click "inspect" next to your app
+## Common Issues
 
-4. **View logs:**
-   - Open the Console tab
-   - Filter by `[Notifications]` to see only notification logs
-   - You'll see all console.log statements from your app
+### Issue: "No device tokens found"
+**Check:**
+1. Is user logged in? (Check `localStorage.getItem('userId')`)
+2. Is device token registered? (Check `device_tokens` table in Supabase)
+3. Is platform set correctly? (Should be `'ios'` for iOS devices)
 
-### Method 2: Android Logcat (Command Line)
-
-```bash
-# Connect your phone via USB
-# Then run:
-adb logcat | grep -i "notifications"
-
-# Or see all logs:
-adb logcat
+**Fix:**
+```sql
+-- Check device tokens
+SELECT user_id, platform, device_token, created_at 
+FROM device_tokens 
+WHERE user_id = 'YOUR_USER_ID';
 ```
 
-### Method 3: Android Studio Logcat
-
-1. Open Android Studio
-2. Connect your phone
-3. Open the Logcat tab at the bottom
-4. Filter by "Notifications" or your app package name
-
-## 2. Test in Chrome Browser (Web Push Notifications)
-
-**Note:** Web push notifications work differently than native push notifications, but you can test the token registration flow.
-
-### Setup:
-
-1. **Run your app locally:**
-   ```bash
-   cd /Users/bhanu/Desktop/Plattr/plattr
-   npm run dev
-   ```
-
-2. **Open Chrome and navigate to:**
-   ```
-   http://localhost:5173
-   ```
-
-3. **Enable notifications:**
-   - Chrome will prompt for notification permission
-   - Click "Allow"
-   - The app will try to register for web push notifications
-
-4. **Check console:**
-   - Open Chrome DevTools (F12)
-   - Go to Console tab
-   - Look for `[Notifications]` logs
-
-**Important:** Web push notifications require:
-- HTTPS (or localhost)
-- Service Worker registration
-- Different FCM setup for web
-
-For now, **testing on a real Android device is recommended** since that's your target platform.
-
-## 2b. View Console Logs on Mobile (iOS)
-
-### Method: Xcode Console (Recommended)
-
-1. Open `plattr/ios/App/App.xcworkspace` in Xcode
-2. Run the app on a real device
-3. Open **View → Debug Area → Activate Console**
-4. Filter logs by `[Notifications]` (JS) or `[Plattr]` (native)
-
-### What tokens to expect on iOS
-
-- **FCM token (used by backend)**: `[Plattr] FCM token:` and `[Notifications] iOS FCM token...`
-- **APNs token (not used by backend)**: stored in `localStorage.getItem('plattr_apns_token')`
-
-### TestFlight note (important)
-
-TestFlight uses a **Release** build, which requires `aps-environment=production`.
-This repo is configured as:
-- Debug: `ios/App/App/AppDebug.entitlements` → `development`
-- Release/TestFlight: `ios/App/App/App.entitlements` → `production`
-
-## 3. Debugging Steps
-
-### Step 1: Check if token is received
-Look for this log:
-```
-[Notifications] Device token: <token>
-```
-
-On iOS, ensure you also see:
-```
-[Notifications] iOS FCM token received: <token...>
-```
-
-### Step 2: Check if user is logged in
-Look for:
-```
-[Notifications] Registering token directly in Supabase...
-user_id: <user_id>
-```
-
-### Step 3: Check for errors
-Look for:
-```
-[Notifications] Error saving token to Supabase: <error>
-```
-
-### Step 4: Verify in Supabase
-1. Go to Supabase Dashboard
-2. Navigate to Table Editor → `device_tokens`
-3. Check if a row was created
-
-## 4. Common Issues
-
-### Issue: "No user ID available"
-**Solution:** Make sure you're logged in before the token is registered. The app will retry automatically when you log in.
-
-### Issue: "Error saving token to Supabase"
+### Issue: "Sent successfully" but notification doesn't appear
 **Possible causes:**
-- RLS (Row Level Security) policies blocking the insert
-- Missing columns in the table
-- Network error
+1. **App is in foreground** - iOS suppresses notifications when app is open
+   - **Fix:** Background the app (press Home button) before sending test
+   
+2. **Notification permissions disabled**
+   - **Fix:** iPhone Settings → Notifications → Plattr → Enable all options
+   
+3. **APNs certificate/environment mismatch**
+   - **Fix:** Check Firebase Console → Project Settings → Cloud Messaging → APNs
+   - Development builds need Development APNs key
+   - Production builds need Production APNs key
 
-**Check:**
-1. Supabase RLS policies on `device_tokens` table
-2. Table schema matches the insert data
-3. Network connectivity
+4. **Payload structure issue**
+   - **Fix:** Check Edge Function logs for FCM API errors
+   - Look for: `INVALID`, `UNREGISTERED`, `APNS` errors
 
-### Issue: Token registered but not in database
-**Check:**
-- Supabase logs for errors
-- RLS policies
-- Table permissions
+### Issue: FCM API returns error
+**Check Edge Function logs for:**
+- `❌ FCM API Error` - Shows the exact error from Firebase
+- `Token ...: INVALID` - Token is wrong format or expired
+- `Token ...: UNREGISTERED` - Token was removed from Firebase
+- `Token ...: APNS ...` - APNs configuration issue
 
-## 5. Manual Token Registration Test
+## Testing Steps
 
-If automatic registration isn't working, you can manually test:
+1. **Send test notification from app**
+   - Go to Profile → Notification Settings
+   - Tap "Send Test Notification"
+   - Check browser console for logs
 
-1. **Get your device token:**
-   - Check console logs: `[Notifications] Device token: <token>`
-   - Or check localStorage: `localStorage.getItem('plattr_device_token')`
+2. **Check Edge Function logs**
+   - Go to Supabase Dashboard → Edge Functions → send-notification → Logs
+   - Look for: `✅ Sent successfully` or error messages
 
-2. **Get your user ID:**
-   - Check console logs when logged in
-   - Or check Supabase `auth.users` table
+3. **Test with app in background**
+   - Send test notification
+   - Immediately background the app (Home button)
+   - Wait 5-10 seconds
+   - Check notification tray
 
-3. **Manually insert into Supabase:**
-   ```sql
-   INSERT INTO device_tokens (user_id, device_token, platform, preferences)
-   VALUES (
-     'your-user-id',
-     'your-device-token',
-     'android',
-     '{"order_updates": true, "offers_promotions": false, "menu_recommendations": false, "reminders": true}'::jsonb
-   );
-   ```
+4. **Compare with Firebase Console**
+   - Send notification via Firebase Console (this works)
+   - Compare payload structure in Edge Function logs
+   - Ensure they match
 
-## 6. Testing Notifications
-
-Once a token is registered:
+## Debug Commands
 
 ```bash
-curl -X POST https://leltckltotobsibixhqo.supabase.co/functions/v1/send-notification \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxlbHRja2x0b3RvYnNpYml4aHFvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAzNzc5ODEsImV4cCI6MjA3NTk1Mzk4MX0._IrMgGQDJB7OvKEoT7pwWG9AjN6aeN1ejnj8IViDLyE" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "user_id": "YOUR_USER_ID",
-    "title": "Test Notification",
-    "body": "This is a test notification!",
-    "event_name": "order_confirmed",
-    "category": "transactional"
-  }'
+# Deploy Edge Function with latest changes
+supabase functions deploy send-notification
+
+# Check Supabase project status
+supabase status
+
+# View function list
+supabase functions list
 ```
 
-Replace `YOUR_USER_ID` with your actual user ID from Supabase.
+## What to Look For in Logs
+
+### Success Logs:
+```
+[Notification] Platform: ios, Token length: 152, Detected iOS: true
+[Notification] 📤 Sending to iOS device:
+[Notification] ✅ Sent successfully to iOS device
+[Notification] FCM Message ID: projects/.../messages/...
+```
+
+### Error Logs:
+```
+[Notification] ❌ FCM API Error for iOS device:
+[Notification] Token: abc123...
+[Notification] Error details: {"error": {"message": "..."}}
+```
+
+## Next Steps
+
+If notifications still don't work:
+1. Share the Edge Function logs (from Dashboard)
+2. Share the browser console logs
+3. Check Firebase Console → Cloud Messaging → Reports for delivery status

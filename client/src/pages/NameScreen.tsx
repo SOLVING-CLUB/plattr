@@ -29,6 +29,7 @@ export default function NameScreen() {
         
         // Store username locally for quick access
         localStorage.setItem("username", fullName.trim());
+        localStorage.removeItem('needsName');
         sessionStorage.removeItem('needsName');
         
         // Invalidate profile cache so Profile page shows updated name immediately
@@ -36,6 +37,19 @@ export default function NameScreen() {
         
         // Refresh auth state with new username
         refreshAuthState();
+        
+        // Register device token for notifications (signup completion)
+        // Add delay to ensure userId is set in localStorage
+        setTimeout(async () => {
+          try {
+            const { notificationService } = await import('@/lib/notifications/service');
+            console.log('[NameScreen] Registering device token after signup completion...');
+            await notificationService.retryTokenRegistration();
+          } catch (error) {
+            console.warn('[NameScreen] Could not register device token:', error);
+            // Don't block navigation if token registration fails
+          }
+        }, 1500); // Wait 1.5 seconds for localStorage to be set
         
         toast({
           title: "Welcome!",
@@ -127,12 +141,25 @@ export default function NameScreen() {
 
         {/* Continue Button */}
         <button 
-          onClick={handleContinue}
+          onClick={(e) => {
+            e.preventDefault();
+            handleContinue();
+          }}
+          onTouchStart={(e) => {
+            // iOS touch handling - prevent double-tap zoom and ensure click works
+            if (isValid && !isSubmitting) {
+              e.preventDefault();
+              handleContinue();
+            }
+          }}
           className="w-full py-3 rounded-md text-white font-semibold text-sm sm:text-base flex items-center justify-center gap-2 transition-all mb-4 sm:mb-6"
           style={{ 
             backgroundColor: (isValid && !isSubmitting) ? '#1A9952' : '#A5D6A7',
             cursor: (isValid && !isSubmitting) ? 'pointer' : 'not-allowed',
-            fontFamily: "Sweet Sans Pro, -apple-system, sans-serif"
+            fontFamily: "Sweet Sans Pro, -apple-system, sans-serif",
+            WebkitTapHighlightColor: 'transparent',
+            touchAction: 'manipulation',
+            userSelect: 'none'
           }}
           disabled={!isValid || isSubmitting}
         >

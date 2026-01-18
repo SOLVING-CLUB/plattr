@@ -65,7 +65,7 @@ export default function SixtyMinSection({ onExplore }: SixtyMinSectionProps) {
           />
         )}
         
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <div className="absolute inset-0 flex flex-col items-center justify-end pb-4">
           <button
             className="group flex items-center gap-1.5 px-4 py-2 text-[#F5E9DB] shadow-xl hover-elevate active-elevate-2 transition-all duration-300"
             style={{
