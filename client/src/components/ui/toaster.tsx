@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { useLocation } from "wouter"
 import { useToast } from "@/hooks/use-toast"
 import { useCart } from "@/context/CartContex"
@@ -16,6 +16,7 @@ export function Toaster() {
   const { toasts, dismiss } = useToast()
   const { cart, mealBoxProgress, activeCategory } = useCart()
   const [location] = useLocation()
+  const viewportRef = useRef<HTMLDivElement>(null)
   
   // Dismiss all toasts when the page/route changes
   useEffect(() => {
@@ -24,6 +25,38 @@ export function Toaster() {
       dismiss(toast.id)
     })
   }, [location])
+  
+  // Measure toast viewport height and update CSS variable for smooth button transitions
+  useEffect(() => {
+    const viewport = viewportRef.current
+    if (!viewport) return
+
+    const updateToastHeight = () => {
+      const height = viewport.offsetHeight
+      // Set CSS custom property on document root for global access
+      document.documentElement.style.setProperty('--toast-viewport-height', `${height}px`)
+    }
+
+    // Initial measurement
+    updateToastHeight()
+
+    // Use ResizeObserver to watch for height changes
+    const resizeObserver = new ResizeObserver(() => {
+      updateToastHeight()
+    })
+
+    resizeObserver.observe(viewport)
+
+    // Also watch for toast changes
+    const timeoutId = setTimeout(updateToastHeight, 100)
+
+    return () => {
+      resizeObserver.disconnect()
+      clearTimeout(timeoutId)
+      // Reset height when component unmounts
+      document.documentElement.style.setProperty('--toast-viewport-height', '0px')
+    }
+  }, [toasts])
   
   // Check if we're on the home page
   const isHomePage = location === "/";
@@ -35,24 +68,6 @@ export function Toaster() {
   // Check if there's a continue order banner visible
   // Banner shows on home page when there's an active order
   const hasContinueBanner = isHomePage && (mealBoxProgress !== null || (activeCategory && cart.length > 0));
-  
-  // Position toast above buttons/banners if present, otherwise at their position
-  // FloatingNav is at bottom-4 (~70px height)
-  // ContinueOrderBanner is at bottom-20 (80px from bottom)
-  // FloatingCartButton is at bottom-[102px] (102px from bottom)
-  // 
-  // If cart button exists: toast at bottom-[180px] (above cart button)
-  // If only banner exists: toast at bottom-40 (160px - above continue banner with gap)
-  // If nothing exists: toast at bottom-20 (at banner position, above footer nav)
-  const getPositionClass = () => {
-    if (hasCartButton) {
-      return "bottom-[180px]"; // Above cart button
-    } else if (hasContinueBanner) {
-      return "bottom-40"; // Above continue banner with more gap
-    } else {
-      return "bottom-20"; // At banner position (above footer nav)
-    }
-  };
 
   return (
     <ToastProvider>
@@ -71,7 +86,15 @@ export function Toaster() {
           </Toast>
         )
       })}
-      <ToastViewport className={`fixed ${getPositionClass()} left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 w-[calc(100%-2rem)] max-w-sm`} />
+      <ToastViewport 
+        ref={viewportRef}
+        className="toast-viewport-bottom fixed bottom-0 left-0 right-0 z-[100] flex flex-col-reverse gap-0 w-full"
+        style={{
+          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 72px)', // Account for FloatingNav (~56px) + spacing (16px)
+          top: 'auto',
+          position: 'fixed',
+        }}
+      />
     </ToastProvider>
   )
 }

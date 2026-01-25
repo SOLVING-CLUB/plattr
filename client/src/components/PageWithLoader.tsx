@@ -81,7 +81,11 @@ export function PageWithLoader({ children, minLoadTime = 500 }: PageWithLoaderPr
         style={{ 
           visibility: showLoader ? 'hidden' : 'visible',
           opacity: showLoader ? 0 : 1,
-          transition: 'opacity 0.2s ease-in-out'
+          transition: 'opacity 0.2s ease-in-out',
+          padding: 0,
+          margin: 0,
+          paddingTop: 0,
+          marginTop: 0,
         }}
       >
         {children}

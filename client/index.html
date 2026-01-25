@@ -2,10 +2,29 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover, user-scalable=no" />
+    <meta name="viewport" content="viewport-fit=cover, width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <style>
+      /* Global boundary enforcement - prevent content overflow */
+      html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100%;
+        max-width: 100vw;
+        overflow-x: hidden;
+        overflow-y: auto;
+        position: relative;
+        height: auto;
+        min-height: 100vh;
+      }
+      #root {
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      
+    </style>
     <title>Plattr - Bangalore Catering & Bulk Meal Service</title>
     <meta name="description" content="Order delicious catering and bulk meals in Bangalore. Traditional tiffins, snacks, lunch and dinner options delivered to your doorstep." />
     
@@ -19,7 +38,76 @@
     <link href="https://fonts.googleapis.com/css2?family=Architects+Daughter&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Fira+Code:wght@300..700&family=Geist+Mono:wght@100..900&family=Geist:wght@100..900&family=IBM+Plex+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&family=IBM+Plex+Sans:ital,wght@0,100..700;1,100..700&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400..700;1,400..700&family=Merriweather:ital,opsz,wght@0,18..144,300..900;1,18..144,300..900&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Outfit:wght@100..900&family=Oxanium:wght@200..800&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Roboto+Mono:ital,wght@0,100..700;1,100..700&family=Roboto:ital,wght@0,100..900;1,100..900&family=Source+Code+Pro:ital,wght@0,200..900;1,200..900&family=Source+Serif+4:ital,opsz,wght@0,8..60,200..900;1,8..60,200..900&family=Space+Grotesk:wght@300..700&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Loading indicator - will be replaced by React -->
+      <div id="loading-indicator" style="display: flex; align-items: center; justify-content: center; height: 100vh; flex-direction: column; background: #ffffff; font-family: system-ui, -apple-system, sans-serif;">
+        <div style="width: 40px; height: 40px; border: 4px solid #f3f4f6; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 16px;"></div>
+        <p style="color: #6b7280; font-size: 14px;">Loading Plattr...</p>
+      </div>
+    </div>
+    <style>
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+    </style>
+    <script>
+      // Immediate test to verify page is loading
+      console.log('[Plattr] HTML loaded at:', new Date().toISOString());
+      console.log('[Plattr] Document ready state:', document.readyState);
+      console.log('[Plattr] Root element exists:', !!document.getElementById('root'));
+      console.log('[Plattr] User agent:', navigator.userAgent);
+      console.log('[Plattr] Window location:', window.location.href);
+      
+      // Remove loading indicator once React takes over
+      window.addEventListener('load', function() {
+        console.log('[Plattr] Window load event fired');
+        setTimeout(function() {
+          const indicator = document.getElementById('loading-indicator');
+          if (indicator && indicator.parentElement) {
+            console.log('[Plattr] Removing loading indicator');
+            indicator.remove();
+          }
+        }, 100);
+      });
+      
+      // Fallback: If app doesn't initialize within 10 seconds, show error
+      setTimeout(function() {
+        const root = document.getElementById('root');
+        const indicator = document.getElementById('loading-indicator');
+        // If loading indicator is still visible after 10 seconds, something went wrong
+        if (indicator && root && root.children.length === 1 && root.children[0] === indicator) {
+          console.error('[Plattr] App failed to initialize after 10 seconds');
+          root.innerHTML = `
+            <div style="display: flex; align-items: center; justify-content: center; height: 100vh; flex-direction: column; padding: 20px; text-align: center; font-family: system-ui, -apple-system, sans-serif; background: #ffffff;">
+              <h1 style="color: #ef4444; margin-bottom: 16px; font-size: 24px;">App Failed to Load</h1>
+              <p style="color: #6b7280; margin-bottom: 8px;">The application took too long to initialize.</p>
+              <p style="color: #9ca3af; font-size: 14px; margin-bottom: 16px;">Please check the console for errors or try restarting the app.</p>
+              <button onclick="window.location.reload()" style="padding: 12px 24px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">Reload App</button>
+            </div>
+          `;
+        }
+      }, 10000);
+    </script>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Catch module loading errors
+      window.addEventListener('error', function(event) {
+        if (event.filename && event.filename.includes('main.tsx')) {
+          console.error('[Plattr] Failed to load main.tsx:', event);
+          const root = document.getElementById('root');
+          if (root) {
+            root.innerHTML = `
+              <div style="display: flex; align-items: center; justify-content: center; height: 100vh; flex-direction: column; padding: 20px; text-align: center; font-family: system-ui, -apple-system, sans-serif; background: #ffffff;">
+                <h1 style="color: #ef4444; margin-bottom: 16px; font-size: 24px;">JavaScript Load Error</h1>
+                <p style="color: #6b7280; margin-bottom: 8px;">Failed to load the application script.</p>
+                <p style="color: #9ca3af; font-size: 14px; margin-bottom: 16px;">Error: ${event.message || 'Unknown error'}</p>
+                <p style="color: #9ca3af; font-size: 12px; margin-bottom: 16px;">File: ${event.filename || 'Unknown'}</p>
+                <button onclick="window.location.reload()" style="padding: 12px 24px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">Reload App</button>
+              </div>
+            `;
+          }
+        }
+      }, true);
+    </script>
   </body>
 </html>

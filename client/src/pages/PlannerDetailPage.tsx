@@ -136,7 +136,7 @@ export default function PlannerDetailPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-amber-50/30 pb-20">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+      <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm" style={{ padding: 0, margin: 0 }}>
         <div className="flex items-center justify-between p-4">
           <div className="flex items-center gap-3">
             <Button

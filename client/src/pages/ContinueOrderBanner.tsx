@@ -126,12 +126,14 @@ export default function ContinueOrderBanner() {
   return (
     <div 
       onClick={handleContinue}
-      className={`fixed bottom-20 left-1/2 -translate-x-1/2 max-w-sm w-[calc(100%-2rem)] flex items-center gap-3 px-3 py-2.5 rounded-full shadow-lg cursor-pointer transition-all duration-300 ${
+      className={`fixed left-1/2 -translate-x-1/2 max-w-sm w-[calc(100%-2rem)] flex items-center gap-3 px-3 py-2.5 rounded-full shadow-lg cursor-pointer transition-all duration-300 continue-order-banner ${
         isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'
       }`}
       style={{ 
         backgroundColor: backgroundColor,
-        zIndex: 45
+        zIndex: 45,
+        bottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)', // Above FloatingNav
+        top: 'auto',
       }}
       data-testid="banner-continue-order"
     >

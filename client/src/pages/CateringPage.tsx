@@ -916,7 +916,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { cateringOrderService } from "@/lib/supabase-service";
+import { cateringOrderService, userService } from "@/lib/supabase-service";
 import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft,
@@ -967,7 +967,7 @@ import snackBoxIconActive from "@assets/BulkBox5.png";
 import snackBoxIconInactive from "@assets/BulkBox4.png";
 import DeliveryTimePicker from "@/components/DeliveryTimePicker";
 import DeliveryDatePicker from "@/components/DeliveryDatePicker";
-import { validateBangaloreAddress, BANGALORE_VALIDATION_ERROR } from "@/lib/addressValidation";
+// Location validation removed for catering orders - no location restrictions
 import { analytics } from "@/lib/analytics";
 import { facebookEvents } from "@/lib/facebook-capi";
 import { cn } from "@/lib/utils";
@@ -1073,7 +1073,7 @@ export default function CateringOrder() {
       mealTimes: [] as string[],
       eventDate: minDT.date,
       eventTime: minDT.time,
-      phone: savedPhone ? `+91 ${savedPhone}` : "",
+      phone: "", // Phone will be retrieved from user profile on submit
       email: savedEmail || "",
     };
   });
@@ -1188,10 +1188,21 @@ export default function CateringOrder() {
       return;
     }
 
-    if (!formData.phone || !formData.phone.trim()) {
+    // Get user's phone number from profile
+    let userPhone: string = "";
+    try {
+      const userProfile = await userService.getProfile();
+      userPhone = userProfile.phone || "";
+    } catch (error) {
+      // Fallback to localStorage if getProfile fails
+      const savedPhone = localStorage.getItem("phone");
+      userPhone = savedPhone ? `+91 ${savedPhone}` : "";
+    }
+
+    if (!userPhone || !userPhone.trim()) {
       toast({
-        title: "Phone Required",
-        description: "Please enter your phone number.",
+        title: "Authentication Required",
+        description: "Please log in to continue. Your phone number is required.",
         variant: "destructive",
       });
       return;
@@ -1253,25 +1264,6 @@ export default function CateringOrder() {
         variant: "destructive",
       });
       return;
-    }
-
-    // Validate Bangalore address from saved location
-    const savedLocation = localStorage.getItem(LOCATION_STORAGE_KEY);
-    if (savedLocation) {
-      try {
-        const parsed = JSON.parse(savedLocation);
-        const addressText = parsed.addressLine || parsed.label || parsed.address || '';
-        if (!validateBangaloreAddress(addressText)) {
-          toast({
-            title: BANGALORE_VALIDATION_ERROR.title,
-            description: BANGALORE_VALIDATION_ERROR.description,
-            variant: "destructive",
-          });
-          return;
-        }
-      } catch (e) {
-        console.error("Error parsing location:", e);
-      }
     }
 
     // Check 12-hour minimum advance booking
@@ -1426,21 +1418,31 @@ export default function CateringOrder() {
               {locationLabel}
             </span>
           </button>
-          <button
-            onClick={() => setLocation("/concierge")}
-            data-testid="button-ai-menu-planner"
-            className="flex items-center justify-center px-3 py-2 rounded-[10px] shadow-md hover:opacity-90 transition-opacity"
-            style={{
-              background: "linear-gradient(135deg, #06352A 0%, #1A9952 100%)",
-              fontFamily: "Sweet Sans Pro",
-              fontSize: "12px",
-              fontWeight: 500,
-              color: "#F5E9DB",
-              height: "40px",
-            }}
-          >
-            AI Menu Planner
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setLocation("/concierge")}
+              data-testid="button-ai-menu-planner"
+              className="flex items-center justify-center px-3 py-2 rounded-[10px] shadow-md hover:opacity-90 transition-opacity"
+              style={{
+                background: "linear-gradient(135deg, #06352A 0%, #1A9952 100%)",
+                fontFamily: "Sweet Sans Pro",
+                fontSize: "12px",
+                fontWeight: 500,
+                color: "#F5E9DB",
+                height: "40px",
+              }}
+            >
+              AI Menu Planner
+            </button>
+            <a
+              href="tel:+917026644556"
+              className="flex items-center justify-center w-10 h-10 bg-[#1A9952] rounded-[10px] shadow-md hover:bg-[#158043] transition-colors"
+              data-testid="button-call"
+              aria-label="Call us"
+            >
+              <Phone className="w-5 h-5 text-white" />
+            </a>
+          </div>
         </div>
 
         {/* Service Navigation Tabs */}
@@ -2105,24 +2107,6 @@ export default function CateringOrder() {
                 onChange={(time) => setFormData({ ...formData, eventTime: time })}
                 selectedDate={formData.eventDate}
               />
-
-              {/* Phone Number */}
-              <div className="space-y-2">
-                <Label htmlFor="phone">Enter Your Phone Number</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  data-testid="input-phone"
-                  value={formData.phone}
-                  onChange={(e) =>
-                    setFormData({ ...formData, phone: e.target.value })
-                  }
-                  placeholder="+91 98552 12375"
-                  required
-                  className="border-[#1A9952] focus-visible:ring-[#1A9952]"
-                  style={{ fontFamily: "Sweet Sans Pro" }}
-                />
-              </div>
 
               {/* Email Address */}
               <div className="space-y-2">

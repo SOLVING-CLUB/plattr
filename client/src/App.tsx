@@ -13,6 +13,7 @@ import Menu from "@/pages/Menu";
 import DishesPage from "@/pages/DishesPage";
 import CheckoutPage from "@/pages/CheckoutPage";
 import PaymentPage from "@/pages/PaymentPage";
+import PaymentCallbackPage from "@/pages/PaymentCallbackPage";
 import AddOnsPage from "@/pages/AddOnsPage";
 import OrdersPage from "@/pages/OrdersPage";
 import OrderDetailsPage from "@/pages/OrderDetailsPage";
@@ -128,11 +129,17 @@ function RequireNeedsName({ children }: { children: ReactNode }) {
       }
 
       // Check both localStorage (for persistence across app restarts) and sessionStorage
-      const needsName = localStorage.getItem('needsName') || sessionStorage.getItem('needsName');
-      if (needsName === 'true') {
-        setShouldRender(true);
-      } else {
-        // User doesn't need to set name, redirect to home
+      try {
+        const needsName = localStorage.getItem('needsName') || sessionStorage.getItem('needsName');
+        if (needsName === 'true') {
+          setShouldRender(true);
+        } else {
+          // User doesn't need to set name, redirect to home
+          setLocation('/', { replace: true });
+        }
+      } catch (error) {
+        // If storage is not available, assume user doesn't need to set name
+        console.warn('[App] Storage not available in RequireNeedsName:', error);
         setLocation('/', { replace: true });
       }
     }
@@ -146,16 +153,16 @@ function RequireNeedsName({ children }: { children: ReactNode }) {
 }
 
 const withAuthGuard = <P extends object>(Component: ComponentType<P>) => (props: P) => (
-      <RequireAuth>
-        <Component {...props} />
-      </RequireAuth>
-    );
+  <RequireAuth>
+    <Component {...props} />
+  </RequireAuth>
+);
 
 const withPublicOnly = <P extends object>(Component: ComponentType<P>) => (props: P) => (
   <PublicOnly>
-        <Component {...props} />
-      </PublicOnly>
-    );
+    <Component {...props} />
+  </PublicOnly>
+);
 
 const withNeedsName = <P extends object>(Component: ComponentType<P>) => (props: P) => (
   <RequireNeedsName>
@@ -168,29 +175,29 @@ function ScrollToTop() {
   const [location] = useLocation();
   const { showLoader, hideLoader } = usePageLoader();
   const previousLocation = useRef(location);
-  
+
   useEffect(() => {
     // Show loader when location changes
     if (previousLocation.current !== location) {
       showLoader();
       window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-      
+
       // Hide loader after a short delay (simulates page load)
       const timer = setTimeout(() => {
         hideLoader();
       }, 300);
-      
+
       previousLocation.current = location;
       return () => clearTimeout(timer);
     }
   }, [location, showLoader, hideLoader]);
-  
+
   return null;
 }
 
 function Router() {
   useAndroidBackButton();
-  
+
   // Disable browser's native scroll restoration
   useEffect(() => {
     if ('scrollRestoration' in history) {
@@ -263,65 +270,66 @@ function Router() {
       <ScrollToTop />
       <Switch>
         <Route path="/" component={GuardedHomePage} />
-      <Route path="/menu" component={GuardedMenuPage} />
-      <Route path="/explore-menu" component={GuardedExploreMenuPage} />
-      <Route path="/test-auth" component={TestAuthPage} />
-      <Route path="/test-otp-password" component={TestOtpPasswordPage} />
-      <Route path="/auth" component={PublicAuthPage} />
-      <Route path="/phone" component={PublicPhoneScreen} />
-      <Route path="/verification" component={PublicVerificationScreen} />
-      <Route path="/name" component={GuardedNameScreen} />
-      <Route path="/cart" component={GuardedCartRedirect} />
-      <Route path="/categories/:mealType" component={GuardedCategoryPage} />
-      <Route path="/dishes/:mealType/:category" component={GuardedDishesPage} />
-      <Route path="/planner/:mealType/:planType" component={GuardedPlannerDetailPage} />
-      <Route path="/add-ons" component={GuardedAddOnsPage} />
-      <Route path="/checkout" component={GuardedCheckoutPage} />
-      <Route path="/payment" component={GuardedPaymentPage} />
-      <Route path="/order-confirmation" component={GuardedOrderConfirmationPage} />
-      <Route path="/orders" component={GuardedOrdersPage} />
-      <Route path="/orders/:orderId" component={GuardedOrderDetailsPage} />
-      <Route path="/bulk-orders/:orderId" component={GuardedBulkMealOrderDetailsPage} />
-      <Route path="/profile" component={GuardedProfilePage} />
-      <Route path="/edit-profile" component={GuardedEditProfile} />
-      <Route path="/notification-settings" component={GuardedNotificationSettingsPage} />
-      <Route path="/debug-logs" component={GuardedDebugLogsPage} />
-      <Route path="/saved-addresses" component={GuardedSavedAddresses} />
-      <Route path="/location" component={GuardedLocationPage} />
-      <Route path="/location/map" component={GuardedMapConfirmationPage} />
-      <Route path="/payment-methods" component={GuardedPaymentMethods} />
-      <Route path="/help" component={GuardedHelpPage} />
-      <Route path="/about" component={GuardedAboutPage} />
-      <Route path="/terms" component={GuardedTermsPage} />
-      <Route path="/privacy" component={GuardedPrivacyPage} />
-      <Route path="/licenses" component={GuardedLicensesPage} />
-      <Route path="/referral" component={GuardedReferralPage} />
-      <Route path="/corporate" component={GuardedCorporatePage} />
-      <Route path="/corporate-thank-you" component={CorporateThankYouPage} />
-      <Route path="/catering" component={GuardedCateringPage} />
-      <Route path="/catering-thank-you" component={CateringThankYouPage} />
-      <Route path="/tasting-menu" component={TastingMenuPage} />
-      <Route path="/concierge" component={GuardedConciergeWizardPage} />
-      <Route path="/ai-planner" component={GuardedConciergeWizardPage} />
-      <Route path="/concierge/results" component={GuardedConciergeResultsPage} />
-      <Route path="/concierge-results" component={GuardedConciergeResultsPage} />
-      <Route path="/ai-planner-results" component={GuardedConciergeResultsPage} />
-      <Route path="/smart-menu-concierge" component={GuardedSmartMenuConcierge} />
-      <Route path="/smart-menu-results" component={GuardedSmartMenuResults} />
-      <Route path="/mealbox" component={GuardedMealBoxPage} />
-      <Route path="/mealbox/builder" component={GuardedMealBoxBuilderPage} />
-      <Route path="/mealbox-thank-you" component={MealBoxThankyouPage} />
-      <Route path="/bulk-meals" component={GuardedBulkMeal} />
-      <Route path="/bulk-meals-cart" component={GuardedBulkMealCart} />
-      <Route path="/bulk-meals-addons" component={GuardedBulkMealAddons} />
-      <Route path="/bulk-meals-delivery" component={GuardedBulkMealDelivery} />
-      <Route path="/bulk-meals-thank-you" component={GuardedBulkMealThankyouPage} />
-      <Route path="/snack-box" component={GuardedSnackBoxPage} />
-      <Route path="/snack-box-cart" component={GuardedSnackBoxCart} />
-      <Route path="/snack-box-addons" component={GuardedSnackBoxAddons} />
-      <Route path="/snack-box-delivery" component={GuardedSnackBoxDelivery} />
-      <Route path="/snack-box-thank-you" component={GuardedSnackBoxThankYouPage} />
-      <Route path="/admin" component={GuardedAdminDashboard} />
+        <Route path="/menu" component={GuardedMenuPage} />
+        <Route path="/explore-menu" component={GuardedExploreMenuPage} />
+        <Route path="/test-auth" component={TestAuthPage} />
+        <Route path="/test-otp-password" component={TestOtpPasswordPage} />
+        <Route path="/auth" component={PublicAuthPage} />
+        <Route path="/phone" component={PublicPhoneScreen} />
+        <Route path="/verification" component={PublicVerificationScreen} />
+        <Route path="/name" component={GuardedNameScreen} />
+        <Route path="/cart" component={GuardedCartRedirect} />
+        <Route path="/categories/:mealType" component={GuardedCategoryPage} />
+        <Route path="/dishes/:mealType/:category" component={GuardedDishesPage} />
+        <Route path="/planner/:mealType/:planType" component={GuardedPlannerDetailPage} />
+        <Route path="/add-ons" component={GuardedAddOnsPage} />
+        <Route path="/checkout" component={GuardedCheckoutPage} />
+        <Route path="/payment" component={GuardedPaymentPage} />
+        <Route path="/payment-callback" component={PaymentCallbackPage} />
+        <Route path="/order-confirmation" component={GuardedOrderConfirmationPage} />
+        <Route path="/orders" component={GuardedOrdersPage} />
+        <Route path="/orders/:orderId" component={GuardedOrderDetailsPage} />
+        <Route path="/bulk-orders/:orderId" component={GuardedBulkMealOrderDetailsPage} />
+        <Route path="/profile" component={GuardedProfilePage} />
+        <Route path="/edit-profile" component={GuardedEditProfile} />
+        <Route path="/notification-settings" component={GuardedNotificationSettingsPage} />
+        <Route path="/debug-logs" component={GuardedDebugLogsPage} />
+        <Route path="/saved-addresses" component={GuardedSavedAddresses} />
+        <Route path="/location" component={GuardedLocationPage} />
+        <Route path="/location/map" component={GuardedMapConfirmationPage} />
+        <Route path="/payment-methods" component={GuardedPaymentMethods} />
+        <Route path="/help" component={GuardedHelpPage} />
+        <Route path="/about" component={GuardedAboutPage} />
+        <Route path="/terms" component={GuardedTermsPage} />
+        <Route path="/privacy" component={GuardedPrivacyPage} />
+        <Route path="/licenses" component={GuardedLicensesPage} />
+        <Route path="/referral" component={GuardedReferralPage} />
+        <Route path="/corporate" component={GuardedCorporatePage} />
+        <Route path="/corporate-thank-you" component={CorporateThankYouPage} />
+        <Route path="/catering" component={GuardedCateringPage} />
+        <Route path="/catering-thank-you" component={CateringThankYouPage} />
+        <Route path="/tasting-menu" component={TastingMenuPage} />
+        <Route path="/concierge" component={GuardedConciergeWizardPage} />
+        <Route path="/ai-planner" component={GuardedConciergeWizardPage} />
+        <Route path="/concierge/results" component={GuardedConciergeResultsPage} />
+        <Route path="/concierge-results" component={GuardedConciergeResultsPage} />
+        <Route path="/ai-planner-results" component={GuardedConciergeResultsPage} />
+        <Route path="/smart-menu-concierge" component={GuardedSmartMenuConcierge} />
+        <Route path="/smart-menu-results" component={GuardedSmartMenuResults} />
+        <Route path="/mealbox" component={GuardedMealBoxPage} />
+        <Route path="/mealbox/builder" component={GuardedMealBoxBuilderPage} />
+        <Route path="/mealbox-thank-you" component={MealBoxThankyouPage} />
+        <Route path="/bulk-meals" component={GuardedBulkMeal} />
+        <Route path="/bulk-meals-cart" component={GuardedBulkMealCart} />
+        <Route path="/bulk-meals-addons" component={GuardedBulkMealAddons} />
+        <Route path="/bulk-meals-delivery" component={GuardedBulkMealDelivery} />
+        <Route path="/bulk-meals-thank-you" component={GuardedBulkMealThankyouPage} />
+        <Route path="/snack-box" component={GuardedSnackBoxPage} />
+        <Route path="/snack-box-cart" component={GuardedSnackBoxCart} />
+        <Route path="/snack-box-addons" component={GuardedSnackBoxAddons} />
+        <Route path="/snack-box-delivery" component={GuardedSnackBoxDelivery} />
+        <Route path="/snack-box-thank-you" component={GuardedSnackBoxThankYouPage} />
+        <Route path="/admin" component={GuardedAdminDashboard} />
         <Route component={NotFound} />
       </Switch>
     </>
@@ -332,36 +340,48 @@ function App() {
   const [fadeOut, setFadeOut] = useState(false);
   const [, setLocation] = useLocation();
   const { isAuthenticated, loading, initialized } = useAuth();
-  
+
   useSwipeBack();
-  
+
   // Check sessionStorage ONCE on mount - if splash was seen, never show it
   const [showSplash, setShowSplash] = useState(() => {
-    const alreadySeen = sessionStorage.getItem('splashSeen') === 'true';
-    if (!alreadySeen) {
-      // Mark as seen IMMEDIATELY to prevent any race conditions
-      sessionStorage.setItem('splashSeen', 'true');
+    try {
+      const alreadySeen = sessionStorage.getItem('splashSeen') === 'true';
+      if (!alreadySeen) {
+        // Mark as seen IMMEDIATELY to prevent any race conditions
+        sessionStorage.setItem('splashSeen', 'true');
+        return true;
+      }
+      return false;
+    } catch (error) {
+      // If sessionStorage is not available (e.g., private browsing, iOS restrictions), default to showing splash
+      console.warn('[App] sessionStorage not available, showing splash:', error);
       return true;
     }
-    return false;
   });
 
   // Force light theme only - ensure dark mode is never enabled
   useEffect(() => {
-    document.documentElement.classList.remove('dark');
-    localStorage.setItem('theme', 'light');
+    try {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    } catch (error) {
+      // If localStorage is not available, just remove dark class
+      console.warn('[App] localStorage not available for theme:', error);
+      document.documentElement.classList.remove('dark');
+    }
   }, []);
 
   // Handle splash screen video end
   const handleVideoEnd = () => {
     if (!showSplash) return;
-    
+
     setFadeOut(true);
-    
+
     // After fade animation, hide splash and navigate
     setTimeout(() => {
       setShowSplash(false);
-      
+
       // Simple navigation logic:
       // - If authenticated → go to home
       // - If not authenticated → go to phone screen (WhatsApp login)
@@ -382,10 +402,15 @@ function App() {
             <NotificationHandler />
             {showSplash && (
               <div
-                className={`fixed inset-0 transition-opacity duration-500 ${
-                  fadeOut ? "opacity-0 pointer-events-none" : "opacity-100"
-                }`}
-                style={{ zIndex: 10000 }}
+                className={`fixed transition-opacity duration-500 ${fadeOut ? "opacity-0 pointer-events-none" : "opacity-100"
+                  }`}
+                style={{ 
+                  zIndex: 10000,
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                }}
               >
                 <SplashScreen onVideoEnd={handleVideoEnd} />
               </div>

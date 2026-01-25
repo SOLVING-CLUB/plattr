@@ -47,6 +47,7 @@ interface Dish {
   dietaryType: string | null;
   dishType: string | null;
   cuisine: string | null;
+  quantity?: string | null; // Quantity field from database
 }
 
 type SupabaseCuisineRow = {
@@ -219,7 +220,7 @@ export default function AdminDashboard() {
     queryFn: async () => {
       const options: SupabaseQueryOptions = {
         select:
-          "id,name,description,price,least_price,image_url,meal_type,category_id,is_available,spice_level,dietary_type,dish_type,cuisine",
+          "id,name,description,price,least_price,image_url,meal_type,category_id,is_available,spice_level,dietary_type,dish_type,cuisine,quantity",
         order: "name.asc",
       };
 
@@ -243,6 +244,7 @@ export default function AdminDashboard() {
         dietary_type?: string | null;
         dish_type?: string | null;
         cuisine?: string | null;
+        quantity?: string | null;
       }>("dishes", options);
 
       return rows.map((row) => {
@@ -270,6 +272,7 @@ export default function AdminDashboard() {
           dietaryType: row.dietary_type ?? null,
           dishType: row.dish_type ?? null,
           cuisine: row.cuisine ?? null,
+          quantity: row.quantity ?? null,
         };
       });
     },

@@ -107,6 +107,82 @@ serve(async (req) => {
       );
     }
 
+    // POST /razorpay/create-payment-link - Create a Razorpay Payment Link
+    if (req.method === "POST" && path === "create-payment-link") {
+      if (!RAZORPAY_KEY_ID || !RAZORPAY_KEY_SECRET) {
+        return new Response(
+          JSON.stringify({ error: "Razorpay credentials not configured" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const body = await req.json();
+      const { amount, currency = "INR", description, order_id, method, callback_url, callback_method = "get" } = body;
+
+      if (!amount) {
+        return new Response(
+          JSON.stringify({ error: "Amount is required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Create payment link via Razorpay API
+      const authHeader = btoa(`${RAZORPAY_KEY_ID}:${RAZORPAY_KEY_SECRET}`);
+      
+      const paymentLinkData: any = {
+        amount: Math.round(amount), // Already in paise
+        currency,
+        description: description || "Order Payment",
+        callback_url: callback_url || `${Deno.env.get("SITE_URL") || "https://plattr.in"}/payment-callback`,
+        callback_method,
+        notes: {
+          order_id: order_id || `order_${Date.now()}`,
+        },
+      };
+
+      // Add payment method restrictions if specified
+      if (method) {
+        paymentLinkData.options = {
+          checkout: {
+            method: {
+              [method]: 1, // Enable only selected method
+            },
+          },
+        };
+      }
+
+      const linkResponse = await fetch("https://api.razorpay.com/v1/payment_links", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Basic ${authHeader}`,
+        },
+        body: JSON.stringify(paymentLinkData),
+      });
+
+      if (!linkResponse.ok) {
+        const error = await linkResponse.json();
+        console.error("[Razorpay] Payment link creation failed:", error);
+        return new Response(
+          JSON.stringify({ error: error.error?.description || "Failed to create payment link" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const paymentLink = await linkResponse.json();
+      console.log("[Razorpay] Payment link created:", paymentLink.id);
+
+      return new Response(
+        JSON.stringify({
+          paymentLinkId: paymentLink.id,
+          paymentLinkUrl: paymentLink.short_url || paymentLink.url,
+          amount: paymentLink.amount,
+          currency: paymentLink.currency,
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // POST /razorpay/verify - Verify payment signature
     if (req.method === "POST" && path === "verify") {
       if (!RAZORPAY_KEY_SECRET) {
@@ -149,6 +225,58 @@ serve(async (req) => {
           verified: true,
           paymentId: razorpay_payment_id,
           orderId: razorpay_order_id,
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // GET /razorpay/payment-link-status - Get payment link status
+    if (req.method === "GET" && path === "payment-link-status") {
+      if (!RAZORPAY_KEY_ID || !RAZORPAY_KEY_SECRET) {
+        return new Response(
+          JSON.stringify({ error: "Razorpay credentials not configured" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const url = new URL(req.url);
+      const paymentLinkId = url.searchParams.get("payment_link_id");
+
+      if (!paymentLinkId) {
+        return new Response(
+          JSON.stringify({ error: "payment_link_id is required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const authHeader = btoa(`${RAZORPAY_KEY_ID}:${RAZORPAY_KEY_SECRET}`);
+      
+      const linkResponse = await fetch(`https://api.razorpay.com/v1/payment_links/${paymentLinkId}`, {
+        method: "GET",
+        headers: {
+          "Authorization": `Basic ${authHeader}`,
+        },
+      });
+
+      if (!linkResponse.ok) {
+        const error = await linkResponse.json();
+        console.error("[Razorpay] Payment link fetch failed:", error);
+        return new Response(
+          JSON.stringify({ error: error.error?.description || "Failed to fetch payment link" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const paymentLink = await linkResponse.json();
+      console.log("[Razorpay] Payment link status:", paymentLink.status);
+
+      return new Response(
+        JSON.stringify({
+          paymentLinkId: paymentLink.id,
+          status: paymentLink.status,
+          amount: paymentLink.amount,
+          currency: paymentLink.currency,
+          payments: paymentLink.payments || [],
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );

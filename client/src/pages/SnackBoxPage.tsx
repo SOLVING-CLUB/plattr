@@ -123,30 +123,34 @@ export default function SnackBoxPage() {
         const finalPrice = Number(dish.price || 0) + extraCost;
         const displayName = (hasMaazaOrPaperBoat && selectedDrink) ? `${dish.name} (${selectedDrink})` : dish.name;
 
+        // Get image URL - ensure it's always a full URL
+        const getImageUrl = () => {
+          const prefix = "https://leltckltotobsibixhqo.supabase.co/storage/v1/object/public/dish_images/snack-box/";
+          const raw = dish.image_url ? dish.image_url.trim() : "";
+          
+          if (!raw) return "";
+
+          // If it's already a full URL
+          if (/^https?:\/\//i.test(raw)) {
+            // If it's from the broken legacy host, try to use the ID-based filename
+            if (raw.includes("sanishtech.com")) {
+              const normalizedId = dish.id.toString().toLowerCase().replace(/\s+/g, '-');
+              return `${prefix}${normalizedId}.png`;
+            }
+            return raw;
+          }
+
+          // It's a relative path/filename - construct full URL
+          const cleanRaw = raw.startsWith('/') ? raw.slice(1) : raw;
+          return `${prefix}${cleanRaw}`;
+        };
+
         addToCart("snack-box", {
             id: typeof dish.id === 'string' ? parseInt(dish.id.replace(/\D/g, '') || "0", 10) : dish.id,
             name: displayName,
             price: finalPrice,
             quantity: quantity,
-            image: (() => {
-                const prefix = "https://leltckltotobsibixhqo.supabase.co/storage/v1/object/public/dish_images/snack-box/";
-                const raw = dish.image_url ? dish.image_url.trim() : "";
-                if (!raw) return "";
-
-                // If it's already a full URL
-                if (/^https?:\/\//i.test(raw)) {
-                    // If it's from the broken legacy host, try to use the ID-based filename
-                    if (raw.includes("sanishtech.com")) {
-                        const normalizedId = dish.id.toString().toLowerCase().replace(/\s+/g, '-');
-                        return `${prefix}${normalizedId}.png`;
-                    }
-                    return raw;
-                }
-
-                // It's a relative path/filename
-                const cleanRaw = raw.startsWith('/') ? raw.slice(1) : raw;
-                return `${prefix}${cleanRaw}`;
-            })(),
+            image: getImageUrl(),
             metadata: selectedDrink ? { selectedDrink, extraCost } : undefined
         });
     };
@@ -408,21 +412,31 @@ export default function SnackBoxPage() {
                             {locationLabel}
                         </span>
                     </button>
-                    <button
-                        onClick={() => setLocation("/concierge")}
-                        data-testid="button-ai-menu-planner"
-                        className="flex items-center justify-center px-3 py-2 rounded-[10px] shadow-md hover:opacity-90 transition-opacity"
-                        style={{
-                            background: "linear-gradient(135deg, #06352A 0%, #1A9952 100%)",
-                            fontFamily: "Sweet Sans Pro",
-                            fontSize: "12px",
-                            fontWeight: 500,
-                            color: "#F5E9DB",
-                            height: "40px",
-                        }}
-                    >
-                        AI Menu Planner
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setLocation("/concierge")}
+                            data-testid="button-ai-menu-planner"
+                            className="flex items-center justify-center px-3 py-2 rounded-[10px] shadow-md hover:opacity-90 transition-opacity"
+                            style={{
+                                background: "linear-gradient(135deg, #06352A 0%, #1A9952 100%)",
+                                fontFamily: "Sweet Sans Pro",
+                                fontSize: "12px",
+                                fontWeight: 500,
+                                color: "#F5E9DB",
+                                height: "40px",
+                            }}
+                        >
+                            AI Menu Planner
+                        </button>
+                        <a
+                            href="tel:+917026644556"
+                            className="flex items-center justify-center w-10 h-10 bg-[#1A9952] rounded-[10px] shadow-md hover:bg-[#158043] transition-colors"
+                            data-testid="button-call"
+                            aria-label="Call us"
+                        >
+                            <Phone className="w-5 h-5 text-white" />
+                        </a>
+                    </div>
                 </div>
 
                 {/* Service Navigation Tabs */}
@@ -883,9 +897,15 @@ export default function SnackBoxPage() {
                                                             <span className="text-[16px] font-extrabold text-[#1A9952]" style={{ fontFamily: "Sweet Sans Pro" }}>
                                                                 ₹{dish.price}
                                                             </span>
-                                                            <span className="text-[10px] text-gray-500 font-medium" style={{ fontFamily: "Sweet Sans Pro" }}>
-                                                                per serve
-                                                            </span>
+                                                            {dish.quantity ? (
+                                                                <span className="text-[10px] text-gray-500 font-medium" style={{ fontFamily: "Sweet Sans Pro" }}>
+                                                                    {dish.quantity}
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-[10px] text-gray-500 font-medium" style={{ fontFamily: "Sweet Sans Pro" }}>
+                                                                    per serve
+                                                                </span>
+                                                            )}
                                                         </div>
                                                         <Button
                                                             className="w-full rounded-full font-bold"
@@ -1057,7 +1077,9 @@ export default function SnackBoxPage() {
                             <div className="space-y-6 pt-4 border-t border-gray-100">
                                 <div className="flex items-center justify-between">
                                     <div className="space-y-1">
-                                        <span className="text-gray-500 text-sm font-medium" style={{ fontFamily: "Sweet Sans Pro" }}>Price per serve</span>
+                                        <span className="text-gray-500 text-sm font-medium" style={{ fontFamily: "Sweet Sans Pro" }}>
+                                            {detailDish?.quantity ? `Price (${detailDish.quantity})` : 'Price per serve'}
+                                        </span>
                                         <div className="text-[#1A9952] text-3xl font-bold" style={{ fontFamily: "Sweet Sans Pro" }}>₹{Number(detailDish?.price || 0) + (selectedDrink ? ((selectedDrink === 'Diet coke' || selectedDrink === 'Coke zero') ? 20 : 0) : 0)}</div>
                                     </div>
                                     <div className="space-y-1 text-right">
@@ -1148,7 +1170,13 @@ export default function SnackBoxPage() {
             {/* Floating Cart Bar - Sits above bottom nav */}
             {
                 cart.length > 0 && (
-                    <div className="fixed bottom-4 left-0 right-0 z-40 px-4">
+                    <div 
+                        className="fixed left-0 right-0 z-40 px-4 floating-cart-bar"
+                        style={{
+                            bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)',
+                            top: 'auto',
+                        }}
+                    >
                         <button
                             onClick={() => setLocation("/snack-box-cart")}
                             className="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all active:scale-[0.98]"

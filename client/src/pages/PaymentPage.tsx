@@ -74,9 +74,9 @@ const PaymentForm = ({ amount }: PaymentFormProps) => {
         </div>
       </div>
 
-      <Button 
-        type="submit" 
-        size="lg" 
+      <Button
+        type="submit"
+        size="lg"
         className="w-full"
         disabled={!stripe || isProcessing}
         data-testid="button-pay-now"
@@ -166,21 +166,23 @@ export default function PaymentPage() {
 
   return (
     <div className="min-h-screen bg-background pb-6">
-      <header className="sticky top-0 z-50 bg-background border-b p-3" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
-        <div className="max-w-7xl mx-auto flex items-center gap-3">
-          <Button 
-            variant="ghost" 
-            size="icon"
-            onClick={goBack}
-            data-testid="button-back"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <h1 className="text-xl font-bold font-serif" data-testid="text-page-title">Payment</h1>
+      <header className="fixed top-0 left-0 right-0 z-50 bg-background border-b" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 8px)', margin: 0 }}>
+        <div className="p-3">
+          <div className="max-w-7xl mx-auto flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={goBack}
+              data-testid="button-back"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <h1 className="text-xl font-bold font-serif" data-testid="text-page-title">Payment</h1>
+          </div>
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-4 py-6">
+      <main className="max-w-2xl mx-auto px-4 py-6" style={{ paddingTop: 'calc(60px + 24px)' }}>
         <Elements stripe={stripePromise!} options={{ clientSecret }}>
           <PaymentForm amount={amount} />
         </Elements>

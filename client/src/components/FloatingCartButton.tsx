@@ -11,7 +11,13 @@ export default function FloatingCartButton({ itemCount, totalPrice, onClick }: F
   if (itemCount === 0) return null;
 
   return (
-    <div className="fixed bottom-[102px] md:bottom-6 left-4 right-4 z-30">
+    <div 
+      className="fixed left-4 right-4 z-30 floating-cart-button"
+      style={{
+        bottom: 'calc(env(safe-area-inset-bottom, 0px) + 102px)',
+        top: 'auto',
+      }}
+    >
       <Button 
         size="lg"
         className="w-full relative py-6 rounded-lg bg-gray-100 no-default-hover-elevate no-default-active-elevate"

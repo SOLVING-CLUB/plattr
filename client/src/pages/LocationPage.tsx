@@ -170,6 +170,8 @@ export default function LocationPage() {
       addressLine: address.landmark ? `${address.address}, ${address.landmark}` : address.address,
       type: "saved",
       id: address.id,
+      lat: address.latitude || undefined,
+      lng: address.longitude || undefined,
     };
     saveLocationAndNavigate(locationData);
   };
@@ -179,7 +181,7 @@ export default function LocationPage() {
   };
 
   const handleAddNewAddress = () => {
-    setLocation("/saved-addresses");
+    setLocation("/location/map");
   };
 
   // Filter addresses based on search

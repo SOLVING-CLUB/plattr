@@ -66,6 +66,8 @@
 	<true/>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Plattr needs your location to help you find nearby restaurants and delivery options.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Plattr needs your location to calculate delivery distance and provide accurate delivery time estimates for your orders.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

@@ -505,7 +505,6 @@
 
 import { useState, useCallback } from "react";
 import { useLocation } from "wouter";
-import AppHeader from "@/pages/AppHeader";
 import HeroSection from "@/pages/HeroSection";
 import FestiveBanner from "@/pages/FestiveBanner";
 import ServicesWeOfferSection from "@/pages/ServicesWeOfferSection";
@@ -547,6 +546,11 @@ export default function Home() {
 
   const handleExploreMenu = () => {
     console.log("Explore Menu clicked");
+    // Clear any festive filter when navigating from 60-minute delivery CTA
+    // This ensures we show the full menu, not festive dishes
+    localStorage.removeItem('festiveFilter');
+    // Set flag to indicate navigation from 60-minute CTA
+    localStorage.setItem('fromSixtyMinCTA', 'true');
     setActiveTab("menu");
     setLocation("/explore-menu");
   };
@@ -599,14 +603,12 @@ export default function Home() {
   return (
     <PageWithLoader>
       <div className="min-h-screen pb-44 bg-white">
-        <AppHeader 
-          onLocationClick={handleLocationClick}
-          onServiceAvailabilityChange={handleServiceAvailabilityChange}
-        />
-        
         {/* Hero Section with Festive Banner */}
-        <div className="relative">
-          <FestiveBanner />
+        <div className="relative" style={{ marginTop: 0, paddingTop: 0 }}>
+          <FestiveBanner 
+            onLocationClick={handleLocationClick}
+            onServiceAvailabilityChange={handleServiceAvailabilityChange}
+          />
           <HeroSection onExploreMenu={handleExploreMenu} />
         </div>
         

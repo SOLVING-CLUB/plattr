@@ -4,6 +4,7 @@
  */
 
 import { supabaseAuth } from './supabase-auth';
+import { geocodeAddress } from './geo';
 
 // Get the Supabase client from auth (it has full database access)
 const supabase = supabaseAuth;
@@ -42,17 +43,21 @@ function parseTimeSlotTo24Hour(timeSlot: string): string {
 /**
  * Ensure user exists in public.users table (auto-create if missing)
  * This handles the case where Supabase Auth user exists but no corresponding DB record
+ * IMPORTANT: Only creates user if they don't exist - never overwrites existing user data
  */
 async function ensureUserExists(authUser: { id: string; phone?: string; email?: string }): Promise<void> {
-  // Check if user exists in database
+  // Check if user exists in database (check both id and username to be thorough)
   const { data: existingUser } = await supabase
     .from('users')
-    .select('id')
+    .select('id, username')
     .eq('id', authUser.id)
     .single();
 
+  // Only create if user doesn't exist at all
+  // If user exists (even with temp username), don't overwrite - let NameScreen handle the update
   if (!existingUser) {
-    // Create user record with Auth user ID
+    // Create user record with Auth user ID and temporary username
+    // This temporary username will be replaced when user enters their name on NameScreen
     const phone = authUser.phone?.replace('+91', '') || authUser.email?.split('@')[0] || '';
     const { error: insertError } = await supabase
       .from('users')
@@ -67,6 +72,10 @@ async function ensureUserExists(authUser: { id: string; phone?: string; email?: 
     if (insertError && !insertError.message.includes('duplicate')) {
       console.error('Error creating user record:', insertError);
     }
+  } else {
+    // User already exists - don't modify anything
+    // The NameScreen will update the username if it's still a temporary one
+    console.log('User already exists in database, skipping creation');
   }
 }
 
@@ -149,14 +158,33 @@ export const userService = {
       if (existing) throw new Error('Phone number already registered');
     }
 
+    const updateData: any = {};
+    if (updates.username !== undefined) updateData.username = updates.username;
+    if (updates.email !== undefined) updateData.email = updates.email;
+    if (updates.phone !== undefined) updateData.phone = updates.phone;
+
     const { data, error } = await supabase
       .from('users')
-      .update(updates)
+      .update(updateData)
       .eq('id', user.id)
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error updating user profile:', error);
+      throw error;
+    }
+    
+    if (!data) {
+      throw new Error('Failed to update profile - no data returned');
+    }
+    
+    // Verify the update was successful, especially for username
+    if (updates.username && data.username !== updates.username) {
+      console.error('Username update mismatch:', { expected: updates.username, actual: data.username });
+      throw new Error('Username update failed - value mismatch');
+    }
+    
     return {
       id: data.id,
       username: data.username,
@@ -281,13 +309,22 @@ export const addressService = {
       landmark: addr.landmark,
       isDefault: addr.is_default || addr.isDefault,
       userId: addr.user_id || addr.userId,
+      latitude: addr.latitude,
+      longitude: addr.longitude,
     }));
   },
 
   /**
    * Create new address
    */
-  async create(address: { label: string; address: string; landmark?: string; isDefault?: boolean }) {
+  async create(address: { 
+    label: string; 
+    address: string; 
+    landmark?: string; 
+    isDefault?: boolean;
+    latitude?: number;
+    longitude?: number;
+  }) {
     const user = await getAuthenticatedUser();
     if (!user) throw new Error('Not authenticated');
 
@@ -300,6 +337,22 @@ export const addressService = {
         .eq('is_default', true);
     }
 
+    // Get coordinates - use provided coordinates or geocode the address
+    let latitude: number | null = address.latitude || null;
+    let longitude: number | null = address.longitude || null;
+
+    // If coordinates not provided, try to geocode the address
+    if (!latitude || !longitude) {
+      const fullAddress = address.landmark 
+        ? `${address.address}, ${address.landmark}` 
+        : address.address;
+      const coords = await geocodeAddress(fullAddress);
+      if (coords) {
+        latitude = coords.lat;
+        longitude = coords.lng;
+      }
+    }
+
     const { data, error } = await supabase
       .from('addresses')
       .insert({
@@ -308,6 +361,8 @@ export const addressService = {
         address: address.address,
         landmark: address.landmark || null,
         is_default: address.isDefault || false,
+        latitude: latitude,
+        longitude: longitude,
       })
       .select()
       .single();
@@ -320,20 +375,29 @@ export const addressService = {
       landmark: data.landmark,
       isDefault: data.is_default || data.isDefault,
       userId: data.user_id || data.userId,
+      latitude: data.latitude,
+      longitude: data.longitude,
     };
   },
 
   /**
    * Update address
    */
-  async update(id: string, updates: { label?: string; address?: string; landmark?: string; isDefault?: boolean }) {
+  async update(id: string, updates: { 
+    label?: string; 
+    address?: string; 
+    landmark?: string; 
+    isDefault?: boolean;
+    latitude?: number;
+    longitude?: number;
+  }) {
     const user = await getAuthenticatedUser();
     if (!user) throw new Error('Not authenticated');
 
     // Verify ownership
     const { data: existing } = await supabase
       .from('addresses')
-      .select('user_id')
+      .select('user_id, address, landmark')
       .eq('id', id)
       .eq('user_id', user.id)
       .single();
@@ -355,6 +419,28 @@ export const addressService = {
     if (updates.address !== undefined) updateData.address = updates.address;
     if (updates.landmark !== undefined) updateData.landmark = updates.landmark || null;
     if (updates.isDefault !== undefined) updateData.is_default = updates.isDefault;
+    
+    // Handle coordinates
+    let latitude: number | null | undefined = updates.latitude;
+    let longitude: number | null | undefined = updates.longitude;
+
+    // If address or landmark changed and coordinates not explicitly provided, geocode
+    if ((updates.address !== undefined || updates.landmark !== undefined) && 
+        latitude === undefined && longitude === undefined) {
+      const addressToGeocode = updates.address !== undefined ? updates.address : existing.address;
+      const landmarkToUse = updates.landmark !== undefined ? updates.landmark : existing.landmark;
+      const fullAddress = landmarkToUse 
+        ? `${addressToGeocode}, ${landmarkToUse}` 
+        : addressToGeocode;
+      const coords = await geocodeAddress(fullAddress);
+      if (coords) {
+        latitude = coords.lat;
+        longitude = coords.lng;
+      }
+    }
+
+    if (latitude !== undefined) updateData.latitude = latitude;
+    if (longitude !== undefined) updateData.longitude = longitude;
 
     const { data, error } = await supabase
       .from('addresses')
@@ -371,6 +457,8 @@ export const addressService = {
       landmark: data.landmark,
       isDefault: data.is_default || data.isDefault,
       userId: data.user_id || data.userId,
+      latitude: data.latitude,
+      longitude: data.longitude,
     };
   },
 
@@ -401,6 +489,62 @@ export const addressService = {
 };
 
 /**
+ * Helper function to get coordinates from address (either from saved address or by geocoding)
+ * This ensures all orders have coordinates stored
+ */
+async function getAddressCoordinates(addressId?: string | null, deliveryAddress?: string | null): Promise<{ latitude: number | null; longitude: number | null }> {
+  let latitude: number | null = null;
+  let longitude: number | null = null;
+
+  // First, try to get coordinates from saved address
+  if (addressId) {
+    const { data: addressData } = await supabase
+      .from('addresses')
+      .select('latitude, longitude, address, landmark')
+      .eq('id', addressId)
+      .single();
+    
+    if (addressData) {
+      latitude = addressData.latitude;
+      longitude = addressData.longitude;
+      
+      // If coordinates exist, return them
+      if (latitude && longitude) {
+        return { latitude, longitude };
+      }
+      
+      // If coordinates don't exist but address does, geocode it
+      if (addressData.address) {
+        const fullAddress = addressData.landmark 
+          ? `${addressData.address}, ${addressData.landmark}` 
+          : addressData.address;
+        const coords = await geocodeAddress(fullAddress);
+        if (coords) {
+          // Update the address with coordinates for future use
+          await supabase
+            .from('addresses')
+            .update({ latitude: coords.lat, longitude: coords.lng })
+            .eq('id', addressId);
+          return { latitude: coords.lat, longitude: coords.lng };
+        }
+      }
+    }
+  }
+
+  // If no saved address or no coordinates found, geocode the delivery address
+  if (deliveryAddress) {
+    const coords = await geocodeAddress(deliveryAddress);
+    if (coords) {
+      return { latitude: coords.lat, longitude: coords.lng };
+    }
+  }
+
+  // Return null if coordinates cannot be determined
+  console.warn('Could not determine coordinates for address', { addressId, deliveryAddress });
+  return { latitude: null, longitude: null };
+}
+
+/**
  * Order Operations
  */
 export const orderService = {
@@ -410,6 +554,20 @@ export const orderService = {
   async create(addressId: string, deliveryDate: string, deliveryTime: string) {
     const user = await getAuthenticatedUser();
     if (!user) throw new Error('Not authenticated');
+
+    // Verify address exists
+    const { data: addressData } = await supabase
+      .from('addresses')
+      .select('id')
+      .eq('id', addressId)
+      .single();
+
+    if (!addressData) {
+      throw new Error('Address not found');
+    }
+
+    // Get coordinates from address - MANDATORY for all orders
+    const { latitude, longitude } = await getAddressCoordinates(addressId, null);
 
     // Fetch cart items
     const { data: cartItems, error: cartError } = await supabase
@@ -442,21 +600,33 @@ export const orderService = {
     const timePart = Date.now() % 100000000;
     const nextOrderNumber = Math.floor(timePart / 100) + Math.floor(Math.random() * 1000)
 
-    // Create order
+    // Create order with coordinates - MANDATORY
+    const orderInsertData: any = {
+      order_number: nextOrderNumber,
+      user_id: user.id,
+      address_id: addressId,
+      subtotal: subtotal.toFixed(2),
+      delivery_fee: deliveryFee.toFixed(2),
+      tax: tax.toFixed(2),
+      total: total.toFixed(2),
+      delivery_date: deliveryDate,
+      delivery_time: deliveryTime,
+      status: 'pending',
+      order_type_label: 'Regular Order', // Store order type label for easy display
+    };
+
+    // Add coordinates - MANDATORY (store even if null, will log warning)
+    orderInsertData.delivery_latitude = latitude;
+    orderInsertData.delivery_longitude = longitude;
+
+    // Log warning if coordinates couldn't be determined
+    if (latitude === null || longitude === null) {
+      console.warn('⚠️ Order created without coordinates for addressId:', addressId);
+    }
+
     const { data: order, error: orderError } = await supabase
       .from('orders')
-      .insert({
-        order_number: nextOrderNumber,
-        user_id: user.id,
-        address_id: addressId,
-        subtotal: subtotal.toFixed(2),
-        delivery_fee: deliveryFee.toFixed(2),
-        tax: tax.toFixed(2),
-        total: total.toFixed(2),
-        delivery_date: deliveryDate,
-        delivery_time: deliveryTime,
-        status: 'pending',
-      })
+      .insert(orderInsertData)
       .select()
       .single();
 
@@ -562,33 +732,129 @@ export const orderService = {
     const user = await getAuthenticatedUser();
     if (!user) throw new Error('Not authenticated');
 
-    // Fetch from specialized order tables in parallel (excluding main orders table)
-    const [mealboxOrders, bulkMealOrders, cateringOrders, corporateOrders] = await Promise.all([
+    // Fetch from all order tables in parallel
+    const [regularOrders, mealboxOrders, bulkMealOrders, snackBoxOrders, sixtyMinMealboxOrders, sixtyMinBulkOrders, cateringOrders, corporateOrders, tastingMenuOrders] = await Promise.all([
+      supabase
+        .from('orders')
+        .select(`
+          *,
+          addresses (
+            id,
+            label,
+            address
+          ),
+          order_items (
+            id,
+            quantity,
+            price,
+            dishes (
+              id,
+              name,
+              image_url,
+              dietary_type
+            )
+          )
+        `)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false }),
       supabase
         .from('mealbox_orders')
         .select('*')
-        .eq('user_id', user.id),
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false }),
       supabase
         .from('bulk_meal_orders')
         .select('*')
-        .eq('user_id', user.id),
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('snack_box_orders')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('sixty_min_mealbox_orders')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('sixty_min_bulk_orders')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false }),
       supabase
         .from('catering_orders')
         .select('*')
-        .eq('user_id', user.id),
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false }),
       supabase
         .from('corporate_orders')
         .select('*')
-        .eq('user_id', user.id),
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('tasting_menu_orders')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false }),
     ]);
 
     // Handle errors from any of the queries
+    if (regularOrders.error) throw regularOrders.error;
     if (mealboxOrders.error) throw mealboxOrders.error;
     if (bulkMealOrders.error) throw bulkMealOrders.error;
+    if (snackBoxOrders.error) throw snackBoxOrders.error;
+    if (sixtyMinMealboxOrders.error) throw sixtyMinMealboxOrders.error;
+    if (sixtyMinBulkOrders.error) throw sixtyMinBulkOrders.error;
     if (cateringOrders.error) throw cateringOrders.error;
     if (corporateOrders.error) throw corporateOrders.error;
+    if (tastingMenuOrders.error) throw tastingMenuOrders.error;
+    if (tastingMenuOrders.error) throw tastingMenuOrders.error;
 
     const allOrders: any[] = [];
+
+    // Helper function to get order type label from stored field or determine from table
+    const getOrderTypeLabel = (order: any, defaultLabel: string, tableName: string): string => {
+      // First check if order_type_label is stored in the order
+      if (order.order_type_label) {
+        return order.order_type_label;
+      }
+      // Fallback to default label based on table
+      return defaultLabel;
+    };
+
+    // Process regular orders (from main orders table)
+    if (regularOrders.data) {
+      regularOrders.data.forEach(order => {
+        const items = (order.order_items || []).map((item: any) => ({
+          id: item.id,
+          quantity: item.quantity,
+          price: String(item.price || '0'),
+          dishId: item.dishes?.id || '',
+          dishName: item.dishes?.name || '',
+          dishImageUrl: item.dishes?.image_url || '',
+          dishDietaryType: item.dishes?.dietary_type || 'Regular',
+        }));
+
+        allOrders.push({
+          id: order.id,
+          orderNumber: order.order_number,
+          orderType: 'regular',
+          orderTypeLabel: getOrderTypeLabel(order, 'Regular Order', 'orders'),
+          subtotal: String(order.subtotal || 0),
+          deliveryFee: String(order.delivery_fee || 0),
+          tax: String(order.tax || 0),
+          total: String(order.total || 0),
+          deliveryDate: order.delivery_date || '',
+          deliveryTime: order.delivery_time || '',
+          status: order.status || 'pending',
+          createdAt: order.created_at,
+          addressLabel: order.addresses?.label || 'Delivery',
+          address: order.addresses?.address || '',
+          items: items,
+        });
+      });
+    }
 
     // Process mealbox orders
     if (mealboxOrders.data) {
@@ -597,7 +863,7 @@ export const orderService = {
           id: order.id,
           orderNumber: order.order_number,
           orderType: 'mealbox',
-          orderTypeLabel: 'Meal Box',
+          orderTypeLabel: getOrderTypeLabel(order, 'Meal Box', 'mealbox_orders'),
           subtotal: String(order.subtotal || 0),
           deliveryFee: String(order.delivery_fee || 0),
           tax: String(order.tax || 0),
@@ -622,12 +888,24 @@ export const orderService = {
 
     // Process bulk meal orders
     if (bulkMealOrders.data) {
+      console.log('[Orders] Bulk meal orders fetched:', bulkMealOrders.data.length);
       bulkMealOrders.data.forEach(order => {
+        // Log the specific order we're looking for
+        if (order.order_number === 159073) {
+          console.log('[Orders] 🔍 Found order 159073 in bulk_meal_orders:', {
+            id: order.id,
+            order_number: order.order_number,
+            created_at: order.created_at,
+            created_at_type: typeof order.created_at,
+            status: order.status
+          });
+        }
+        
         allOrders.push({
           id: order.id,
           orderNumber: order.order_number,
           orderType: 'bulk',
-          orderTypeLabel: 'Bulk Meal',
+          orderTypeLabel: getOrderTypeLabel(order, 'Bulk Meal', 'bulk_meal_orders'),
           subtotal: String(order.subtotal || 0),
           deliveryFee: String(order.platform_fee || 0),
           tax: String(order.gst || 0),
@@ -641,6 +919,126 @@ export const orderService = {
           items: [],
         });
       });
+    } else {
+      console.warn('[Orders] ⚠️ No bulk meal orders data found');
+    }
+
+    // Process snack box orders
+    if (snackBoxOrders.data) {
+      snackBoxOrders.data.forEach(order => {
+        // Parse items from snack box order
+        let items: any[] = [];
+        if (order.items) {
+          try {
+            const parsedItems = typeof order.items === 'string' 
+              ? JSON.parse(order.items) 
+              : order.items;
+            items = Array.isArray(parsedItems) ? parsedItems.map((item: any) => ({
+              id: item.dishId || item.id || '',
+              quantity: item.quantity || 0,
+              price: String(item.price || 0),
+              dishId: item.dishId || item.id || '',
+              dishName: item.name || `Item ${item.dishId || ''}`,
+              dishImageUrl: item.image_url || item.imageUrl || '',
+              dishDietaryType: item.dietary_type || 'Regular',
+            })) : [];
+          } catch (parseError) {
+            console.error('Error parsing snack box order items:', parseError);
+          }
+        }
+
+        allOrders.push({
+          id: order.id,
+          orderNumber: order.order_number,
+          orderType: 'snackbox',
+          orderTypeLabel: getOrderTypeLabel(order, 'Snack Box', 'snack_box_orders'),
+          subtotal: String(order.subtotal || 0),
+          deliveryFee: String(order.platform_fee || 0),
+          tax: String(order.gst || 0),
+          total: String(order.total || 0),
+          deliveryDate: order.delivery_date || '',
+          deliveryTime: order.delivery_time || '',
+          status: order.status || 'pending',
+          createdAt: order.created_at,
+          addressLabel: 'Delivery',
+          address: order.delivery_address || '',
+          items: items,
+        });
+      });
+    }
+
+    // Process 60-min mealbox orders
+    if (sixtyMinMealboxOrders.data) {
+      sixtyMinMealboxOrders.data.forEach(order => {
+        allOrders.push({
+          id: order.id,
+          orderNumber: order.order_number,
+          orderType: 'sixty_min_mealbox',
+          orderTypeLabel: getOrderTypeLabel(order, '60-Min Meal Box', 'sixty_min_mealbox_orders'),
+          subtotal: String(order.subtotal || 0),
+          deliveryFee: String(order.delivery_fee || 0),
+          tax: String(order.tax || 0),
+          total: String(order.total || 0),
+          deliveryDate: order.delivery_date || '',
+          deliveryTime: order.delivery_time || '',
+          status: order.status || 'pending',
+          createdAt: order.created_at,
+          addressLabel: 'Delivery',
+          address: order.delivery_address || '',
+          items: [],
+          mealDetails: {
+            portions: order.portions,
+            mealPreference: order.meal_preference,
+            vegBoxes: order.veg_boxes,
+            eggBoxes: order.egg_boxes,
+            nonVegBoxes: order.non_veg_boxes,
+          },
+        });
+      });
+    }
+
+    // Process 60-min bulk orders
+    if (sixtyMinBulkOrders.data) {
+      sixtyMinBulkOrders.data.forEach(order => {
+        // Parse items from 60-min bulk order
+        let items: any[] = [];
+        if (order.items) {
+          try {
+            const parsedItems = typeof order.items === 'string' 
+              ? JSON.parse(order.items) 
+              : order.items;
+            items = Array.isArray(parsedItems) ? parsedItems.map((item: any) => ({
+              id: item.dishId || item.id || '',
+              quantity: item.quantity || 0,
+              price: String(item.price || item.unit_price || 0),
+              dishId: item.dishId || item.id || '',
+              dishName: item.dish_name || item.name || `Dish ${item.dishId || ''}`,
+              dishImageUrl: item.image_url || item.imageUrl || '',
+              dishDietaryType: item.dietary_type || 'Regular',
+            })) : [];
+          } catch (parseError) {
+            console.error('Error parsing 60-min bulk order items:', parseError);
+          }
+        }
+
+        allOrders.push({
+          id: order.id,
+          orderNumber: order.order_number,
+          orderType: 'sixty_min_bulk',
+          orderTypeLabel: getOrderTypeLabel(order, '60-Min Bulk Meal', 'sixty_min_bulk_orders'),
+          subtotal: String(order.subtotal || 0),
+          deliveryFee: String(order.platform_fee || 0),
+          tax: String(order.gst || 0),
+          total: String(order.total || 0),
+          deliveryDate: order.delivery_date || '',
+          deliveryTime: order.delivery_time || '',
+          status: order.status || 'pending',
+          createdAt: order.created_at,
+          addressLabel: 'Delivery',
+          address: order.delivery_address || '',
+          items: items,
+        });
+      });
     }
 
     // Process catering orders
@@ -650,7 +1048,7 @@ export const orderService = {
           id: order.id,
           orderNumber: order.order_number || Math.floor(Math.random() * 10000),
           orderType: 'catering',
-          orderTypeLabel: 'Catering',
+          orderTypeLabel: getOrderTypeLabel(order, 'Catering', 'catering_orders'),
           subtotal: String(order.budget_min || order.estimated_total || 0),
           deliveryFee: '0',
           tax: '0',
@@ -677,7 +1075,7 @@ export const orderService = {
           id: order.id,
           orderNumber: order.order_number || Math.floor(Math.random() * 10000),
           orderType: 'corporate',
-          orderTypeLabel: 'Corporate',
+          orderTypeLabel: getOrderTypeLabel(order, 'Corporate', 'corporate_orders'),
           subtotal: String(order.subtotal || order.estimated_total || 0),
           deliveryFee: '0',
           tax: '0',
@@ -697,11 +1095,222 @@ export const orderService = {
       });
     }
 
-    // Sort all orders by created_at descending
+    // Process tasting menu orders
+    if (tastingMenuOrders.data) {
+      tastingMenuOrders.data.forEach(order => {
+        // Parse items from tasting menu order if stored as JSON
+        let items: any[] = [];
+        if (order.items) {
+          try {
+            const parsedItems = typeof order.items === 'string' 
+              ? JSON.parse(order.items) 
+              : order.items;
+            items = Array.isArray(parsedItems) ? parsedItems.map((item: any) => ({
+              id: item.dishId || item.id || '',
+              quantity: item.quantity || 0,
+              price: String(item.price || 0),
+              dishId: item.dishId || item.id || '',
+              dishName: item.name || item.dish_name || `Item ${item.dishId || ''}`,
+              dishImageUrl: item.image_url || item.imageUrl || '',
+              dishDietaryType: item.dietary_type || 'Regular',
+            })) : [];
+          } catch (parseError) {
+            console.error('Error parsing tasting menu order items:', parseError);
+          }
+        }
+
+        allOrders.push({
+          id: order.id,
+          orderNumber: order.order_number || Math.floor(Math.random() * 10000),
+          orderType: 'tasting_menu',
+          orderTypeLabel: getOrderTypeLabel(order, 'Tasting Menu', 'tasting_menu_orders'),
+          subtotal: String(order.subtotal || order.total || 0),
+          deliveryFee: String(order.delivery_fee || order.platform_fee || 0),
+          tax: String(order.tax || order.gst || 0),
+          total: String(order.total || 0),
+          deliveryDate: order.delivery_date || order.event_date || '',
+          deliveryTime: order.delivery_time || order.event_time || '',
+          status: order.status || order.order_status || 'pending',
+          createdAt: order.created_at,
+          addressLabel: 'Delivery',
+          address: order.delivery_address || '',
+          items: items,
+        });
+      });
+    }
+
+    // Log orders BEFORE sorting for debugging
+    if (allOrders.length > 0) {
+      console.log('[Orders] BEFORE SORT - Total orders:', allOrders.length);
+      console.log('[Orders] BEFORE SORT - First 3 orders:', 
+        allOrders.slice(0, 3).map((o) => ({ 
+          id: o.id?.substring(0, 8), 
+          orderNumber: o.orderNumber,
+          type: o.orderType,
+          createdAt: o.createdAt,
+          timestamp: o.createdAt ? new Date(o.createdAt).getTime() : 0
+        }))
+      );
+    }
+
+    // Sort all orders by created_at descending (newest first)
+    // Use a more robust sorting that handles different date formats and timezones
     allOrders.sort((a, b) => {
-      const dateA = new Date(a.createdAt || 0).getTime();
-      const dateB = new Date(b.createdAt || 0).getTime();
+      // Get created_at values - handle both string and Date objects
+      const createdAtA = a.createdAt || a.created_at || '';
+      const createdAtB = b.createdAt || b.created_at || '';
+      
+      // Convert to timestamps - handle timezone inconsistencies
+      let dateA = 0;
+      let dateB = 0;
+      
+      if (createdAtA) {
+        // If no timezone is specified (no + or Z), treat as UTC (database default)
+        // Format: '2026-01-21T17:18:23.489944' -> '2026-01-21T17:18:23.489944Z'
+        let dateStrA = createdAtA;
+        if (typeof createdAtA === 'string' && createdAtA.includes('T') && !createdAtA.includes('+') && !createdAtA.includes('Z')) {
+          dateStrA = createdAtA + 'Z'; // Append Z to treat as UTC
+        }
+        const parsedA = new Date(dateStrA);
+        dateA = isNaN(parsedA.getTime()) ? 0 : parsedA.getTime();
+      }
+      
+      if (createdAtB) {
+        // If no timezone is specified (no + or Z), treat as UTC (database default)
+        // Format: '2026-01-21T17:18:23.489944' -> '2026-01-21T17:18:23.489944Z'
+        let dateStrB = createdAtB;
+        if (typeof createdAtB === 'string' && createdAtB.includes('T') && !createdAtB.includes('+') && !createdAtB.includes('Z')) {
+          dateStrB = createdAtB + 'Z'; // Append Z to treat as UTC
+        }
+        const parsedB = new Date(dateStrB);
+        dateB = isNaN(parsedB.getTime()) ? 0 : parsedB.getTime();
+      }
+      
+      // If both dates are invalid, maintain order
+      if (dateA === 0 && dateB === 0) return 0;
+      
+      // Invalid dates go to the end
+      if (dateA === 0) return 1; // A goes to end
+      if (dateB === 0) return -1; // B goes to end
+      
+      // Descending order: newest first (dateB - dateA)
+      // This ensures the most recent order (larger timestamp) comes first
       return dateB - dateA;
+    });
+    
+    // Log sorted orders for debugging - show all orders with timestamps
+    if (allOrders.length > 0) {
+      console.log('[Orders] AFTER SORT - Total orders:', allOrders.length);
+      
+      // Find the specific order we're looking for (159073)
+      const targetOrder = allOrders.find(o => o.orderNumber === 159073);
+      if (targetOrder) {
+        console.log('[Orders] 🔍 Found order 159073:', {
+          position: allOrders.indexOf(targetOrder) + 1,
+          id: targetOrder.id,
+          orderNumber: targetOrder.orderNumber,
+          type: targetOrder.orderType,
+          label: targetOrder.orderTypeLabel,
+          createdAt: targetOrder.createdAt,
+          timestamp: targetOrder.createdAt ? new Date(targetOrder.createdAt).getTime() : 0,
+          readableDate: targetOrder.createdAt ? new Date(targetOrder.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : 'N/A'
+        });
+      } else {
+        console.warn('[Orders] ⚠️ Order 159073 NOT FOUND in results!');
+      }
+      
+      // Show first 10 orders with full details
+      console.log('[Orders] AFTER SORT - First 10 orders:', 
+        allOrders.slice(0, 10).map((o, index) => ({ 
+          position: index + 1,
+          id: o.id?.substring(0, 8) + '...', 
+          orderNumber: o.orderNumber,
+          type: o.orderType,
+          label: o.orderTypeLabel,
+          createdAt: o.createdAt,
+          timestamp: o.createdAt ? new Date(o.createdAt).getTime() : 0,
+          readableDate: o.createdAt ? new Date(o.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : 'N/A'
+        }))
+      );
+      
+      // Show all order numbers for quick reference
+      console.log('[Orders] All order numbers (in sorted order):', allOrders.map(o => o.orderNumber));
+      
+      console.log('[Orders] ✅ First order (should be newest):', {
+        id: allOrders[0]?.id,
+        orderNumber: allOrders[0]?.orderNumber,
+        type: allOrders[0]?.orderType,
+        label: allOrders[0]?.orderTypeLabel,
+        createdAt: allOrders[0]?.createdAt,
+        timestamp: allOrders[0]?.createdAt ? new Date(allOrders[0].createdAt).getTime() : 0,
+        readableDate: allOrders[0]?.createdAt ? new Date(allOrders[0].createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : 'N/A'
+      });
+    }
+
+    // Fetch all payments for the user to determine payment status
+    const { data: allPayments } = await supabase
+      .from('payments')
+      .select('order_id, order_type, payment_status, payment_stage, amount')
+      .eq('user_id', user.id);
+
+    // Create a map of order_id + order_type -> payment status
+    const paymentMap = new Map<string, { status: string; hasPayment: boolean; totalPaid: number }>();
+    if (allPayments) {
+      allPayments.forEach((payment: any) => {
+        const key = `${payment.order_id}_${payment.order_type}`;
+        const existing = paymentMap.get(key);
+        const paymentAmount = parseFloat(payment.amount || '0');
+        
+        if (existing) {
+          // If payment exists, update status and add to total paid
+          existing.hasPayment = true;
+          existing.totalPaid += paymentAmount;
+          // If any payment is success, mark as paid
+          if (payment.payment_status === 'success') {
+            existing.status = 'paid';
+          } else if (existing.status !== 'paid' && payment.payment_status === 'pending') {
+            existing.status = 'pending';
+          }
+        } else {
+          paymentMap.set(key, {
+            status: payment.payment_status === 'success' ? 'paid' : payment.payment_status || 'pending',
+            hasPayment: true,
+            totalPaid: paymentAmount,
+          });
+        }
+      });
+    }
+
+    // Add payment status to each order
+    allOrders.forEach(order => {
+      // Map order type to payment order_type format
+      // Note: payment order_type uses: 'bulk_meal', 'mealbox', 'sixty_min_bulk', 'sixty_min_mealbox', 'snack_box'
+      const paymentOrderType = order.orderType === 'bulk' ? 'bulk_meal' :
+                              order.orderType === 'mealbox' ? 'mealbox' :
+                              order.orderType === 'sixty_min_bulk' ? 'sixty_min_bulk' :
+                              order.orderType === 'sixty_min_mealbox' ? 'sixty_min_mealbox' :
+                              order.orderType === 'snackbox' ? 'snack_box' :
+                              order.orderType === 'regular' ? null : // Regular orders may not have payments
+                              null;
+      
+      if (paymentOrderType) {
+        const key = `${order.id}_${paymentOrderType}`;
+        const paymentInfo = paymentMap.get(key);
+        if (paymentInfo) {
+          order.paymentStatus = paymentInfo.status;
+          order.hasPayment = true;
+          order.totalPaid = paymentInfo.totalPaid;
+        } else {
+          order.paymentStatus = 'unpaid';
+          order.hasPayment = false;
+          order.totalPaid = 0;
+        }
+      } else {
+        // For order types without payment tracking (catering, corporate, etc.)
+        order.paymentStatus = 'unknown';
+        order.hasPayment = false;
+        order.totalPaid = 0;
+      }
     });
 
     return allOrders;
@@ -865,6 +1474,7 @@ export const mealboxOrderService = {
     subtotal: number;
     deliveryFee: number;
     tax: number;
+    doorstepDeliveryFee?: number;
     total: number;
     deliveryDate?: string;
     deliveryTime?: string;
@@ -873,35 +1483,53 @@ export const mealboxOrderService = {
     const user = await getAuthenticatedUser();
     if (!user) throw new Error('Not authenticated');
 
+    // Get coordinates from address
+    const { latitude, longitude } = await getAddressCoordinates(orderData.addressId || null, null);
+
     // Generate unique order number (max 2147483647 for integer)
     const timePart = Date.now() % 100000000; // Last 8 digits of timestamp
     const nextOrderNumber = Math.floor(timePart / 100) + Math.floor(Math.random() * 1000)
 
+    const insertData: any = {
+      user_id: user.id,
+      order_number: nextOrderNumber,
+      portions: orderData.portions,
+      meal_preference: orderData.mealPreference,
+      selected_meal_type: orderData.selectedMealType || null,
+      veg_boxes: orderData.vegBoxes,
+      egg_boxes: orderData.eggBoxes,
+      non_veg_boxes: orderData.nonVegBoxes,
+      veg_plate_selections: JSON.stringify(orderData.vegPlateSelections),
+      egg_plate_selections: JSON.stringify(orderData.eggPlateSelections),
+      non_veg_plate_selections: JSON.stringify(orderData.nonVegPlateSelections),
+      selected_addons: JSON.stringify(orderData.selectedAddons),
+      subtotal: orderData.subtotal.toFixed(2),
+      delivery_fee: orderData.deliveryFee.toFixed(2),
+      tax: orderData.tax.toFixed(2),
+      doorstep_delivery_fee: (orderData.doorstepDeliveryFee || 0).toFixed(2),
+      total: orderData.total.toFixed(2),
+      delivery_date: orderData.deliveryDate || null,
+      delivery_time: orderData.deliveryTime || null,
+      address_id: orderData.addressId || null,
+      status: 'pending',
+      // Don't set created_at manually - let database use default now()
+      order_type_label: 'Meal Box', // Store order type label for easy display
+    };
+
+    // Add coordinates - MANDATORY (store even if null, will log warning)
+    insertData.delivery_latitude = latitude;
+    insertData.delivery_longitude = longitude;
+
+    // Log warning if coordinates couldn't be determined
+    if (latitude === null || longitude === null) {
+      console.warn('⚠️ MealBox order created without coordinates:', { 
+        addressId: orderData.addressId 
+      });
+    }
+
     const { data, error } = await supabase
       .from('mealbox_orders')
-      .insert({
-        user_id: user.id,
-        order_number: nextOrderNumber,
-        portions: orderData.portions,
-        meal_preference: orderData.mealPreference,
-        selected_meal_type: orderData.selectedMealType || null,
-        veg_boxes: orderData.vegBoxes,
-        egg_boxes: orderData.eggBoxes,
-        non_veg_boxes: orderData.nonVegBoxes,
-        veg_plate_selections: JSON.stringify(orderData.vegPlateSelections),
-        egg_plate_selections: JSON.stringify(orderData.eggPlateSelections),
-        non_veg_plate_selections: JSON.stringify(orderData.nonVegPlateSelections),
-        selected_addons: JSON.stringify(orderData.selectedAddons),
-        subtotal: orderData.subtotal.toFixed(2),
-        delivery_fee: orderData.deliveryFee.toFixed(2),
-        tax: orderData.tax.toFixed(2),
-        total: orderData.total.toFixed(2),
-        delivery_date: orderData.deliveryDate || null,
-        delivery_time: orderData.deliveryTime || null,
-        address_id: orderData.addressId || null,
-        status: 'pending',
-        created_at: new Date().toISOString(),
-      })
+      .insert(insertData)
       .select()
       .single();
 
@@ -959,6 +1587,7 @@ export const bulkMealOrderService = {
     gst: number;
     platformFee: number;
     packagingFee: number;
+    doorstepDeliveryFee?: number;
     total: number;
     deliveryDate?: string;
     deliveryTime?: string;
@@ -968,30 +1597,50 @@ export const bulkMealOrderService = {
     const user = await getAuthenticatedUser();
     if (!user) throw new Error('Not authenticated');
 
+    // Get coordinates from address - MANDATORY for all orders
+    const { latitude, longitude } = await getAddressCoordinates(orderData.addressId || null, orderData.deliveryAddress || null);
+
     // Generate unique order number (max 2147483647 for integer)
     const timePart = Date.now() % 100000000;
     const nextOrderNumber = Math.floor(timePart / 100) + Math.floor(Math.random() * 1000)
 
+    const insertData: any = {
+      user_id: user.id,
+      order_number: nextOrderNumber,
+      items: JSON.stringify(orderData.items),
+      selected_addons: orderData.selectedAddons && orderData.selectedAddons.length > 0 
+        ? JSON.stringify(orderData.selectedAddons) 
+        : null,
+      subtotal: orderData.subtotal.toFixed(2),
+      gst: orderData.gst.toFixed(2),
+      platform_fee: orderData.platformFee.toFixed(2),
+      packaging_fee: orderData.packagingFee.toFixed(2),
+      doorstep_delivery_fee: (orderData.doorstepDeliveryFee || 0).toFixed(2),
+      total: orderData.total.toFixed(2),
+      delivery_date: orderData.deliveryDate || null,
+      delivery_time: orderData.deliveryTime || null,
+      address_id: orderData.addressId || null,
+      status: 'pending',
+      // Don't set created_at manually - let database use default now()
+      // This ensures consistent timestamp format and timezone
+      order_type_label: 'Bulk Meal', // Store order type label for easy display
+    };
+
+    // Add coordinates - MANDATORY: store even if null (will log warning)
+    insertData.delivery_latitude = latitude;
+    insertData.delivery_longitude = longitude;
+
+    // Log warning if coordinates couldn't be determined
+    if (latitude === null || longitude === null) {
+      console.warn('⚠️ Order created without coordinates:', { 
+        addressId: orderData.addressId, 
+        deliveryAddress: orderData.deliveryAddress 
+      });
+    }
+
     const { data, error } = await supabase
       .from('bulk_meal_orders')
-      .insert({
-        user_id: user.id,
-        order_number: nextOrderNumber,
-        items: JSON.stringify(orderData.items),
-        selected_addons: orderData.selectedAddons && orderData.selectedAddons.length > 0 
-          ? JSON.stringify(orderData.selectedAddons) 
-          : null,
-        subtotal: orderData.subtotal.toFixed(2),
-        gst: orderData.gst.toFixed(2),
-        platform_fee: orderData.platformFee.toFixed(2),
-        packaging_fee: orderData.packagingFee.toFixed(2),
-        total: orderData.total.toFixed(2),
-        delivery_date: orderData.deliveryDate || null,
-        delivery_time: orderData.deliveryTime || null,
-        address_id: orderData.addressId || null,
-        status: 'pending',
-        created_at: new Date().toISOString(),
-      })
+      .insert(insertData)
       .select()
       .single();
 
@@ -1050,6 +1699,7 @@ export const sixtyMinBulkOrderService = {
     gst: number;
     platformFee: number;
     packagingFee: number;
+    doorstepDeliveryFee?: number;
     total: number;
     deliveryDate?: string;
     deliveryTime?: string;
@@ -1068,12 +1718,14 @@ export const sixtyMinBulkOrderService = {
     // For sixty_min_bulk_orders, we only use delivery_address text (no address_id foreign key)
     // If an addressId was passed, we need to look up the address and use it as text
     let finalDeliveryAddress = orderData.deliveryAddress || 'Address not provided';
+    let deliveryLatitude: number | null = null;
+    let deliveryLongitude: number | null = null;
     
     if (orderData.addressId && orderData.deliveryAddress === undefined) {
-      // Look up the saved address and use its text
+      // Look up the saved address and use its text and coordinates
       const { data: addressData } = await supabase
         .from('addresses')
-        .select('address, landmark')
+        .select('address, landmark, latitude, longitude')
         .eq('id', orderData.addressId)
         .single();
       
@@ -1082,6 +1734,15 @@ export const sixtyMinBulkOrderService = {
         if (addressData.landmark) {
           finalDeliveryAddress += `, ${addressData.landmark}`;
         }
+        deliveryLatitude = addressData.latitude;
+        deliveryLongitude = addressData.longitude;
+      }
+    } else if (orderData.deliveryAddress) {
+      // Geocode the delivery address if coordinates not available
+      const coords = await geocodeAddress(orderData.deliveryAddress);
+      if (coords) {
+        deliveryLatitude = coords.lat;
+        deliveryLongitude = coords.lng;
       }
     }
 
@@ -1110,9 +1771,13 @@ export const sixtyMinBulkOrderService = {
           ? `${orderData.deliveryDate}T${parseTimeSlotTo24Hour(orderData.deliveryTime)}:00` 
           : null,
         delivery_address: finalDeliveryAddress,
+        delivery_latitude: deliveryLatitude,
+        delivery_longitude: deliveryLongitude,
         order_status: 'pending',
         payment_status: 'pending',
-        created_at: new Date().toISOString(),
+        doorstep_delivery_fee: (orderData.doorstepDeliveryFee || 0).toFixed(2),
+        // Don't set created_at manually - let database use default now()
+        order_type_label: '60-Min Bulk Meal', // Store order type label for easy display
       })
       .select()
       .single();
@@ -1179,6 +1844,7 @@ export const sixtyMinMealboxOrderService = {
     subtotal: number;
     deliveryFee: number;
     tax: number;
+    doorstepDeliveryFee?: number;
     total: number;
     deliveryDate?: string;
     deliveryTime?: string;
@@ -1191,13 +1857,15 @@ export const sixtyMinMealboxOrderService = {
     // Generate unique order number as TEXT
     const orderNumber = `60MB-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
-    // Resolve delivery address
+    // Resolve delivery address and coordinates
     let finalDeliveryAddress = orderData.deliveryAddress || 'Address not provided';
+    let deliveryLatitude: number | null = null;
+    let deliveryLongitude: number | null = null;
     
     if (orderData.addressId && !orderData.deliveryAddress) {
       const { data: addressData } = await supabase
         .from('addresses')
-        .select('address, landmark')
+        .select('address, landmark, latitude, longitude')
         .eq('id', orderData.addressId)
         .single();
       
@@ -1206,6 +1874,15 @@ export const sixtyMinMealboxOrderService = {
         if (addressData.landmark) {
           finalDeliveryAddress += `, ${addressData.landmark}`;
         }
+        deliveryLatitude = addressData.latitude;
+        deliveryLongitude = addressData.longitude;
+      }
+    } else if (orderData.deliveryAddress) {
+      // Geocode the delivery address if coordinates not available
+      const coords = await geocodeAddress(orderData.deliveryAddress);
+      if (coords) {
+        deliveryLatitude = coords.lat;
+        deliveryLongitude = coords.lng;
       }
     }
 
@@ -1265,9 +1942,13 @@ export const sixtyMinMealboxOrderService = {
           ? `${orderData.deliveryDate}T${parseTimeSlotTo24Hour(orderData.deliveryTime)}:00` 
           : null,
         delivery_address: finalDeliveryAddress,
+        delivery_latitude: deliveryLatitude,
+        delivery_longitude: deliveryLongitude,
         order_status: 'pending',
         payment_status: 'pending',
-        created_at: new Date().toISOString(),
+        doorstep_delivery_fee: (orderData.doorstepDeliveryFee || 0).toFixed(2),
+        // Don't set created_at manually - let database use default now()
+        order_type_label: '60-Min Meal Box', // Store order type label for easy display
       })
       .select()
       .single();
@@ -1343,36 +2024,53 @@ export const cateringOrderService = {
     // Get user if authenticated (optional for catering orders)
     const { data: { user } } = await supabase.auth.getUser();
 
+    // Get coordinates from address - MANDATORY for all orders
+    const { latitude, longitude } = await getAddressCoordinates(orderData.addressId || null, null);
+
     // Generate unique order number (max 2147483647 for integer)
     const timePart = Date.now() % 100000000;
     const nextOrderNumber = Math.floor(timePart / 100) + Math.floor(Math.random() * 1000)
 
+    const insertData: any = {
+      user_id: user?.id || null,
+      order_number: nextOrderNumber,
+      event_type: orderData.eventType,
+      guest_count: orderData.guestCount,
+      veg_count: orderData.vegCount || 0,
+      non_veg_count: orderData.nonVegCount || 0,
+      egg_count: orderData.eggCount || 0,
+      event_date: orderData.eventDate,
+      event_time: orderData.eventTime || null,
+      meal_times: orderData.mealTimes ? JSON.stringify(orderData.mealTimes) : null,
+      dietary_types: orderData.dietaryTypes ? JSON.stringify(orderData.dietaryTypes) : null,
+      cuisines: orderData.cuisines ? JSON.stringify(orderData.cuisines) : null,
+      cuisine_preferences: orderData.cuisinePreferences ? JSON.stringify(orderData.cuisinePreferences) : null,
+      budget_min: orderData.budgetMin ? orderData.budgetMin.toFixed(2) : null,
+      budget_max: orderData.budgetMax ? orderData.budgetMax.toFixed(2) : null,
+      add_on_ids: orderData.addOnIds ? JSON.stringify(orderData.addOnIds) : null,
+      name: orderData.name,
+      email: orderData.email || null,
+      phone: orderData.phone,
+      message: orderData.message || null,
+      address_id: orderData.addressId || null,
+      status: 'pending',
+      order_type_label: 'Catering', // Store order type label for easy display
+    };
+
+    // Add coordinates - MANDATORY
+    insertData.delivery_latitude = latitude;
+    insertData.delivery_longitude = longitude;
+
+    // Log warning if coordinates couldn't be determined
+    if (latitude === null || longitude === null) {
+      console.warn('⚠️ Catering order created without coordinates:', { 
+        addressId: orderData.addressId 
+      });
+    }
+
     const { data, error } = await supabase
       .from('catering_orders')
-      .insert({
-        user_id: user?.id || null,
-        order_number: nextOrderNumber,
-        event_type: orderData.eventType,
-        guest_count: orderData.guestCount,
-        veg_count: orderData.vegCount || 0,
-        non_veg_count: orderData.nonVegCount || 0,
-        egg_count: orderData.eggCount || 0,
-        event_date: orderData.eventDate,
-        event_time: orderData.eventTime || null,
-        meal_times: orderData.mealTimes ? JSON.stringify(orderData.mealTimes) : null,
-        dietary_types: orderData.dietaryTypes ? JSON.stringify(orderData.dietaryTypes) : null,
-        cuisines: orderData.cuisines ? JSON.stringify(orderData.cuisines) : null,
-        cuisine_preferences: orderData.cuisinePreferences ? JSON.stringify(orderData.cuisinePreferences) : null,
-        budget_min: orderData.budgetMin ? orderData.budgetMin.toFixed(2) : null,
-        budget_max: orderData.budgetMax ? orderData.budgetMax.toFixed(2) : null,
-        add_on_ids: orderData.addOnIds ? JSON.stringify(orderData.addOnIds) : null,
-        name: orderData.name,
-        email: orderData.email || null,
-        phone: orderData.phone,
-        message: orderData.message || null,
-        address_id: orderData.addressId || null,
-        status: 'pending',
-      })
+      .insert(insertData)
       .select()
       .single();
 
@@ -1426,33 +2124,50 @@ export const corporateOrderService = {
     // Get user if authenticated (optional for corporate orders)
     const { data: { user } } = await supabase.auth.getUser();
 
+    // Get coordinates from address - MANDATORY for all orders
+    const { latitude, longitude } = await getAddressCoordinates(orderData.addressId || null, null);
+
     // Generate unique order number (max 2147483647 for integer)
     const timePart = Date.now() % 100000000;
     const nextOrderNumber = Math.floor(timePart / 100) + Math.floor(Math.random() * 1000)
 
+    const insertData: any = {
+      user_id: user?.id || null,
+      order_number: nextOrderNumber,
+      company_name: orderData.companyName,
+      contact_person: orderData.contactPerson,
+      email: orderData.email || null,
+      phone: orderData.phone,
+      number_of_people: orderData.numberOfPeople,
+      veg_count: orderData.vegCount || 0,
+      non_veg_count: orderData.nonVegCount || 0,
+      egg_count: orderData.eggCount || 0,
+      event_type: orderData.eventType,
+      budget_min: orderData.budgetMin ? orderData.budgetMin.toFixed(2) : null,
+      budget_max: orderData.budgetMax ? orderData.budgetMax.toFixed(2) : null,
+      event_date: orderData.eventDate,
+      event_time: orderData.eventTime || null,
+      additional_services: orderData.additionalServices ? JSON.stringify(orderData.additionalServices) : null,
+      message: orderData.message || null,
+      address_id: orderData.addressId || null,
+      status: 'pending',
+      order_type_label: 'Corporate', // Store order type label for easy display
+    };
+
+    // Add coordinates - MANDATORY
+    insertData.delivery_latitude = latitude;
+    insertData.delivery_longitude = longitude;
+
+    // Log warning if coordinates couldn't be determined
+    if (latitude === null || longitude === null) {
+      console.warn('⚠️ Corporate order created without coordinates:', { 
+        addressId: orderData.addressId 
+      });
+    }
+
     const { data, error } = await supabase
       .from('corporate_orders')
-      .insert({
-        user_id: user?.id || null,
-        order_number: nextOrderNumber,
-        company_name: orderData.companyName,
-        contact_person: orderData.contactPerson,
-        email: orderData.email || null,
-        phone: orderData.phone,
-        number_of_people: orderData.numberOfPeople,
-        veg_count: orderData.vegCount || 0,
-        non_veg_count: orderData.nonVegCount || 0,
-        egg_count: orderData.eggCount || 0,
-        event_type: orderData.eventType,
-        budget_min: orderData.budgetMin ? orderData.budgetMin.toFixed(2) : null,
-        budget_max: orderData.budgetMax ? orderData.budgetMax.toFixed(2) : null,
-        event_date: orderData.eventDate,
-        event_time: orderData.eventTime || null,
-        additional_services: orderData.additionalServices ? JSON.stringify(orderData.additionalServices) : null,
-        message: orderData.message || null,
-        address_id: orderData.addressId || null,
-        status: 'pending',
-      })
+      .insert(insertData)
       .select()
       .single();
 
@@ -1611,18 +2326,27 @@ export const couponService = {
 
     // Check first-time user restriction
     if (coupon.first_time_user_only && user) {
-      // Check if user has any previous orders (across all order types)
-      const { count: orderCount } = await supabase
-        .from('orders')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id);
+      // Check if user has any previous orders (across ALL order types)
+      const orderTables = [
+        'orders',
+        'bulk_meal_orders',
+        'mealbox_orders',
+        'snack_box_orders',
+        'catering_orders',
+        'corporate_orders',
+        'sixty_min_bulk_orders',
+        'sixty_min_mealbox_orders'
+      ];
       
-      const { count: bulkCount } = await supabase
-        .from('bulk_meal_orders')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id);
+      let totalOrders = 0;
+      for (const table of orderTables) {
+        const { count } = await supabase
+          .from(table)
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id);
+        totalOrders += count || 0;
+      }
 
-      const totalOrders = (orderCount || 0) + (bulkCount || 0);
       if (totalOrders > 0) {
         return { valid: false, error: 'This coupon is for first-time customers only' };
       }
@@ -1642,12 +2366,28 @@ export const couponService = {
 
     // Check minimum previous orders
     if (coupon.min_previous_orders && coupon.min_previous_orders > 0 && user) {
-      const { count: orderCount } = await supabase
-        .from('orders')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id);
+      // Check total orders across ALL order types
+      const orderTables = [
+        'orders',
+        'bulk_meal_orders',
+        'mealbox_orders',
+        'snack_box_orders',
+        'catering_orders',
+        'corporate_orders',
+        'sixty_min_bulk_orders',
+        'sixty_min_mealbox_orders'
+      ];
+      
+      let totalOrders = 0;
+      for (const table of orderTables) {
+        const { count } = await supabase
+          .from(table)
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id);
+        totalOrders += count || 0;
+      }
 
-      if (!orderCount || orderCount < coupon.min_previous_orders) {
+      if (totalOrders < coupon.min_previous_orders) {
         return { valid: false, error: `Complete ${coupon.min_previous_orders} orders to unlock this coupon` };
       }
     }
@@ -1835,41 +2575,84 @@ export const couponService = {
 
       // Check first-time user only
       if (!ineligibleReason && coupon.first_time_user_only && user) {
-        const { count: orderCount } = await supabase
-          .from('orders')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', user.id);
+        // Check all order types for first-time user validation
+        const orderTables = [
+          'orders',
+          'bulk_meal_orders',
+          'mealbox_orders',
+          'snack_box_orders',
+          'catering_orders',
+          'corporate_orders',
+          'sixty_min_bulk_orders',
+          'sixty_min_mealbox_orders'
+        ];
         
-        const { count: bulkCount } = await supabase
-          .from('bulk_meal_orders')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', user.id);
-
-        if ((orderCount || 0) + (bulkCount || 0) > 0) {
-          ineligibleReason = 'For first-time users only';
+        let totalOrders = 0;
+        for (const table of orderTables) {
+          const { count } = await supabase
+            .from(table)
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user.id);
+          totalOrders += count || 0;
+        }
+        
+        if (totalOrders > 0) {
+          ineligibleReason = 'For first-time customers only';
         }
       }
 
       // Check returning user only restriction
       if (!ineligibleReason && coupon.returning_user_only && user) {
-        const { count: orderCount } = await supabase
-          .from('orders')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', user.id);
-
-        if (!orderCount || orderCount === 0) {
-          ineligibleReason = 'For returning customers';
+        // Check all order types for returning user validation
+        const orderTables = [
+          'orders',
+          'bulk_meal_orders',
+          'mealbox_orders',
+          'snack_box_orders',
+          'catering_orders',
+          'corporate_orders',
+          'sixty_min_bulk_orders',
+          'sixty_min_mealbox_orders'
+        ];
+        
+        let totalOrders = 0;
+        for (const table of orderTables) {
+          const { count } = await supabase
+            .from(table)
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user.id);
+          totalOrders += count || 0;
+        }
+        
+        if (totalOrders === 0) {
+          ineligibleReason = 'For returning customers only';
         }
       }
 
       // Check minimum previous orders requirement
       if (!ineligibleReason && coupon.min_previous_orders && coupon.min_previous_orders > 0 && user) {
-        const { count: orderCount } = await supabase
-          .from('orders')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', user.id);
+        // Check all order types for minimum previous orders
+        const orderTables = [
+          'orders',
+          'bulk_meal_orders',
+          'mealbox_orders',
+          'snack_box_orders',
+          'catering_orders',
+          'corporate_orders',
+          'sixty_min_bulk_orders',
+          'sixty_min_mealbox_orders'
+        ];
+        
+        let totalOrders = 0;
+        for (const table of orderTables) {
+          const { count } = await supabase
+            .from(table)
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user.id);
+          totalOrders += count || 0;
+        }
 
-        if (!orderCount || orderCount < coupon.min_previous_orders) {
+        if (totalOrders < coupon.min_previous_orders) {
           ineligibleReason = `Need ${coupon.min_previous_orders}+ orders`;
         }
       }
@@ -1949,7 +2732,7 @@ export const paymentService = {
    */
   async create(paymentData: {
     orderId: string;
-    orderType: 'bulk_meal' | 'mealbox' | 'sixty_min_bulk' | 'sixty_min_mealbox';
+    orderType: 'bulk_meal' | 'mealbox' | 'sixty_min_bulk' | 'sixty_min_mealbox' | 'snack_box';
     orderNumber: number;
     userId: string;
     paymentStage: 'initial' | 'second' | 'final' | 'full';
@@ -2091,7 +2874,7 @@ export const paymentService = {
    */
   async addPaymentStage(paymentData: {
     orderId: string;
-    orderType: 'bulk_meal' | 'mealbox' | 'sixty_min_bulk' | 'sixty_min_mealbox';
+    orderType: 'bulk_meal' | 'mealbox' | 'sixty_min_bulk' | 'sixty_min_mealbox' | 'snack_box';
     orderNumber: number;
     userId: string;
     paymentStage: 'second' | 'final';
@@ -2198,6 +2981,7 @@ export const snackBoxOrderService = {
     gst: number;
     platformFee: number;
     packagingFee: number;
+    doorstepDeliveryFee?: number;
     total: number;
     deliveryDate?: string;
     deliveryTime?: string;
@@ -2209,33 +2993,52 @@ export const snackBoxOrderService = {
     const user = await getAuthenticatedUser();
     if (!user) throw new Error('Not authenticated');
 
+    // Get coordinates from address - MANDATORY for all orders
+    const { latitude, longitude } = await getAddressCoordinates(orderData.addressId || null, orderData.deliveryAddress || null);
+
     // Generate unique order number (max 2147483647 for integer)
     const timePart = Date.now() % 100000000;
     const nextOrderNumber = Math.floor(timePart / 100) + Math.floor(Math.random() * 1000)
 
+    const insertData: any = {
+      user_id: user.id,
+      order_number: nextOrderNumber,
+      items: JSON.stringify(orderData.items),
+      selected_addons: orderData.selectedAddons && orderData.selectedAddons.length > 0
+        ? JSON.stringify(orderData.selectedAddons)
+        : null,
+      subtotal: orderData.subtotal.toFixed(2),
+      gst: orderData.gst.toFixed(2),
+      platform_fee: orderData.platformFee.toFixed(2),
+      packaging_fee: orderData.packagingFee.toFixed(2),
+      doorstep_delivery_fee: (orderData.doorstepDeliveryFee || 0).toFixed(2),
+      total: orderData.total.toFixed(2),
+      delivery_date: orderData.deliveryDate || null,
+      delivery_time: orderData.deliveryTime || null,
+      address_id: orderData.addressId || null,
+      delivery_address: orderData.deliveryAddress || null,
+      coupon_id: orderData.couponId || null,
+      discount_applied: orderData.discountApplied || 0,
+      status: 'pending',
+      // Don't set created_at manually - let database use default now()
+      order_type_label: 'Snack Box', // Store order type label for easy display
+    };
+
+    // Add coordinates - MANDATORY
+    insertData.delivery_latitude = latitude;
+    insertData.delivery_longitude = longitude;
+
+    // Log warning if coordinates couldn't be determined
+    if (latitude === null || longitude === null) {
+      console.warn('⚠️ SnackBox order created without coordinates:', { 
+        addressId: orderData.addressId, 
+        deliveryAddress: orderData.deliveryAddress 
+      });
+    }
+
     const { data, error } = await supabase
       .from('snack_box_orders')
-      .insert({
-        user_id: user.id,
-        order_number: nextOrderNumber,
-        items: JSON.stringify(orderData.items),
-        selected_addons: orderData.selectedAddons && orderData.selectedAddons.length > 0
-          ? JSON.stringify(orderData.selectedAddons)
-          : null,
-        subtotal: orderData.subtotal.toFixed(2),
-        gst: orderData.gst.toFixed(2),
-        platform_fee: orderData.platformFee.toFixed(2),
-        packaging_fee: orderData.packagingFee.toFixed(2),
-        total: orderData.total.toFixed(2),
-        delivery_date: orderData.deliveryDate || null,
-        delivery_time: orderData.deliveryTime || null,
-        address_id: orderData.addressId || null,
-        delivery_address: orderData.deliveryAddress || null,
-        coupon_id: orderData.couponId || null,
-        discount_applied: orderData.discountApplied || 0,
-        status: 'pending',
-        created_at: new Date().toISOString(),
-      })
+      .insert(insertData)
       .select()
       .single();
 
@@ -2263,7 +3066,8 @@ export const snackBoxOrderService = {
           coupon_id: orderData.couponId || null,
           coupon_discount: orderData.discountApplied || 0,
           status: 'pending',
-          created_at: new Date().toISOString(),
+          // Don't set created_at manually - let database use default now()
+          order_type_label: 'Snack Box', // Store order type label for easy display (fallback case)
         })
         .select()
         .single();
@@ -2358,39 +3162,32 @@ export const snackBoxService = {
    * Get all snack box dishes
    */
   async getAll() {
-    // Try 'snack-box' first
-    let result = await supabase
-      .from('snack-box')
+    // Use 'dishes' table with category filter (this is the working approach)
+    const result = await supabase
+      .from('dishes')
       .select('*')
+      .eq('category_id', 'snack-box')
       .order('name', { ascending: true });
 
-    if (!result.data || result.data.length === 0) {
-      // Try 'snack - box' as suggested by the user's SQL
-      const alternative = await supabase
-        .from('snack - box')
-        .select('*')
-        .order('name', { ascending: true });
-
-      if (alternative.data && alternative.data.length > 0) {
-        result = alternative;
-      }
-    }
-
-    if (!result.data || result.data.length === 0) {
-      // Fallback to 'dishes' table with category filtering
-      const dishesFallback = await supabase
-        .from('dishes')
-        .select('*')
-        .eq('category_id', 'snack-box')
-        .order('name', { ascending: true });
-
-      if (dishesFallback.data && dishesFallback.data.length > 0) {
-        result = dishesFallback;
-      }
-    }
-
-    console.log("snackBoxService.getAll result:", result.data);
     if (result.error) throw result.error;
-    return result.data;
+    return result.data || [];
+  },
+
+  /**
+   * Get snack box dish by ID
+   */
+  async getById(dishId: string | number) {
+    const idStr = dishId.toString();
+    
+    // Use 'dishes' table with category filter (this is the working approach)
+    const result = await supabase
+      .from('dishes')
+      .select('*')
+      .eq('id', idStr)
+      .eq('category_id', 'snack-box')
+      .single();
+
+    if (result.error && result.error.code !== 'PGRST116') throw result.error;
+    return result.data || null;
   },
 };

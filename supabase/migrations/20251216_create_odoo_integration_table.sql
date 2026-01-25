@@ -28,6 +28,7 @@ CREATE INDEX IF NOT EXISTS idx_odoo_entities_entity_type
 ALTER TABLE public.integration_odoo_entities ENABLE ROW LEVEL SECURITY;
 
 -- Allow service role full access (for Edge Functions)
+DROP POLICY IF EXISTS "Service role has full access" ON public.integration_odoo_entities;
 CREATE POLICY "Service role has full access" 
   ON public.integration_odoo_entities 
   FOR ALL 

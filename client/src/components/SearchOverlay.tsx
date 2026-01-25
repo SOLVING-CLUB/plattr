@@ -101,7 +101,19 @@ export function SearchOverlay({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100]">
+    <div 
+      className="search-overlay-fixed fixed inset-0 z-[100]"
+      style={{
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        paddingTop: '0',
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        paddingLeft: 'env(safe-area-inset-left, 0px)',
+        paddingRight: 'env(safe-area-inset-right, 0px)',
+      }}
+    >
       <div
         className="absolute inset-0 bg-black/30 backdrop-blur-sm"
         onClick={onClose}
@@ -112,7 +124,7 @@ export function SearchOverlay({
           isOpen ? "translate-y-0" : "-translate-y-full"
         )}
         style={{
-          paddingTop: "calc(env(safe-area-inset-top, 0px) + 56px)",
+          paddingTop: "56px",
           maxHeight: "85vh",
           overflowY: "auto",
         }}

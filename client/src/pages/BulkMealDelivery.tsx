@@ -7,14 +7,22 @@ import { useCart } from "@/context/CartContex";
 import FloatingNav from "@/pages/FloatingNav";
 import { bulkMealOrderService, sixtyMinBulkOrderService, addressService, paymentService } from "@/lib/supabase-service";
 import { useToast } from "@/hooks/use-toast";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import DeliveryTimePicker from "@/components/DeliveryTimePicker";
 import DeliveryDatePicker from "@/components/DeliveryDatePicker";
+import { openRazorpayModal } from "@/lib/payment-utils";
 import { validateBangaloreAddress, validateBangalorePincode, BANGALORE_VALIDATION_ERROR } from "@/lib/addressValidation";
 import { analytics } from "@/lib/analytics";
 import { facebookEvents } from "@/lib/facebook-capi";
 import { getCurrentPosition, getLocationPermissionInstructions } from "@/lib/locationPermission";
 import { getApiUrl } from "@/config/api";
+
+// Declare Razorpay global type
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
 
 // Supabase configuration for Edge Functions
 const SUPABASE_URL = 'https://leltckltotobsibixhqo.supabase.co';
@@ -24,8 +32,9 @@ const SIXTY_MIN_ORDER_FLAG = "isSixtyMinOrder";
 
 export default function BulkMealsDelivery() {
   const [, setLocation] = useLocation();
-  const { cart, clearCart } = useCart();
+  const { cart, clearCart, bulkMealType } = useCart();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<"home" | "menu" | "profile">("menu");
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
@@ -56,11 +65,14 @@ export default function BulkMealsDelivery() {
   const [email, setEmail] = useState(() => localStorage.getItem('email') || "");
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [saveAddressForFuture, setSaveAddressForFuture] = useState(false);
+  const [doorstepDelivery, setDoorstepDelivery] = useState(false);
   
   // Payment plan modal state
   const [isPaymentPlanOpen, setIsPaymentPlanOpen] = useState(false);
   const [selectedPaymentPlan, setSelectedPaymentPlan] = useState<"full" | "split">("full");
+  const [isTotalBreakdownExpanded, setIsTotalBreakdownExpanded] = useState(false);
   const [isSplitPaymentExpanded, setIsSplitPaymentExpanded] = useState(false);
+  
 
   // Update selected plan when modal opens - default to full if split not available
   useEffect(() => {
@@ -250,28 +262,71 @@ export default function BulkMealsDelivery() {
         console.warn('[BulkMealDelivery] Payment gateway initialization failed:', error.message);
       });
 
-    // Load Razorpay script
-    const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.async = true;
-    script.onload = () => setRazorpayLoaded(true);
-    script.onerror = () => {
-      console.error('Failed to load Razorpay script');
-      toast({
-        title: "Payment Error",
-        description: "Failed to load payment gateway. Please refresh the page.",
-        variant: "destructive",
-      });
-    };
-    document.body.appendChild(script);
+    // Load Razorpay script - check if already exists first
+    const loadRazorpayScript = () => {
+      // Check if Razorpay is already available
+      if (window.Razorpay) {
+        console.log('[BulkMealDelivery] Razorpay already loaded');
+        setRazorpayLoaded(true);
+        return;
+      }
 
-    return () => {
-      // Cleanup: remove script if component unmounts
+      // Check if script tag already exists
       const existingScript = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
       if (existingScript) {
-        document.body.removeChild(existingScript);
+        console.log('[BulkMealDelivery] Razorpay script tag already exists, waiting for load...');
+        // Wait a bit for it to load
+        const checkInterval = setInterval(() => {
+          if (window.Razorpay) {
+            setRazorpayLoaded(true);
+            clearInterval(checkInterval);
+          }
+        }, 100);
+        
+        // Clear interval after 5 seconds
+        setTimeout(() => clearInterval(checkInterval), 5000);
+        return;
       }
+
+      // Create and load script
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.async = true;
+      script.crossOrigin = 'anonymous';
+      script.onload = () => {
+        console.log('[BulkMealDelivery] Razorpay script loaded successfully');
+        if (window.Razorpay) {
+          setRazorpayLoaded(true);
+        } else {
+          console.warn('[BulkMealDelivery] Script loaded but window.Razorpay not available');
+          // Retry after a short delay
+          setTimeout(() => {
+            if (window.Razorpay) {
+              setRazorpayLoaded(true);
+            }
+          }, 500);
+        }
+      };
+      script.onerror = (error) => {
+        console.error('[BulkMealDelivery] Failed to load Razorpay script:', error);
+        toast({
+          title: "Payment Error",
+          description: "Failed to load payment gateway. Please check your internet connection and try again.",
+          variant: "destructive",
+        });
+      };
+      document.body.appendChild(script);
     };
+
+    loadRazorpayScript();
+
+    // Don't cleanup script on unmount - let it persist for better iOS compatibility
+    // return () => {
+    //   const existingScript = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
+    //   if (existingScript) {
+    //     document.body.removeChild(existingScript);
+    //   }
+    // };
   }, [toast]);
 
   useEffect(() => {
@@ -290,18 +345,49 @@ export default function BulkMealsDelivery() {
     }
   };
 
+  // Calculate all totals - these are reactive and will recalculate on every render
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const packagingFee = Math.round(subtotal * 0.06);
   const baseDeliveryCharges = 500;
   const deliveryCharges = appliedCoupon?.isFreeDelivery ? 0 : baseDeliveryCharges;
+  const doorstepDeliveryFee = doorstepDelivery ? 300 : 0; // This will update when doorstepDelivery state changes
   const gst = Math.round(subtotal * 0.05);
   const discount = appliedCoupon?.isFreeDelivery ? 0 : (appliedCoupon?.discount || 0);
-  const grandTotal = subtotal + packagingFee + deliveryCharges + gst - discount;
+  
+  // Calculate addons total from localStorage
+  const calculateAddonsTotal = () => {
+    const BULK_MEALS_ADDONS_KEY = "bulkMealsAddons";
+    let servingSpoonQuantity = 0;
+    let plateQuantity = 0;
+    let waterBottleQuantity = 0;
+    
+    try {
+      const storedSpoonQty = localStorage.getItem(`${BULK_MEALS_ADDONS_KEY}_serving_spoon_qty`);
+      if (storedSpoonQty) servingSpoonQuantity = parseInt(storedSpoonQty) || 0;
+      
+      const storedPlateQty = localStorage.getItem(`${BULK_MEALS_ADDONS_KEY}_plate_qty`);
+      if (storedPlateQty) plateQuantity = parseInt(storedPlateQty) || 0;
+      
+      const storedWaterBottleQty = localStorage.getItem(`${BULK_MEALS_ADDONS_KEY}_water_bottle_qty`);
+      if (storedWaterBottleQty) waterBottleQuantity = parseInt(storedWaterBottleQty) || 0;
+    } catch (e) {
+      console.error('Error reading addons quantities:', e);
+    }
+    
+    const servingSpoonPrice = servingSpoonQuantity * 20; // ₹20 per piece
+    const platePrice = plateQuantity * 10; // ₹10 per piece
+    const waterBottlePrice = waterBottleQuantity * 10; // ₹10 per piece
+    return servingSpoonPrice + platePrice + waterBottlePrice;
+  };
+  
+  const addonsTotal = calculateAddonsTotal();
+  // Grand total includes doorstepDeliveryFee - will update when doorstepDelivery state changes
+  const grandTotal = subtotal + packagingFee + deliveryCharges + doorstepDeliveryFee + gst + addonsTotal - discount;
 
   // Helper function to determine payment case and calculate days difference
   const getPaymentCase = () => {
-    // Case 4: If total <= ₹700, highest priority
-    if (grandTotal <= 700) {
+    // Case 4: If total <= ₹1000, highest priority
+    if (grandTotal <= 1000) {
       return { case: 4, diffDays: null };
     }
 
@@ -339,7 +425,7 @@ export default function BulkMealsDelivery() {
   const calculateInitialPayment = () => {
     const { case: paymentCase } = getPaymentCase();
 
-    // Case 4: If total <= ₹700, pay full amount
+    // Case 4: If total <= ₹1000, pay full amount
     if (paymentCase === 4) {
       return grandTotal;
     }
@@ -363,7 +449,7 @@ export default function BulkMealsDelivery() {
   const getPaymentButtonText = () => {
     const { case: paymentCase } = getPaymentCase();
 
-    // Case 4: If total <= ₹700, show "Pay"
+    // Case 4: If total <= ₹1000, show "Pay"
     if (paymentCase === 4) {
       return "Pay";
     }
@@ -575,6 +661,7 @@ export default function BulkMealsDelivery() {
         gst: gst,
         platformFee: deliveryCharges,
         packagingFee: packagingFee,
+        doorstepDeliveryFee: doorstepDeliveryFee,
         total: grandTotal,
         deliveryDate: eventDate || undefined,
         deliveryTime: eventTime || undefined,
@@ -609,11 +696,34 @@ export default function BulkMealsDelivery() {
 
   // Process payment based on selected plan
   const processPayment = async () => {
-    // Validation checks first
-    if (!razorpayLoaded) {
+    // Check if Razorpay is actually available (double-check for iOS)
+    if (!window.Razorpay && !razorpayLoaded) {
+      // Try to detect if script is loading
+      const existingScript = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
+      if (existingScript && !razorpayLoaded) {
+        toast({
+          title: "Payment Loading",
+          description: "Payment gateway is still loading. Please wait a moment and try again.",
+          variant: "default",
+        });
+        return;
+      }
+      
+      // Script might have failed to load, try reloading
       toast({
         title: "Payment Error",
-        description: "Payment gateway is loading. Please wait a moment and try again.",
+        description: "Payment gateway not ready. Please refresh the page and try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Ensure Razorpay is available even if state says it's loaded
+    if (!window.Razorpay) {
+      console.error('[BulkMealDelivery] window.Razorpay not available despite razorpayLoaded being true');
+      toast({
+        title: "Payment Error",
+        description: "Payment gateway failed to initialize. Please refresh the page.",
         variant: "destructive",
       });
       return;
@@ -721,121 +831,29 @@ export default function BulkMealsDelivery() {
 
       const { orderId: razorpayOrderId, amount } = await createOrderResponse.json();
 
-      // Step 2: Open Razorpay checkout
-      const razorpay = (window as any).Razorpay({
-        key: razorpayKeyId,
-        amount: amount,
-        currency: 'INR',
-        name: 'Plattr',
-        description: 'Bulk Meal Order Payment',
-        order_id: razorpayOrderId,
-        handler: async function (response: any) {
-          try {
-            // Step 3: Verify payment via Supabase Edge Function
-            const verifyResponse = await fetch(`${SUPABASE_URL}/functions/v1/razorpay/verify`, {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-              }),
-            });
+      // Store order data for payment processing
+      orderDataRef.current = orderData;
+      setOrderDataToSubmit(orderData);
 
-            const verifyData = await verifyResponse.json();
-
-            if (!verifyData.verified) {
-              throw new Error('Payment verification failed');
-            }
-
-            // Payment verified successfully
-            setPaymentVerified(true);
-            
-            // Store payment response data for payment record
-            setPaymentResponseData({
-              razorpayOrderId: response.razorpay_order_id,
-              razorpayPaymentId: response.razorpay_payment_id,
-              razorpaySignature: response.razorpay_signature,
-              razorpayReceipt: razorpayOrderId, // Use order ID as receipt
-            });
-            
-            // Create and confirm order immediately after payment (status="paid")
-            // This will sync to Odoo as Sales Order + Invoice
-            toast({
-              title: "Payment Successful!",
-              description: "Payment verified. Confirming your order...",
-            });
-            
-            // Send PUSH NOTIFICATION for payment success (FCM - transactional)
-            const userId = localStorage.getItem('userId');
-            if (userId) {
-              fetch(`${SUPABASE_URL}/functions/v1/send-notification`, {
-                method: 'POST',
-                headers: {
-                  'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                  'Content-Type': 'application/json',
-                },
-                  body: JSON.stringify({
-                    user_id: userId,
-                    title: '💳 Payment Successful!',
-                    body: `₹${(paymentAmount).toFixed(0)} payment verified for your bulk order.`,
-                    event_name: 'payment_success',
-                    category: 'transactional',
-                  }),
-              }).catch(err => console.log('[Notification] Failed to send payment notification:', err));
-            }
-            
-            // Create order with paid status
-            await createOrderAfterPayment(
-              response.razorpay_order_id,
-              response.razorpay_payment_id,
-              response.razorpay_signature
-            );
-          } catch (error: any) {
-            console.error('Payment verification error:', error);
-            toast({
-              title: "Payment Error",
-              description: error.message || "Failed to verify payment. Please contact support.",
-              variant: "destructive",
-            });
-            
-            // Send PUSH NOTIFICATION for payment failure (FCM - transactional)
-            const userId = localStorage.getItem('userId');
-            if (userId) {
-              fetch(`${SUPABASE_URL}/functions/v1/send-notification`, {
-                method: 'POST',
-                headers: {
-                  'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  user_id: userId,
-                  title: '❌ Payment Failed',
-                  body: error.message || 'Payment verification failed. Please try again.',
-                  event_name: 'payment_failed',
-                  category: 'transactional',
-                }),
-              }).catch(err => console.log('[Notification] Failed to send error notification:', err));
-            }
-          } finally {
-            setIsProcessingPayment(false);
-          }
-        },
-        theme: {
-          color: '#1A9952',
-        },
-        modal: {
-          ondismiss: function() {
-            console.log('[BulkMealDelivery] Razorpay modal dismissed');
-            setIsProcessingPayment(false);
-          },
+      // Open Razorpay modal directly
+      await openRazorpayModal({
+        razorpayKeyId: razorpayKeyId!,
+        razorpayOrderId: razorpayOrderId,
+        amount: paymentAmount,
+        description: "Bulk Meal Order Payment",
+        orderType: "bulk_meal",
+        orderData: orderData,
+        onError: (error) => {
+          toast({
+            title: "Payment Error",
+            description: error,
+            variant: "destructive",
+          });
+          setIsProcessingPayment(false);
         },
       });
-
-      razorpay.open();
+      
+      setIsProcessingPayment(false);
     } catch (error: any) {
       console.error("Error initiating payment:", error);
       toast({
@@ -846,6 +864,7 @@ export default function BulkMealsDelivery() {
       setIsProcessingPayment(false);
     }
   };
+
 
   // Create order after payment (status="paid") - confirms order and syncs to Odoo
   const createOrderAfterPayment = async (
@@ -929,6 +948,9 @@ export default function BulkMealsDelivery() {
           createdOrder = await bulkMealOrderService.create(finalOrderData);
         }
         console.log('[Order] ✓ Order created successfully:', createdOrder?.id, 'Order Number:', createdOrder?.order_number);
+        
+        // Invalidate orders query to refresh the orders list
+        queryClient.invalidateQueries({ queryKey: ["orders-unified"] });
       } catch (orderError: any) {
         console.error('[Order] ✗ Order creation failed:', orderError.message || orderError);
         throw orderError; // Re-throw to stop payment storage
@@ -1151,6 +1173,7 @@ export default function BulkMealsDelivery() {
         gst: orderData.gst,
         platformFee: orderData.platformFee,
         packagingFee: orderData.packagingFee,
+        doorstepDeliveryFee: orderData.doorstepDeliveryFee || 0,
         total: orderData.total,
         deliveryDate: orderData.deliveryDate,
         deliveryTime: orderData.deliveryTime,
@@ -1168,6 +1191,9 @@ export default function BulkMealsDelivery() {
       } else {
         createdOrder = await bulkMealOrderService.create(finalOrderData);
       }
+      
+      // Invalidate orders query to refresh the orders list
+      queryClient.invalidateQueries({ queryKey: ["orders-unified"] });
       
       // Clear localStorage and cart
       localStorage.removeItem(SIXTY_MIN_ORDER_FLAG);
@@ -1217,9 +1243,21 @@ export default function BulkMealsDelivery() {
   }
 
   return (
-    <div className="min-h-screen bg-white pb-32">
+    <div 
+      className="min-h-screen bg-white pb-32"
+      style={{
+        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 128px)',
+      }}
+    >
       {/* Header */}
-      <div className="bg-white px-4 pb-4 border-b border-gray-100 sticky top-0 z-50" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 16px)" }}>
+      <div 
+        className="bg-white px-4 pb-4 border-b border-gray-100 sticky z-50" 
+        style={{ 
+          top: 0,
+          paddingTop: "16px",
+          paddingBottom: "16px"
+        }}
+      >
         <button 
           onClick={() => setLocation("/bulk-meals-addons")}
           className="flex items-center gap-2 text-gray-700"
@@ -1236,14 +1274,187 @@ export default function BulkMealsDelivery() {
           Proceed to Payment
         </h2>
 
-        {/* Total Amount Card */}
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6 flex items-center justify-between">
-          <span className="font-semibold text-sm" style={{ fontFamily: "Sweet Sans Pro", color: "#1A9952" }}>
-            Total Amount to be Paid
-          </span>
-          <span className="font-bold text-xl" style={{ fontFamily: "Sweet Sans Pro", color: "#1A9952" }}>
-            ₹{grandTotal.toLocaleString('en-IN')}
-          </span>
+        {/* Total Amount to be Paid - Expandable */}
+        <div className="bg-green-50 border border-green-200 rounded-lg mb-6">
+          <button
+            onClick={() => setIsTotalBreakdownExpanded(!isTotalBreakdownExpanded)}
+            className="w-full p-4 flex items-center justify-between"
+            style={{ fontFamily: "Sweet Sans Pro" }}
+          >
+            <span className="font-semibold text-sm" style={{ color: "#1A9952" }}>
+              Total Amount to be Paid
+            </span>
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-xl" style={{ color: "#1A9952" }}>
+                ₹{grandTotal.toLocaleString('en-IN')}
+              </span>
+              {isTotalBreakdownExpanded ? (
+                <ChevronUp className="w-5 h-5" style={{ color: "#1A9952" }} />
+              ) : (
+                <ChevronDown className="w-5 h-5" style={{ color: "#1A9952" }} />
+              )}
+            </div>
+          </button>
+          
+          {isTotalBreakdownExpanded && (
+            <div className="px-4 pb-4 space-y-3 border-t border-green-200 pt-4">
+              {/* Line Items - Cart Items */}
+              {cart.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-xs font-semibold uppercase" style={{ fontFamily: "Sweet Sans Pro", color: "#4B5563" }}>
+                    Line Items
+                  </h4>
+                  {cart.map((item, index) => (
+                    <div key={index} className="flex justify-between text-sm pl-2">
+                      <span style={{ fontFamily: "Sweet Sans Pro", color: "#4B5563" }}>
+                        {item.name} × {item.quantity}
+                      </span>
+                      <span style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                        ₹{(item.price * item.quantity).toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Add-ons */}
+              {addonsTotal > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-xs font-semibold uppercase" style={{ fontFamily: "Sweet Sans Pro", color: "#4B5563" }}>
+                    Add-ons
+                  </h4>
+                  {(() => {
+                    const BULK_MEALS_ADDONS_KEY = "bulkMealsAddons";
+                    let servingSpoonQuantity = 0;
+                    let plateQuantity = 0;
+                    let waterBottleQuantity = 0;
+                    let selectedAddons: string[] = [];
+                    
+                    try {
+                      const storedSpoonQty = localStorage.getItem(`${BULK_MEALS_ADDONS_KEY}_serving_spoon_qty`);
+                      if (storedSpoonQty) servingSpoonQuantity = parseInt(storedSpoonQty) || 0;
+                      
+                      const storedPlateQty = localStorage.getItem(`${BULK_MEALS_ADDONS_KEY}_plate_qty`);
+                      if (storedPlateQty) plateQuantity = parseInt(storedPlateQty) || 0;
+                      
+                      const storedWaterBottleQty = localStorage.getItem(`${BULK_MEALS_ADDONS_KEY}_water_bottle_qty`);
+                      if (storedWaterBottleQty) waterBottleQuantity = parseInt(storedWaterBottleQty) || 0;
+                      
+                      const storedAddons = localStorage.getItem(BULK_MEALS_ADDONS_KEY);
+                      if (storedAddons) {
+                        selectedAddons = JSON.parse(storedAddons);
+                      }
+                    } catch (e) {
+                      console.error('Error reading addons:', e);
+                    }
+                    
+                    return (
+                      <>
+                        {servingSpoonQuantity > 0 && (
+                          <div className="flex justify-between text-sm pl-2">
+                            <span style={{ fontFamily: "Sweet Sans Pro", color: "#4B5563" }}>
+                              Serving Spoons × {servingSpoonQuantity}
+                            </span>
+                            <span style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                              ₹{(servingSpoonQuantity * 20).toLocaleString('en-IN')}
+                            </span>
+                          </div>
+                        )}
+                        {plateQuantity > 0 && (
+                          <div className="flex justify-between text-sm pl-2">
+                            <span style={{ fontFamily: "Sweet Sans Pro", color: "#4B5563" }}>
+                              Plates × {plateQuantity}
+                            </span>
+                            <span style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                              ₹{(plateQuantity * 10).toLocaleString('en-IN')}
+                            </span>
+                          </div>
+                        )}
+                        {waterBottleQuantity > 0 && (
+                          <div className="flex justify-between text-sm pl-2">
+                            <span style={{ fontFamily: "Sweet Sans Pro", color: "#4B5563" }}>
+                              Water Bottles × {waterBottleQuantity}
+                            </span>
+                            <span style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                              ₹{(waterBottleQuantity * 10).toLocaleString('en-IN')}
+                            </span>
+                          </div>
+                        )}
+                        {selectedAddons.includes('spoons_forks') && (
+                          <div className="flex justify-between text-sm pl-2">
+                            <span style={{ fontFamily: "Sweet Sans Pro", color: "#4B5563" }}>
+                              Spoons & Forks
+                            </span>
+                            <span style={{ fontFamily: "Sweet Sans Pro", color: "#1A9952" }}>
+                              FREE
+                            </span>
+                          </div>
+                        )}
+                        {selectedAddons.includes('tissues') && (
+                          <div className="flex justify-between text-sm pl-2">
+                            <span style={{ fontFamily: "Sweet Sans Pro", color: "#4B5563" }}>
+                              Tissues
+                            </span>
+                            <span style={{ fontFamily: "Sweet Sans Pro", color: "#1A9952" }}>
+                              FREE
+                            </span>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
+
+              {/* Charges Breakdown */}
+              <div className="space-y-2 pt-2 border-t border-green-200">
+                <div className="flex justify-between text-sm">
+                  <span style={{ fontFamily: "Sweet Sans Pro", color: "#4B5563" }}>Subtotal</span>
+                  <span style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>₹{subtotal.toLocaleString('en-IN')}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span style={{ fontFamily: "Sweet Sans Pro", color: "#4B5563" }}>Packaging Fee</span>
+                  <span style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>₹{packagingFee.toLocaleString('en-IN')}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span style={{ fontFamily: "Sweet Sans Pro", color: "#4B5563" }}>Delivery Charges</span>
+                  <span style={{ fontFamily: "Sweet Sans Pro", color: appliedCoupon?.isFreeDelivery ? "#1A9952" : "#06352A" }}>
+                    {appliedCoupon?.isFreeDelivery ? (
+                      <><s className="text-gray-400 mr-1">₹{baseDeliveryCharges}</s> FREE</>
+                    ) : (
+                      `₹${deliveryCharges.toLocaleString('en-IN')}`
+                    )}
+                  </span>
+                </div>
+                {addonsTotal > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span style={{ fontFamily: "Sweet Sans Pro", color: "#4B5563" }}>Add-ons</span>
+                    <span style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>₹{addonsTotal.toLocaleString('en-IN')}</span>
+                  </div>
+                )}
+                {doorstepDelivery && (
+                  <div className="flex justify-between text-sm">
+                    <span style={{ fontFamily: "Sweet Sans Pro", color: "#4B5563" }}>Doorstep Delivery</span>
+                    <span style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>₹{doorstepDeliveryFee.toLocaleString('en-IN')}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-sm">
+                  <span style={{ fontFamily: "Sweet Sans Pro", color: "#4B5563" }}>GST</span>
+                  <span style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>₹{gst.toLocaleString('en-IN')}</span>
+                </div>
+                {discount > 0 && (
+                  <div className="flex justify-between text-sm text-green-600">
+                    <span style={{ fontFamily: "Sweet Sans Pro" }}>Discount ({appliedCoupon?.code})</span>
+                    <span style={{ fontFamily: "Sweet Sans Pro" }}>-₹{discount.toLocaleString('en-IN')}</span>
+                  </div>
+                )}
+                <div className="border-t border-green-200 pt-2 mt-2 flex justify-between font-semibold">
+                  <span style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>Total</span>
+                  <span style={{ fontFamily: "Sweet Sans Pro", color: "#1A9952" }}>₹{grandTotal.toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Form */}
@@ -1267,6 +1478,13 @@ export default function BulkMealsDelivery() {
               setHasSelectedDateTime(true);
             }}
             selectedDate={eventDate}
+            disabledPeriods={
+              bulkMealType === "lunch-dinner" 
+                ? ["morning"] 
+                : bulkMealType === "tiffins" 
+                ? ["afternoon"] 
+                : []
+            }
           />
 
 
@@ -1454,43 +1672,85 @@ export default function BulkMealsDelivery() {
             </>
           )}
 
-          {/* Order Summary */}
-          {(appliedCoupon || discount > 0) && (
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-2">
-              <div className="flex justify-between text-sm">
-                <span style={{ fontFamily: "Sweet Sans Pro", color: "#4B5563" }}>Subtotal</span>
-                <span style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>₹{subtotal.toLocaleString('en-IN')}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span style={{ fontFamily: "Sweet Sans Pro", color: "#4B5563" }}>Packaging Fee</span>
-                <span style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>₹{packagingFee.toLocaleString('en-IN')}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span style={{ fontFamily: "Sweet Sans Pro", color: "#4B5563" }}>Delivery Charges</span>
-                <span style={{ fontFamily: "Sweet Sans Pro", color: appliedCoupon?.isFreeDelivery ? "#1A9952" : "#06352A" }}>
-                  {appliedCoupon?.isFreeDelivery ? (
-                    <><s className="text-gray-400 mr-1">₹{baseDeliveryCharges}</s> FREE</>
-                  ) : (
-                    `₹${deliveryCharges.toLocaleString('en-IN')}`
-                  )}
-                </span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span style={{ fontFamily: "Sweet Sans Pro", color: "#4B5563" }}>GST</span>
-                <span style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>₹{gst.toLocaleString('en-IN')}</span>
-              </div>
-              {discount > 0 && (
-                <div className="flex justify-between text-sm text-green-600">
-                  <span style={{ fontFamily: "Sweet Sans Pro" }}>Discount ({appliedCoupon?.code})</span>
-                  <span style={{ fontFamily: "Sweet Sans Pro" }}>-₹{discount.toLocaleString('en-IN')}</span>
+          {/* Doorstep Delivery Addon */}
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <label className="flex items-center justify-between cursor-pointer">
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={doorstepDelivery}
+                  onChange={(e) => {
+                    const newValue = e.target.checked;
+                    setDoorstepDelivery(newValue);
+                    // Force re-render by updating state
+                    console.log('Doorstep delivery changed to:', newValue, 'Fee will be:', newValue ? 300 : 0);
+                  }}
+                  className="w-5 h-5 rounded border-2 border-gray-300"
+                  style={{ accentColor: "#1A9952" }}
+                  data-testid="checkbox-doorstep-delivery"
+                />
+                <div>
+                  <span className="text-sm font-semibold block" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                    Doorstep Delivery
+                  </span>
+                  <span className="text-xs text-gray-500" style={{ fontFamily: "Sweet Sans Pro" }}>
+                    Get your order delivered right to your doorstep
+                  </span>
                 </div>
-              )}
-              <div className="border-t border-gray-200 pt-2 flex justify-between font-semibold">
-                <span style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>Total</span>
-                <span style={{ fontFamily: "Sweet Sans Pro", color: "#1A9952" }}>₹{grandTotal.toLocaleString('en-IN')}</span>
               </div>
+              <span className="text-sm font-semibold" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                ₹300
+              </span>
+            </label>
+          </div>
+
+          {/* Order Summary */}
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-2">
+            <div className="flex justify-between text-sm">
+              <span style={{ fontFamily: "Sweet Sans Pro", color: "#4B5563" }}>Subtotal</span>
+              <span style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>₹{subtotal.toLocaleString('en-IN')}</span>
             </div>
-          )}
+            <div className="flex justify-between text-sm">
+              <span style={{ fontFamily: "Sweet Sans Pro", color: "#4B5563" }}>Packaging Fee</span>
+              <span style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>₹{packagingFee.toLocaleString('en-IN')}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span style={{ fontFamily: "Sweet Sans Pro", color: "#4B5563" }}>Delivery Charges</span>
+              <span style={{ fontFamily: "Sweet Sans Pro", color: appliedCoupon?.isFreeDelivery ? "#1A9952" : "#06352A" }}>
+                {appliedCoupon?.isFreeDelivery ? (
+                  <><s className="text-gray-400 mr-1">₹{baseDeliveryCharges}</s> FREE</>
+                ) : (
+                  `₹${deliveryCharges.toLocaleString('en-IN')}`
+                )}
+              </span>
+            </div>
+            {addonsTotal > 0 && (
+              <div className="flex justify-between text-sm">
+                <span style={{ fontFamily: "Sweet Sans Pro", color: "#4B5563" }}>Add-ons</span>
+                <span style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>₹{addonsTotal.toLocaleString('en-IN')}</span>
+              </div>
+            )}
+            {doorstepDelivery && (
+              <div className="flex justify-between text-sm">
+                <span style={{ fontFamily: "Sweet Sans Pro", color: "#4B5563" }}>Doorstep Delivery</span>
+                <span style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>₹{doorstepDeliveryFee.toLocaleString('en-IN')}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-sm">
+              <span style={{ fontFamily: "Sweet Sans Pro", color: "#4B5563" }}>GST</span>
+              <span style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>₹{gst.toLocaleString('en-IN')}</span>
+            </div>
+            {discount > 0 && (
+              <div className="flex justify-between text-sm text-green-600">
+                <span style={{ fontFamily: "Sweet Sans Pro" }}>Discount ({appliedCoupon?.code})</span>
+                <span style={{ fontFamily: "Sweet Sans Pro" }}>-₹{discount.toLocaleString('en-IN')}</span>
+              </div>
+            )}
+            <div className="border-t border-gray-200 pt-2 flex justify-between font-semibold">
+              <span style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>Total</span>
+              <span style={{ fontFamily: "Sweet Sans Pro", color: "#1A9952" }}>₹{grandTotal.toLocaleString('en-IN')}</span>
+            </div>
+          </div>
         </div>
 
         {/* Payment and Submit Buttons */}
@@ -1680,7 +1940,7 @@ export default function BulkMealsDelivery() {
           {/* Proceed Button */}
           <Button
             onClick={processPayment}
-            disabled={isProcessingPayment || !razorpayLoaded || !razorpayKeyId}
+            disabled={isProcessingPayment}
             className="w-full py-4 text-base font-semibold mt-4"
             style={{
               fontFamily: "Sweet Sans Pro",
@@ -1694,6 +1954,7 @@ export default function BulkMealsDelivery() {
           </Button>
         </SheetContent>
       </Sheet>
+
 
       <FloatingNav activeTab={activeTab} onTabChange={handleTabChange} />
     </div>

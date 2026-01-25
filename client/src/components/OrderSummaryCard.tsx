@@ -4,12 +4,13 @@ import { Separator } from "@/components/ui/separator";
 interface OrderSummaryCardProps {
   subtotal: number;
   deliveryFee: number;
+  doorstepDeliveryFee?: number;
   tax: number;
   discount?: number;
 }
 
-export default function OrderSummaryCard({ subtotal, deliveryFee, tax, discount = 0 }: OrderSummaryCardProps) {
-  const total = subtotal + deliveryFee + tax - discount;
+export default function OrderSummaryCard({ subtotal, deliveryFee, doorstepDeliveryFee = 0, tax, discount = 0 }: OrderSummaryCardProps) {
+  const total = subtotal + deliveryFee + doorstepDeliveryFee + tax - discount;
 
   return (
     <Card className="p-4" data-testid="card-order-summary">
@@ -25,6 +26,13 @@ export default function OrderSummaryCard({ subtotal, deliveryFee, tax, discount 
           <span className="text-muted-foreground" data-testid="text-delivery-label">Delivery Fee</span>
           <span data-testid="text-delivery-fee">₹{deliveryFee}</span>
         </div>
+        
+        {doorstepDeliveryFee > 0 && (
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground" data-testid="text-doorstep-label">Doorstep Delivery</span>
+            <span data-testid="text-doorstep-fee">₹{doorstepDeliveryFee}</span>
+          </div>
+        )}
         
         <div className="flex justify-between text-sm">
           <span className="text-muted-foreground" data-testid="text-tax-label">Taxes & Charges</span>

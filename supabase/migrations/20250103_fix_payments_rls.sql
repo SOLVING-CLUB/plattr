@@ -7,6 +7,11 @@ DROP POLICY IF EXISTS "Users can view their own payments" ON public.payments;
 DROP POLICY IF EXISTS "Users can insert their own payments" ON public.payments;
 DROP POLICY IF EXISTS "Users can update their own payments" ON public.payments;
 
+-- Drop new policies if they already exist (in case migration was partially applied)
+DROP POLICY IF EXISTS "Allow payment inserts for valid users" ON public.payments;
+DROP POLICY IF EXISTS "Allow payment reads for valid users" ON public.payments;
+DROP POLICY IF EXISTS "Allow payment updates for valid users" ON public.payments;
+
 -- Create new INSERT policy - Allow inserts for valid user IDs
 -- Since we validate the user in the application layer, we allow inserts
 -- where user_id exists in the users table

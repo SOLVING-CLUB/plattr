@@ -15,19 +15,26 @@ export async function setupVite(server: Server, app: Express) {
     allowedHosts: true as const,
   };
 
-  const vite = await createViteServer({
-    ...viteConfig,
-    configFile: false,
-    customLogger: {
-      ...viteLogger,
-      error: (msg, options) => {
-        viteLogger.error(msg, options);
-        process.exit(1);
+  let vite;
+  try {
+    vite = await createViteServer({
+      ...viteConfig,
+      configFile: false,
+      customLogger: {
+        ...viteLogger,
+        error: (msg, options) => {
+          viteLogger.error(msg, options);
+          // Log but don't exit - allow server to continue in dev mode
+          console.error('[Vite] Error occurred but continuing:', msg);
+        },
       },
-    },
-    server: serverOptions,
-    appType: "custom",
-  });
+      server: serverOptions,
+      appType: "custom",
+    });
+  } catch (error) {
+    console.error('[Vite] Failed to create Vite server:', error);
+    throw error;
+  }
 
   // Only apply Vite middleware to non-API routes
   // This ensures API routes are handled by Express before Vite intercepts them
@@ -74,8 +81,11 @@ export async function setupVite(server: Server, app: Express) {
       const page = await vite.transformIndexHtml(url, template);
       res.status(200).set({ "Content-Type": "text/html" }).end(page);
     } catch (e) {
-      vite.ssrFixStacktrace(e as Error);
-      next(e);
+      const error = e as Error;
+      console.error('[Vite] Error transforming index.html:', error.message);
+      console.error('[Vite] Stack:', error.stack);
+      vite.ssrFixStacktrace(error);
+      next(error);
     }
   });
 }

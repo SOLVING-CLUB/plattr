@@ -11,10 +11,10 @@ interface ServicesWeOfferSectionProps {
 
 export default function ServicesWeOfferSection({ onServiceClick }: ServicesWeOfferSectionProps) {
   return (
-    <section className="py-8 px-4">
+    <section className="px-4" style={{ paddingTop: '2rem', paddingBottom: '2rem' }}>
       <div className="max-w-2xl mx-auto">
         {/* Section Header */}
-        <h2 className="text-2xl font-bold mb-6" data-testid="text-services-heading">
+        <h2 className="text-2xl font-bold mb-6" data-testid="text-services-heading" style={{ marginTop: '1.5rem' }}>
           Services We Offer
         </h2>
 

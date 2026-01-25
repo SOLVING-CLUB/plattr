@@ -3,6 +3,87 @@
 
 @custom-variant dark (&:is(.dark *));
 
+
+/* Razorpay Modal Safe Area Fix for iOS - COMPREHENSIVE */
+/* Support both constant() (iOS 11.0-11.2) and env() (iOS 11.2+) */
+@supports (padding: constant(safe-area-inset-top)) or (padding: env(safe-area-inset-top)) {
+  /* Target ALL possible Razorpay containers - modify TOP position */
+  body > div[id*="razorpay"],
+  body > div[class*="razorpay"],
+  div[id*="razorpay-modal"],
+  div[class*="razorpay-modal"],
+  div[id*="razorpay-checkout"],
+  div[class*="razorpay-checkout"],
+  .razorpay-container,
+  [class*="razorpay"],
+  [id*="razorpay"] {
+    padding-top: constant(safe-area-inset-top) !important; /* iOS 11.0-11.2 */
+    padding-top: env(safe-area-inset-top, 0px) !important; /* iOS 11.2+ */
+    padding-bottom: constant(safe-area-inset-bottom) !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+    padding-left: constant(safe-area-inset-left) !important;
+    padding-left: env(safe-area-inset-left, 0px) !important;
+    padding-right: constant(safe-area-inset-right) !important;
+    padding-right: env(safe-area-inset-right, 0px) !important;
+  }
+  
+  /* For fixed position containers, adjust TOP instead of just padding */
+  body > div[style*="position: fixed"]:has(iframe[src*="razorpay"]),
+  body > div[style*="position:fixed"]:has(iframe[src*="razorpay"]),
+  div[style*="position: fixed"][id*="razorpay"],
+  div[style*="position:fixed"][id*="razorpay"],
+  div[style*="position: fixed"][class*="razorpay"],
+  div[style*="position:fixed"][class*="razorpay"],
+  div[style*="position: fixed"]:has([id*="razorpay"]),
+  div[style*="position:fixed"]:has([id*="razorpay"]) {
+    top: constant(safe-area-inset-top) !important;
+    top: env(safe-area-inset-top, 0px) !important;
+    padding-top: constant(safe-area-inset-top) !important;
+    padding-top: env(safe-area-inset-top, 0px) !important;
+    padding-bottom: constant(safe-area-inset-bottom) !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+    max-height: calc(100vh - constant(safe-area-inset-top) - constant(safe-area-inset-bottom)) !important;
+    max-height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
+  }
+  
+  /* Razorpay iframe - push it down from top */
+  iframe[src*="razorpay"],
+  iframe[id*="razorpay"],
+  iframe[class*="razorpay"] {
+    margin-top: constant(safe-area-inset-top) !important;
+    margin-top: env(safe-area-inset-top, 0px) !important;
+    max-height: calc(100vh - constant(safe-area-inset-top) - constant(safe-area-inset-bottom)) !important;
+    max-height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
+  }
+  
+  /* Target any div containing Razorpay iframe */
+  div:has(> iframe[src*="razorpay"]),
+  div:has(iframe[src*="razorpay"]) {
+    padding-top: constant(safe-area-inset-top) !important;
+    padding-top: env(safe-area-inset-top, 0px) !important;
+    padding-bottom: constant(safe-area-inset-bottom) !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+  }
+  
+  /* Fixed position parent of Razorpay iframe - adjust TOP */
+  div[style*="position: fixed"]:has(iframe[src*="razorpay"]),
+  div[style*="position:fixed"]:has(iframe[src*="razorpay"]) {
+    top: constant(safe-area-inset-top) !important;
+    top: env(safe-area-inset-top, 0px) !important;
+  }
+  
+  /* Razorpay modal overlay/backdrop */
+  div[style*="background"][id*="razorpay"],
+  div[style*="background"][class*="razorpay"],
+  div[style*="opacity"][id*="razorpay"],
+  div[style*="opacity"][class*="razorpay"] {
+    padding-top: constant(safe-area-inset-top) !important;
+    padding-top: env(safe-area-inset-top, 0px) !important;
+    padding-bottom: constant(safe-area-inset-bottom) !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+  }
+}
+
 /* Leaflet map container fix */
 .leaflet-container {
   width: 100%;
@@ -250,9 +331,154 @@
   * {
     @apply border-border;
   }
+  html {
+    padding: 0;
+    margin: 0;
+  }
   body {
     font-family: 'Sweet Sans Pro', -apple-system, system-ui, sans-serif;
     @apply antialiased bg-background text-foreground;
+    
+    /* Explicit boundaries - minimum padding on all devices */
+    padding-top: 0 !important;
+    padding-bottom: 0;
+    padding-left: 0;
+    padding-right: 0;
+    margin: 0 !important;
+    
+    /* Prevent horizontal overflow */
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100vw;
+  }
+  
+  /* Remove safe area padding for iOS on all pages except Razorpay */
+  @supports (padding: env(safe-area-inset-top)) {
+    /* Remove safe area from body and root */
+    body {
+      padding-top: 0 !important;
+      margin-top: 0 !important;
+    }
+    
+    #root {
+      padding-top: 0 !important;
+      margin-top: 0 !important;
+    }
+    
+    /* Remove safe area from all page containers except Razorpay */
+    section:not([id*="razorpay"]):not([class*="razorpay"]),
+    div:not([id*="razorpay"]):not([class*="razorpay"]),
+    header:not([id*="razorpay"]):not([class*="razorpay"]),
+    main:not([id*="razorpay"]):not([class*="razorpay"]) {
+      padding-top: 0 !important;
+      margin-top: 0 !important;
+    }
+    
+    /* Override any inline styles that might have safe area padding */
+    [style*="safe-area-inset-top"]:not([id*="razorpay"]):not([class*="razorpay"]) {
+      padding-top: 0 !important;
+      margin-top: 0 !important;
+    }
+    
+    /* Force remove safe area from all page wrappers */
+    .min-h-screen:not([id*="razorpay"]):not([class*="razorpay"]),
+    [class*="page"]:not([id*="razorpay"]):not([class*="razorpay"]) {
+      padding-top: 0 !important;
+      margin-top: 0 !important;
+    }
+    
+    /* Remove safe area from fixed headers except Razorpay */
+    header.fixed:not([id*="razorpay"]):not([class*="razorpay"]),
+    header.sticky:not([id*="razorpay"]):not([class*="razorpay"]) {
+      padding-top: 0 !important;
+      margin-top: 0 !important;
+    }
+    
+    /* Remove safe area from sections */
+    section:not([id*="razorpay"]):not([class*="razorpay"]) {
+      padding-top: 0 !important;
+      margin-top: 0 !important;
+    }
+    
+    /* Aggressive override - remove safe area from everything except Razorpay */
+    *:not([id*="razorpay"]):not([class*="razorpay"]):not([id*="razorpay-modal"]):not([class*="razorpay-modal"]) {
+      /* Only override if it has safe-area-inset-top in computed style */
+    }
+    
+    /* But keep Razorpay safe area - this is handled by the Razorpay-specific block above */
+  }
+  
+  /* Additional iOS-specific override - remove any top padding/margin that creates gaps */
+  @supports (-webkit-touch-callout: none) {
+    /* iOS Safari specific */
+    body > #root > *:first-child:not([id*="razorpay"]):not([class*="razorpay"]) {
+      padding-top: 0 !important;
+      margin-top: 0 !important;
+    }
+  }
+  
+  /* Allow first child of root to extend into safe area if needed */
+  #root > *:first-child {
+    position: relative;
+    padding: 0 !important;
+    margin: 0 !important;
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+  }
+  
+  /* Ensure PageWithLoader wrapper has no spacing */
+  [ref]:has(> section):has(> div.min-h-screen) {
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+  }
+  
+  /* Ensure first section (FestiveBanner) starts at top */
+  section:first-of-type {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+    top: 0 !important;
+  }
+  
+  /* Remove any default spacing from section elements */
+  section {
+    margin-top: 0;
+    padding-top: 0;
+  }
+  
+  /* Ensure HomePage wrapper has no top spacing */
+  div.min-h-screen:has(> div.relative) {
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+  }
+  
+  /* Ensure PageWithLoader's first child (div.min-h-screen) has no top spacing */
+  [ref] > div.min-h-screen:first-child {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+  }
+  
+  /* Ensure first section in HomePage starts at absolute top */
+  div.min-h-screen > div.relative > section:first-of-type {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+    top: 0 !important;
+  }
+  
+  
+  /* Root container boundaries */
+  #root {
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
+    position: relative;
+    padding: 0;
+    margin: 0;
+  }
+  
+  /* Prevent any element from extending beyond viewport */
+  * {
+    max-width: 100%;
+    box-sizing: border-box;
   }
 }
 
@@ -267,5 +493,88 @@
   }
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+  
+  /* FloatingNav - ensure it stays at bottom, override global fixed positioning */
+  .floating-nav-bottom {
+    top: auto !important;
+    bottom: 16px !important;
+  }
+  
+  /* Toast Viewport - ensure toasts stay at bottom, above FloatingNav */
+  .toast-viewport-bottom {
+    top: auto !important;
+    bottom: 72px !important;
+  }
+  
+  /* Sheet Overlay - ensure overlay covers full screen */
+  .sheet-overlay-fixed {
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+  }
+  
+  /* Sheet Content Bottom - ensure bottom sheets stay at bottom */
+  .sheet-content-bottom {
+    top: auto !important;
+    bottom: 0 !important;
+  }
+  
+  /* Payment Bottom Sheet - specific positioning */
+  .payment-bottom-sheet {
+    top: auto !important;
+    bottom: 0 !important;
+  }
+  
+  /* Notification Overlay - ensure it covers full screen */
+  .notification-overlay {
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+  }
+  
+  /* Dialog Overlay - ensure it covers full screen with safe areas */
+  .dialog-overlay-fixed {
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+  }
+  
+  /* Search Overlay - ensure it covers full screen */
+  .search-overlay-fixed {
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+  }
+  
+  /* Floating Cart Button - ensure it stays above FloatingNav */
+  .floating-cart-button {
+    top: auto !important;
+    bottom: 102px !important;
+  }
+  
+  /* Debug Console - ensure it stays at bottom */
+  .debug-console-button,
+  .debug-console-card {
+    top: auto !important;
+  }
+  
+  .debug-console-card {
+    bottom: 0 !important;
+  }
+  
+  /* Continue Order Banner - ensure it stays above FloatingNav */
+  .continue-order-banner {
+    top: auto !important;
+    bottom: 80px !important;
+  }
+  
+  /* Floating Cart Bar - ensure it stays above FloatingNav */
+  .floating-cart-bar {
+    top: auto !important;
   }
 }

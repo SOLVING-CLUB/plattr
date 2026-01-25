@@ -1,0 +1,267 @@
+-- Migration: Add coordinate fields to addresses and all order tables
+-- This ensures all addresses and orders store latitude/longitude for location tracking
+
+-- ============================================
+-- 1. ADDRESSES TABLE
+-- ============================================
+-- Add latitude and longitude columns to addresses table
+DO $$
+BEGIN
+  -- Add latitude column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'addresses' 
+    AND column_name = 'latitude'
+  ) THEN
+    ALTER TABLE public.addresses 
+    ADD COLUMN latitude NUMERIC(10, 8) NULL;
+    
+    COMMENT ON COLUMN public.addresses.latitude IS 'Latitude coordinate of the address (decimal degrees)';
+  END IF;
+
+  -- Add longitude column if it doesn't exist
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'addresses' 
+    AND column_name = 'longitude'
+  ) THEN
+    ALTER TABLE public.addresses 
+    ADD COLUMN longitude NUMERIC(11, 8) NULL;
+    
+    COMMENT ON COLUMN public.addresses.longitude IS 'Longitude coordinate of the address (decimal degrees)';
+  END IF;
+END $$;
+
+-- ============================================
+-- 2. ORDERS TABLE (Regular orders)
+-- ============================================
+-- Add delivery_latitude and delivery_longitude columns
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'orders' 
+    AND column_name = 'delivery_latitude'
+  ) THEN
+    ALTER TABLE public.orders 
+    ADD COLUMN delivery_latitude NUMERIC(10, 8) NULL;
+    
+    COMMENT ON COLUMN public.orders.delivery_latitude IS 'Latitude coordinate of delivery address';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'orders' 
+    AND column_name = 'delivery_longitude'
+  ) THEN
+    ALTER TABLE public.orders 
+    ADD COLUMN delivery_longitude NUMERIC(11, 8) NULL;
+    
+    COMMENT ON COLUMN public.orders.delivery_longitude IS 'Longitude coordinate of delivery address';
+  END IF;
+END $$;
+
+-- ============================================
+-- 3. MEALBOX_ORDERS TABLE
+-- ============================================
+-- Add delivery_latitude and delivery_longitude columns
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'mealbox_orders' 
+    AND column_name = 'delivery_latitude'
+  ) THEN
+    ALTER TABLE public.mealbox_orders 
+    ADD COLUMN delivery_latitude NUMERIC(10, 8) NULL;
+    
+    COMMENT ON COLUMN public.mealbox_orders.delivery_latitude IS 'Latitude coordinate of delivery address';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'mealbox_orders' 
+    AND column_name = 'delivery_longitude'
+  ) THEN
+    ALTER TABLE public.mealbox_orders 
+    ADD COLUMN delivery_longitude NUMERIC(11, 8) NULL;
+    
+    COMMENT ON COLUMN public.mealbox_orders.delivery_longitude IS 'Longitude coordinate of delivery address';
+  END IF;
+END $$;
+
+-- ============================================
+-- 4. BULK_MEAL_ORDERS TABLE
+-- ============================================
+-- Add delivery_latitude and delivery_longitude columns
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'bulk_meal_orders' 
+    AND column_name = 'delivery_latitude'
+  ) THEN
+    ALTER TABLE public.bulk_meal_orders 
+    ADD COLUMN delivery_latitude NUMERIC(10, 8) NULL;
+    
+    COMMENT ON COLUMN public.bulk_meal_orders.delivery_latitude IS 'Latitude coordinate of delivery address';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'bulk_meal_orders' 
+    AND column_name = 'delivery_longitude'
+  ) THEN
+    ALTER TABLE public.bulk_meal_orders 
+    ADD COLUMN delivery_longitude NUMERIC(11, 8) NULL;
+    
+    COMMENT ON COLUMN public.bulk_meal_orders.delivery_longitude IS 'Longitude coordinate of delivery address';
+  END IF;
+END $$;
+
+-- ============================================
+-- 5. SNACK_BOX_ORDERS TABLE
+-- ============================================
+-- Add delivery_latitude and delivery_longitude columns
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'snack_box_orders' 
+    AND column_name = 'delivery_latitude'
+  ) THEN
+    ALTER TABLE public.snack_box_orders 
+    ADD COLUMN delivery_latitude NUMERIC(10, 8) NULL;
+    
+    COMMENT ON COLUMN public.snack_box_orders.delivery_latitude IS 'Latitude coordinate of delivery address';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'snack_box_orders' 
+    AND column_name = 'delivery_longitude'
+  ) THEN
+    ALTER TABLE public.snack_box_orders 
+    ADD COLUMN delivery_longitude NUMERIC(11, 8) NULL;
+    
+    COMMENT ON COLUMN public.snack_box_orders.delivery_longitude IS 'Longitude coordinate of delivery address';
+  END IF;
+END $$;
+
+-- ============================================
+-- 6. CATERING_ORDERS TABLE
+-- ============================================
+-- Add delivery_latitude and delivery_longitude columns
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'catering_orders' 
+    AND column_name = 'delivery_latitude'
+  ) THEN
+    ALTER TABLE public.catering_orders 
+    ADD COLUMN delivery_latitude NUMERIC(10, 8) NULL;
+    
+    COMMENT ON COLUMN public.catering_orders.delivery_latitude IS 'Latitude coordinate of delivery address';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'catering_orders' 
+    AND column_name = 'delivery_longitude'
+  ) THEN
+    ALTER TABLE public.catering_orders 
+    ADD COLUMN delivery_longitude NUMERIC(11, 8) NULL;
+    
+    COMMENT ON COLUMN public.catering_orders.delivery_longitude IS 'Longitude coordinate of delivery address';
+  END IF;
+END $$;
+
+-- ============================================
+-- 7. CORPORATE_ORDERS TABLE
+-- ============================================
+-- Add delivery_latitude and delivery_longitude columns
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'corporate_orders' 
+    AND column_name = 'delivery_latitude'
+  ) THEN
+    ALTER TABLE public.corporate_orders 
+    ADD COLUMN delivery_latitude NUMERIC(10, 8) NULL;
+    
+    COMMENT ON COLUMN public.corporate_orders.delivery_latitude IS 'Latitude coordinate of delivery address';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'corporate_orders' 
+    AND column_name = 'delivery_longitude'
+  ) THEN
+    ALTER TABLE public.corporate_orders 
+    ADD COLUMN delivery_longitude NUMERIC(11, 8) NULL;
+    
+    COMMENT ON COLUMN public.corporate_orders.delivery_longitude IS 'Longitude coordinate of delivery address';
+  END IF;
+END $$;
+
+-- ============================================
+-- NOTE: sixty_min_bulk_orders and sixty_min_mealbox_orders
+-- already have delivery_latitude and delivery_longitude columns
+-- (confirmed from schema files), so no changes needed for those tables
+-- ============================================
+
+-- ============================================
+-- OPTIONAL: Create indexes for coordinate-based queries
+-- ============================================
+-- These indexes can help with location-based queries if needed in the future
+
+-- Index on addresses coordinates (for geospatial queries)
+CREATE INDEX IF NOT EXISTS idx_addresses_coordinates 
+ON public.addresses(latitude, longitude) 
+WHERE latitude IS NOT NULL AND longitude IS NOT NULL;
+
+-- Index on orders coordinates
+CREATE INDEX IF NOT EXISTS idx_orders_coordinates 
+ON public.orders(delivery_latitude, delivery_longitude) 
+WHERE delivery_latitude IS NOT NULL AND delivery_longitude IS NOT NULL;
+
+-- Index on mealbox_orders coordinates
+CREATE INDEX IF NOT EXISTS idx_mealbox_orders_coordinates 
+ON public.mealbox_orders(delivery_latitude, delivery_longitude) 
+WHERE delivery_latitude IS NOT NULL AND delivery_longitude IS NOT NULL;
+
+-- Index on bulk_meal_orders coordinates
+CREATE INDEX IF NOT EXISTS idx_bulk_meal_orders_coordinates 
+ON public.bulk_meal_orders(delivery_latitude, delivery_longitude) 
+WHERE delivery_latitude IS NOT NULL AND delivery_longitude IS NOT NULL;
+
+-- Index on snack_box_orders coordinates
+CREATE INDEX IF NOT EXISTS idx_snack_box_orders_coordinates 
+ON public.snack_box_orders(delivery_latitude, delivery_longitude) 
+WHERE delivery_latitude IS NOT NULL AND delivery_longitude IS NOT NULL;
+
+-- Index on catering_orders coordinates
+CREATE INDEX IF NOT EXISTS idx_catering_orders_coordinates 
+ON public.catering_orders(delivery_latitude, delivery_longitude) 
+WHERE delivery_latitude IS NOT NULL AND delivery_longitude IS NOT NULL;
+
+-- Index on corporate_orders coordinates
+CREATE INDEX IF NOT EXISTS idx_corporate_orders_coordinates 
+ON public.corporate_orders(delivery_latitude, delivery_longitude) 
+WHERE delivery_latitude IS NOT NULL AND delivery_longitude IS NOT NULL;

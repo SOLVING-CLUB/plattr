@@ -34,6 +34,7 @@ BEGIN
     -- Determine event name based on new status
     CASE NEW.status
       WHEN 'confirmed' THEN event_name_val := 'order_confirmed';
+      WHEN 'paid' THEN event_name_val := 'order_confirmed'; -- Treat 'paid' as confirmed for payment notifications
       WHEN 'processing' THEN event_name_val := 'order_processing';
       WHEN 'preparing' THEN event_name_val := 'order_processing';
       WHEN 'dispatched' THEN event_name_val := 'order_dispatched';

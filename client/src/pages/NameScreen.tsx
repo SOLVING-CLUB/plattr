@@ -24,8 +24,14 @@ export default function NameScreen() {
       setIsSubmitting(true);
       
       try {
-        // Save username to the database
-        await userService.updateProfile({ username: fullName.trim() });
+        // Save username to the database - this will update the temporary random username
+        const updatedProfile = await userService.updateProfile({ username: fullName.trim() });
+        
+        // Verify the update was successful
+        if (!updatedProfile || updatedProfile.username !== fullName.trim()) {
+          console.error('Username update verification failed:', updatedProfile);
+          throw new Error('Failed to update username. Please try again.');
+        }
         
         // Store username locally for quick access
         localStorage.setItem("username", fullName.trim());
@@ -92,7 +98,7 @@ export default function NameScreen() {
       }}
     >
       {/* Main Content */}
-      <div className="flex-1 px-4 sm:px-6 overflow-y-auto" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 48px)' }}>
+      <div className="flex-1 px-4 sm:px-6 overflow-y-auto" style={{ paddingTop: '48px' }}>
         {/* Logo */}
         <div className="mb-4 sm:mb-6" style={{ marginTop: "20px" }}>
           <img

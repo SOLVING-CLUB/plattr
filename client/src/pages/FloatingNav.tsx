@@ -47,7 +47,14 @@ export default function FloatingNav({
   }
 
   return (
-    <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-md">
+    <nav 
+      className="floating-nav-bottom fixed left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-md"
+      style={{
+        bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)',
+        top: 'auto',
+        position: 'fixed',
+      }}
+    >
       <div className="bg-white/40 backdrop-blur-md border border-white/20 rounded-[10px] shadow-lg overflow-hidden">
         <div className="flex items-center justify-around px-2 py-2">
           {tabs.map((tab) => {

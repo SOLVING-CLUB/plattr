@@ -177,12 +177,76 @@ export default function MapConfirmationPage() {
   const reverseGeocode = async (lat: number, lng: number) => {
     setIsGeocoding(true);
     try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`
-      );
-      const data = await response.json();
+      // Build URL for Edge Function
+      const geocodeUrl = new URL(`${supabaseAuth.supabaseUrl}/functions/v1/geocode`);
+      geocodeUrl.searchParams.set('type', 'reverse');
+      geocodeUrl.searchParams.set('lat', lat.toString());
+      geocodeUrl.searchParams.set('lon', lng.toString());
+      
+      // Get session token for authentication (optional - geocode function should work without auth)
+      // Use anon key as fallback if no session (for public Edge Functions)
+      const { data: { session } } = await supabaseAuth.auth.getSession();
+      const token = session?.access_token;
+      // Get anon key from environment variable for public access
+      const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      // Try Edge Function first
+      let geocodeData: any = null;
+      try {
+        // Build headers - use session token if available, otherwise use anon key
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json',
+        };
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        } else if (anonKey) {
+          // Use anon key for public access if no session
+          headers['Authorization'] = `Bearer ${anonKey}`;
+        }
+        
+        const response = await fetch(geocodeUrl.toString(), {
+          headers,
+        });
+        
+        if (response.ok) {
+          geocodeData = await response.json();
+        } else if (response.status === 401) {
+          // If 401, the function might require authentication
+          // This is expected - we'll fall back to direct geocoding
+          throw new Error(`Edge Function returned ${response.status} - requires authentication`);
+        } else {
+          throw new Error(`Edge Function returned ${response.status}`);
+        }
+      } catch (edgeFunctionError) {
+        console.warn("Edge Function geocoding failed, trying direct call:", edgeFunctionError);
+        
+        // Fallback: try direct call (may fail due to CORS, but worth trying)
+        try {
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`,
+            {
+              headers: {
+                'User-Agent': 'PlattrApp/1.0 (contact@plattr.com)',
+                'Accept': 'application/json',
+              },
+            }
+          );
+          if (response.ok) {
+            geocodeData = await response.json();
+          } else {
+            throw new Error(`Direct call returned ${response.status}`);
+          }
+        } catch (fallbackError) {
+          // If both fail, use coordinates as fallback
+          console.error("Geocoding error (both proxy and direct failed):", fallbackError);
+          setAreaName("Selected Location");
+          setAddress(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+          setIsGeocoding(false);
+          return;
+        }
+      }
 
-      const addr = data.address || {};
+      const addr = geocodeData.address || {};
       const area = addr.suburb ||
         addr.neighbourhood ||
         addr.village ||
@@ -194,11 +258,11 @@ export default function MapConfirmationPage() {
         addr.county ||
         addr.road ||
         addr.state ||
-        (data.display_name ? data.display_name.split(',')[0].trim() : null) ||
+        (geocodeData.display_name ? geocodeData.display_name.split(',')[0].trim() : null) ||
         "Selected Location";
 
       setAreaName(area);
-      setAddress(data.display_name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+      setAddress(geocodeData.display_name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`);
     } catch (error) {
       console.error("Geocoding error:", error);
       setAreaName("Selected Location");
@@ -230,13 +294,67 @@ export default function MapConfirmationPage() {
 
     setIsSearching(true);
     try {
-      // Search within Bangalore bounding box
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ", Bangalore, Karnataka")}&countrycodes=in&limit=10&viewbox=${BANGALORE_BOUNDS.minLng},${BANGALORE_BOUNDS.maxLat},${BANGALORE_BOUNDS.maxLng},${BANGALORE_BOUNDS.minLat}&bounded=1`
-      );
-      const data = await response.json();
+      // Use Supabase Edge Function to proxy Nominatim requests (avoids CORS)
+      const searchQuery = `${query}, Bangalore, Karnataka`;
+      const viewbox = `${BANGALORE_BOUNDS.minLng},${BANGALORE_BOUNDS.maxLat},${BANGALORE_BOUNDS.maxLng},${BANGALORE_BOUNDS.minLat}`;
+      
+      // Build URL for Edge Function
+      const geocodeUrl = new URL(`${supabaseAuth.supabaseUrl}/functions/v1/geocode`);
+      geocodeUrl.searchParams.set('type', 'search');
+      geocodeUrl.searchParams.set('q', searchQuery);
+      geocodeUrl.searchParams.set('countrycodes', 'in');
+      geocodeUrl.searchParams.set('limit', '10');
+      geocodeUrl.searchParams.set('viewbox', viewbox);
+      geocodeUrl.searchParams.set('bounded', '1');
+      
+      // Get session token for authentication
+      const { data: { session } } = await supabaseAuth.auth.getSession();
+      const token = session?.access_token || '';
+      
+      // Try Edge Function first
+      let searchData: any = null;
+      try {
+        const response = await fetch(geocodeUrl.toString(), {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (response.ok) {
+          searchData = await response.json();
+        } else {
+          throw new Error(`Edge Function returned ${response.status}`);
+        }
+      } catch (edgeFunctionError) {
+        console.warn("Edge Function search failed, trying direct call:", edgeFunctionError);
+        
+        // Fallback: try direct call
+        try {
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&countrycodes=in&limit=10&viewbox=${viewbox}&bounded=1`,
+            {
+              headers: {
+                'User-Agent': 'PlattrApp/1.0 (contact@plattr.com)',
+                'Accept': 'application/json',
+              },
+            }
+          );
+          if (response.ok) {
+            searchData = await response.json();
+          } else {
+            throw new Error(`Direct call returned ${response.status}`);
+          }
+        } catch (fallbackError) {
+          console.error("Search error (both proxy and direct failed):", fallbackError);
+          setSearchResults([]);
+          setIsSearching(false);
+          return;
+        }
+      }
+      
       // Filter results to ensure they're within Bangalore bounds
-      const filteredResults = data.filter((result: any) => {
+      const filteredResults = (Array.isArray(searchData) ? searchData : []).filter((result: any) => {
         const lat = parseFloat(result.lat);
         const lng = parseFloat(result.lon);
         return isWithinBangalore(lat, lng);
@@ -376,6 +494,8 @@ export default function MapConfirmationPage() {
         address: address,
         landmark: areaName,
         isDefault: false,
+        latitude: position[0],
+        longitude: position[1],
       });
 
       const locationData: LocationData = {

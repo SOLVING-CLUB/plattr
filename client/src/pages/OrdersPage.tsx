@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Calendar, Clock, Check } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Calendar, Clock, Check, CreditCard } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { orderService } from "@/lib/supabase-service";
 import FloatingNav from "@/pages/FloatingNav";
 
@@ -35,6 +35,9 @@ interface Order {
   addressLabel: string;
   address: string;
   items: OrderItem[];
+  paymentStatus?: 'paid' | 'pending' | 'unpaid' | 'unknown';
+  hasPayment?: boolean;
+  totalPaid?: number;
   mealDetails?: {
     portions: string;
     mealPreference: string;
@@ -56,12 +59,23 @@ export default function Orders() {
   const [, setLocation] = useLocation();
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<"home" | "menu" | "profile">("profile");
+  const queryClient = useQueryClient();
 
   // Fetch all orders from all order types (unified view)
-  const { data: orders = [], isLoading } = useQuery<Order[]>({
+  const { data: orders = [], isLoading, refetch } = useQuery<Order[]>({
     queryKey: ["orders-unified"],
     queryFn: () => orderService.getAllUnified(),
+    staleTime: 0, // Always fetch fresh data
+    gcTime: 0, // Don't cache (gcTime replaces cacheTime in newer versions)
+    refetchOnMount: true, // Refetch when component mounts
+    refetchOnWindowFocus: true, // Refetch when window regains focus
+    refetchOnReconnect: true, // Refetch when network reconnects
   });
+
+  // Refetch orders when component mounts to ensure latest data
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
 
   // Format date for display in IST (Indian Standard Time)
   const formatDate = (dateString: string) => {
@@ -196,7 +210,34 @@ export default function Orders() {
                     {order.orderTypeLabel}
                   </Badge>
                 </div>
-                <Badge 
+                <div className="flex items-center gap-2">
+                  {/* Payment Status Badge */}
+                  {order.paymentStatus && order.paymentStatus !== 'unknown' && (
+                    <Badge 
+                      variant="outline"
+                      className={`${
+                        order.paymentStatus === 'paid' 
+                          ? "border-green-500 text-green-600 bg-green-50" 
+                          : order.paymentStatus === 'pending'
+                          ? "border-yellow-500 text-yellow-600 bg-yellow-50"
+                          : "border-gray-400 text-gray-600 bg-gray-50"
+                      } px-2 py-1 rounded-full flex items-center gap-1 text-xs`}
+                      data-testid={`badge-payment-${order.id}`}
+                    >
+                      <CreditCard className="w-3 h-3" />
+                      {order.paymentStatus === 'paid' ? (
+                        order.totalPaid && order.totalPaid > 0 && parseFloat(order.total) > order.totalPaid
+                          ? `Paid ₹${order.totalPaid.toLocaleString('en-IN')}`
+                          : 'Paid'
+                      ) : order.paymentStatus === 'pending' ? (
+                        order.totalPaid && order.totalPaid > 0
+                          ? `₹${order.totalPaid.toLocaleString('en-IN')} Paid`
+                          : 'Payment Pending'
+                      ) : 'Unpaid'}
+                    </Badge>
+                  )}
+                  {/* Order Status Badge */}
+                  <Badge 
                     variant={statusDisplay.variant}
                     className={`${
                       statusDisplay.variant === "outline" 
@@ -205,11 +246,12 @@ export default function Orders() {
                         ? "bg-red-500 text-white"
                         : "bg-[#1A9952] text-white"
                     } px-3 py-1 rounded-full flex items-center gap-1`}
-                  data-testid={`badge-status-${order.id}`}
-                >
+                    data-testid={`badge-status-${order.id}`}
+                  >
                     <StatusIcon className="w-3 h-3" />
                     {statusDisplay.label}
-                </Badge>
+                  </Badge>
+                </div>
               </div>
 
               {/* Order Info */}
@@ -248,19 +290,6 @@ export default function Orders() {
               {/* Expanded Details */}
               {isExpanded(order.id) && (
                 <div className="mb-4 space-y-4" data-testid={`details-${order.id}`}>
-                  {/* Order Type Specific Details */}
-                  {order.orderType === 'mealbox' && order.mealDetails && (
-                    <div>
-                      <h4 className="font-semibold text-[#1C1C1C] mb-2">Meal Box Details</h4>
-                      <div className="space-y-1 text-sm text-gray-700">
-                        <p>Portions: {order.mealDetails.portions}</p>
-                        <p>Preference: {order.mealDetails.mealPreference}</p>
-                        {order.mealDetails.vegBoxes > 0 && <p>Veg Boxes: {order.mealDetails.vegBoxes}</p>}
-                        {order.mealDetails.eggBoxes > 0 && <p>Egg Boxes: {order.mealDetails.eggBoxes}</p>}
-                        {order.mealDetails.nonVegBoxes > 0 && <p>Non-Veg Boxes: {order.mealDetails.nonVegBoxes}</p>}
-                      </div>
-                    </div>
-                  )}
 
                   {order.orderType === 'catering' && order.cateringDetails && (
                     <div>
@@ -288,6 +317,72 @@ export default function Orders() {
                       <p className="text-sm text-gray-700 mb-3">Large quantity meal order</p>
                       <Button
                         onClick={() => setLocation(`/bulk-orders/${order.id}`)}
+                        className="w-full bg-[#1A9952] hover:bg-[#158544] text-white"
+                        style={{ fontFamily: "Sweet Sans Pro" }}
+                        data-testid={`button-view-status-${order.id}`}
+                      >
+                        View Order Status
+                      </Button>
+                    </div>
+                  )}
+
+                  {order.orderType === 'sixty_min_bulk' && (
+                    <div>
+                      <h4 className="font-semibold text-[#1C1C1C] mb-2">60-Min Bulk Meal Order</h4>
+                      <p className="text-sm text-gray-700 mb-3">Fast delivery bulk meal order</p>
+                      <Button
+                        onClick={() => setLocation(`/bulk-orders/${order.id}`)}
+                        className="w-full bg-[#1A9952] hover:bg-[#158544] text-white"
+                        style={{ fontFamily: "Sweet Sans Pro" }}
+                        data-testid={`button-view-status-${order.id}`}
+                      >
+                        View Order Status
+                      </Button>
+                    </div>
+                  )}
+
+                  {order.orderType === 'snackbox' && (
+                    <div>
+                      <h4 className="font-semibold text-[#1C1C1C] mb-2">Snack Box Order</h4>
+                      <p className="text-sm text-gray-700 mb-3">Curated snack box selection</p>
+                      <Button
+                        onClick={() => setLocation(`/orders/${order.id}`)}
+                        className="w-full bg-[#1A9952] hover:bg-[#158544] text-white"
+                        style={{ fontFamily: "Sweet Sans Pro" }}
+                        data-testid={`button-view-status-${order.id}`}
+                      >
+                        View Order Status
+                      </Button>
+                    </div>
+                  )}
+
+                  {(order.orderType === 'sixty_min_mealbox' || order.orderType === 'mealbox') && order.mealDetails && (
+                    <div>
+                      <h4 className="font-semibold text-[#1C1C1C] mb-2">Meal Box Details</h4>
+                      <div className="space-y-1 text-sm text-gray-700 mb-3">
+                        <p>Portions: {order.mealDetails.portions}</p>
+                        <p>Preference: {order.mealDetails.mealPreference}</p>
+                        {order.mealDetails.vegBoxes > 0 && <p>Veg Boxes: {order.mealDetails.vegBoxes}</p>}
+                        {order.mealDetails.eggBoxes > 0 && <p>Egg Boxes: {order.mealDetails.eggBoxes}</p>}
+                        {order.mealDetails.nonVegBoxes > 0 && <p>Non-Veg Boxes: {order.mealDetails.nonVegBoxes}</p>}
+                      </div>
+                      <Button
+                        onClick={() => setLocation(`/orders/${order.id}`)}
+                        className="w-full bg-[#1A9952] hover:bg-[#158544] text-white"
+                        style={{ fontFamily: "Sweet Sans Pro" }}
+                        data-testid={`button-view-status-${order.id}`}
+                      >
+                        View Order Status
+                      </Button>
+                    </div>
+                  )}
+
+                  {order.orderType === 'tasting_menu' && (
+                    <div>
+                      <h4 className="font-semibold text-[#1C1C1C] mb-2">Tasting Menu Order</h4>
+                      <p className="text-sm text-gray-700 mb-3">Curated tasting menu experience</p>
+                      <Button
+                        onClick={() => setLocation(`/orders/${order.id}`)}
                         className="w-full bg-[#1A9952] hover:bg-[#158544] text-white"
                         style={{ fontFamily: "Sweet Sans Pro" }}
                         data-testid={`button-view-status-${order.id}`}

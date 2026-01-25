@@ -6,11 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, Clock, MapPin, Package, Calendar, IndianRupee, Info, Loader2, CheckCircle } from "lucide-react";
-import { orderService, bulkMealOrderService, sixtyMinBulkOrderService, paymentService } from "@/lib/supabase-service";
+import { orderService, bulkMealOrderService, sixtyMinBulkOrderService, mealboxOrderService, sixtyMinMealboxOrderService, snackBoxOrderService, addressService, paymentService, snackBoxService } from "@/lib/supabase-service";
 import { getSupabaseImageUrl } from "@/lib/supabase";
+import { supabaseAuth } from "@/lib/supabase-auth";
 import { useGoBack } from "@/hooks/useGoBack";
 import { useToast } from "@/hooks/use-toast";
 import { getApiUrl } from "@/config/api";
+import { openRazorpayModal } from "@/lib/payment-utils";
 
 declare global {
   interface Window {
@@ -60,6 +62,74 @@ const STATUS_VARIANTS = {
   delivered: { variant: 'outline' as const, label: 'Delivered', color: 'text-green-600' },
   cancelled: { variant: 'destructive' as const, label: 'Cancelled', color: 'text-red-600' },
 };
+
+// Placeholder image as data URI (simple gray square with icon)
+const PLACEHOLDER_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f3f4f6'/%3E%3Cpath d='M100 70 L130 100 L100 130 L70 100 Z' fill='%239ca3af'/%3E%3C/svg%3E";
+
+/**
+ * Helper function to get snack box dish image URL
+ * Uses cached dishes list or constructs URL from stored data
+ * Handles broken sanishtech.com URLs by converting to Supabase storage
+ */
+function getSnackBoxDishImageUrl(
+  dishId: string | number, 
+  storedImageUrl: string | undefined,
+  allDishes: any[] = []
+): string {
+  const prefix = "https://leltckltotobsibixhqo.supabase.co/storage/v1/object/public/dish_images/snack-box/";
+  
+  // Helper to normalize image URL
+  const normalizeImageUrl = (url: string, id: string | number): string => {
+    if (!url || !url.trim()) return '';
+    
+    // If it's a broken legacy URL from sanishtech.com, convert to Supabase storage
+    if (url.includes("sanishtech.com")) {
+      const normalizedId = id.toString().toLowerCase().replace(/\s+/g, '-');
+      return `${prefix}${normalizedId}.png`;
+    }
+    
+    // If it's already a full URL (and not broken), use it
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    
+    // It's a relative path/filename - construct full URL
+    const cleanPath = url.startsWith('/') ? url.slice(1) : url;
+    return `${prefix}${cleanPath}`;
+  };
+  
+  // If image is already stored, normalize and use it
+  if (storedImageUrl && storedImageUrl.trim()) {
+    const normalized = normalizeImageUrl(storedImageUrl, dishId);
+    if (normalized) return normalized;
+  }
+
+  // Try to find dish in cached list - handle different ID formats
+  if (allDishes.length > 0 && dishId) {
+    const dishIdStr = dishId.toString();
+    const dishIdNum = parseInt(dishIdStr.replace(/\D/g, '') || '0');
+    
+    const dish = allDishes.find(d => {
+      const dId = d.id?.toString() || '';
+      // Exact match
+      if (dId === dishIdStr) return true;
+      // Numeric match (e.g., "37" matches "D-0037" or "37")
+      const dIdNum = parseInt(dId.replace(/\D/g, '') || '0');
+      if (dIdNum > 0 && dIdNum === dishIdNum) return true;
+      return false;
+    });
+    
+    if (dish && (dish.image_url || dish.imageUrl)) {
+      const dbImageUrl = dish.image_url || dish.imageUrl;
+      if (dbImageUrl && dbImageUrl.trim()) {
+        const normalized = normalizeImageUrl(dbImageUrl, dishId);
+        if (normalized) return normalized;
+      }
+    }
+  }
+
+  return PLACEHOLDER_IMAGE;
+}
 
 export default function OrderDetailsPage() {
   const [, setLocation] = useLocation();
@@ -138,7 +208,7 @@ export default function OrderDetailsPage() {
                   name: item.name || `Dish ${item.dishId || ''}`,
                   description: item.description || '',
                   price: (item.price || 0).toString(),
-                  imageUrl: item.image_url || item.imageUrl || '',
+                  imageUrl: item.image || item.image_url || item.imageUrl || '',
                   dietaryType: item.dietary_type || 'Regular',
                 },
               }));
@@ -190,7 +260,7 @@ export default function OrderDetailsPage() {
                     name: item.dish_name || item.name || `Dish ${item.dishId || ''}`,
                     description: item.description || '',
                     price: (item.price || item.unit_price || 0).toString(),
-                    imageUrl: item.image_url || item.imageUrl || '',
+                    imageUrl: item.image || item.image_url || item.imageUrl || '',
                     dietaryType: item.dietary_type || 'Regular',
                   },
                 })) : [];
@@ -220,8 +290,406 @@ export default function OrderDetailsPage() {
               items: items,
             };
           } catch (sixtyMinError: any) {
-            // If not found in any table, throw the original error
-            throw error;
+            // If not found in bulk orders, try mealbox_orders
+            try {
+              const mealboxOrder = await mealboxOrderService.getById(orderId);
+              
+              // Fetch address if address_id exists
+              let addressText = '';
+              let addressLabel = 'Delivery Address';
+              if (mealboxOrder.address_id) {
+                try {
+                  const addresses = await addressService.getAll();
+                  const address = addresses.find(addr => addr.id === mealboxOrder.address_id);
+                  if (address) {
+                    addressText = address.address || '';
+                    addressLabel = address.label || 'Delivery Address';
+                  }
+                } catch (addrError) {
+                  console.error('Error fetching address for mealbox order:', addrError);
+                }
+              }
+              
+              // Try to fetch items from payment record
+              let items: any[] = [];
+              try {
+                const payments = await paymentService.getByOrderId(orderId);
+                console.log('[OrderDetails] Payment records found:', payments?.length || 0);
+                if (payments && payments.length > 0) {
+                  // Get items from the first payment record
+                  const firstPayment = payments[0];
+                  console.log('[OrderDetails] First payment order_items:', firstPayment.order_items);
+                  if (firstPayment.order_items) {
+                    const parsedItems = typeof firstPayment.order_items === 'string' 
+                      ? JSON.parse(firstPayment.order_items) 
+                      : firstPayment.order_items;
+                    items = Array.isArray(parsedItems) ? parsedItems.map((item: any) => {
+                      // Get stored image URL and process it through getSupabaseImageUrl
+                      const storedImageUrl = item.image || item.image_url || item.imageUrl;
+                      const processedImageUrl = storedImageUrl ? getSupabaseImageUrl(storedImageUrl) : PLACEHOLDER_IMAGE;
+                      
+                      return {
+                        id: item.dishId || item.id || '',
+                        quantity: item.quantity || 0,
+                        price: (item.price || 0).toString(),
+                        dish: {
+                          id: item.dishId || item.id || '',
+                          name: item.name || `Item ${item.dishId || ''}`,
+                          description: item.description || '',
+                          price: (item.price || 0).toString(),
+                          imageUrl: processedImageUrl,
+                          dietaryType: item.dietary_type || 'Regular',
+                        },
+                      };
+                    }) : [];
+                    console.log('[OrderDetails] Items from payment:', items.length);
+                  }
+                }
+              } catch (paymentError) {
+                console.error('[OrderDetails] Error fetching payment items for mealbox order:', paymentError);
+              }
+              
+              // If no items from payment, try to construct items from plate selections
+              if (items.length === 0) {
+                console.log('[OrderDetails] No items from payment, parsing plate selections...');
+                try {
+                  console.log('[OrderDetails] Mealbox order data:', {
+                    veg_boxes: mealboxOrder.veg_boxes,
+                    egg_boxes: mealboxOrder.egg_boxes,
+                    non_veg_boxes: mealboxOrder.non_veg_boxes,
+                    has_veg_selections: !!mealboxOrder.veg_plate_selections,
+                    has_egg_selections: !!mealboxOrder.egg_plate_selections,
+                    has_non_veg_selections: !!mealboxOrder.non_veg_plate_selections,
+                  });
+                  const vegSelections = mealboxOrder.veg_plate_selections 
+                    ? (typeof mealboxOrder.veg_plate_selections === 'string' 
+                        ? JSON.parse(mealboxOrder.veg_plate_selections) 
+                        : mealboxOrder.veg_plate_selections)
+                    : [];
+                  const eggSelections = mealboxOrder.egg_plate_selections 
+                    ? (typeof mealboxOrder.egg_plate_selections === 'string' 
+                        ? JSON.parse(mealboxOrder.egg_plate_selections) 
+                        : mealboxOrder.egg_plate_selections)
+                    : [];
+                  const nonVegSelections = mealboxOrder.non_veg_plate_selections 
+                    ? (typeof mealboxOrder.non_veg_plate_selections === 'string' 
+                        ? JSON.parse(mealboxOrder.non_veg_plate_selections) 
+                        : mealboxOrder.non_veg_plate_selections)
+                    : [];
+                  
+                  // Collect all unique dish IDs from all selections
+                  const allDishIds = new Set<string>();
+                  [...vegSelections, ...eggSelections, ...nonVegSelections].forEach((sel: any) => {
+                    if (sel.item?.id) {
+                      allDishIds.add(sel.item.id.toString());
+                    }
+                  });
+                  
+                  // Fetch dish data from database for all dish IDs
+                  const dishDataMap = new Map<string, { name: string; price: number; image_url: string }>();
+                  if (allDishIds.size > 0) {
+                    try {
+                      const dishIdsArray = Array.from(allDishIds);
+                      console.log('[OrderDetails] Fetching dishes from database for IDs:', dishIdsArray);
+                      
+                      const { data: dishes, error: dishesError } = await supabaseAuth
+                        .from('dishes')
+                        .select('id, name, price, image_url, quantity')
+                        .in('id', dishIdsArray);
+                      
+                      if (dishesError) {
+                        console.error('[OrderDetails] Error fetching dishes:', dishesError);
+                      } else if (dishes) {
+                        dishes.forEach((dish: any) => {
+                          dishDataMap.set(dish.id.toString(), {
+                            name: dish.name || '',
+                            price: parseFloat(dish.price || '0'),
+                            image_url: dish.image_url || '',
+                          });
+                        });
+                        console.log('[OrderDetails] Fetched', dishes.length, 'dishes from database');
+                      }
+                    } catch (fetchError) {
+                      console.error('[OrderDetails] Error fetching dishes from database:', fetchError);
+                    }
+                  }
+                  
+                  // Group dishes by ID and sum quantities
+                  const dishMap = new Map<string, { name: string; price: number; quantity: number; dietaryType: string; imageUrl: string }>();
+                  
+                  const processSelections = (selections: any[], dietaryType: string) => {
+                    selections.forEach((sel: any) => {
+                      if (sel.item) {
+                        const dishId = sel.item.id?.toString() || '';
+                        
+                        // Try to get dish data from database first, then fall back to stored data
+                        const dbDish = dishDataMap.get(dishId);
+                        const dishName = dbDish?.name || sel.item.name || `Dish ${dishId}`;
+                        const dishPrice = dbDish?.price || parseFloat(sel.item.price || '0');
+                        
+                        // Get image URL: prefer database, then stored, then placeholder
+                        let storedImageUrl = dbDish?.image_url || sel.item.image_url || sel.item.imageUrl;
+                        const dishImage = storedImageUrl ? getSupabaseImageUrl(storedImageUrl) : PLACEHOLDER_IMAGE;
+                        
+                        if (dishMap.has(dishId)) {
+                          const existing = dishMap.get(dishId)!;
+                          existing.quantity += 1;
+                        } else {
+                          dishMap.set(dishId, {
+                            name: dishName,
+                            price: dishPrice,
+                            quantity: 1,
+                            dietaryType: dietaryType,
+                            imageUrl: dishImage,
+                          });
+                        }
+                      }
+                    });
+                  };
+                  
+                  if (mealboxOrder.veg_boxes > 0) {
+                    processSelections(vegSelections, 'veg');
+                  }
+                  if (mealboxOrder.egg_boxes > 0) {
+                    processSelections(eggSelections, 'egg');
+                  }
+                  if (mealboxOrder.non_veg_boxes > 0) {
+                    processSelections(nonVegSelections, 'non-veg');
+                  }
+                  
+                  // Convert map to items array
+                  items = Array.from(dishMap.entries()).map(([dishId, dishData]) => ({
+                    id: dishId,
+                    quantity: dishData.quantity,
+                    price: (dishData.price * dishData.quantity).toString(),
+                    dish: {
+                      id: dishId,
+                      name: dishData.name,
+                      description: '',
+                      price: dishData.price.toString(),
+                      imageUrl: dishData.imageUrl,
+                      dietaryType: dishData.dietaryType,
+                    },
+                  }));
+                  
+                  // Add mealbox summary item
+                  const totalBoxes = (mealboxOrder.veg_boxes || 0) + (mealboxOrder.egg_boxes || 0) + (mealboxOrder.non_veg_boxes || 0);
+                  if (totalBoxes > 0) {
+                    items.unshift({
+                      id: 'mealbox-summary',
+                      quantity: totalBoxes,
+                      price: mealboxOrder.subtotal?.toString() || '0',
+                      dish: {
+                        id: 'mealbox',
+                        name: 'MealBox',
+                        description: `Veg: ${mealboxOrder.veg_boxes || 0}, Egg: ${mealboxOrder.egg_boxes || 0}, Non-Veg: ${mealboxOrder.non_veg_boxes || 0}`,
+                        price: (parseFloat(mealboxOrder.subtotal || '0') / totalBoxes).toString(),
+                        imageUrl: PLACEHOLDER_IMAGE,
+                        dietaryType: 'Mixed',
+                      },
+                    });
+                  }
+                  
+                  console.log('[OrderDetails] Items from plate selections:', items.length);
+                } catch (parseError) {
+                  console.error('[OrderDetails] Error parsing plate selections:', parseError);
+                }
+              }
+              
+              // If still no items, create a basic mealbox item from order totals
+              if (items.length === 0) {
+                console.log('[OrderDetails] Still no items, creating basic mealbox item from totals...');
+                const totalBoxes = (mealboxOrder.veg_boxes || 0) + (mealboxOrder.egg_boxes || 0) + (mealboxOrder.non_veg_boxes || 0);
+                if (totalBoxes > 0) {
+                  items = [{
+                    id: 'mealbox-summary',
+                    quantity: totalBoxes,
+                    price: mealboxOrder.subtotal?.toString() || '0',
+                    dish: {
+                      id: 'mealbox',
+                      name: 'MealBox',
+                      description: `Veg: ${mealboxOrder.veg_boxes || 0}, Egg: ${mealboxOrder.egg_boxes || 0}, Non-Veg: ${mealboxOrder.non_veg_boxes || 0}`,
+                      price: (parseFloat(mealboxOrder.subtotal || '0') / totalBoxes).toString(),
+                      imageUrl: PLACEHOLDER_IMAGE,
+                      dietaryType: 'Mixed',
+                    },
+                  }];
+                  console.log('[OrderDetails] Created basic mealbox item:', items);
+                }
+              }
+              
+              console.log('[OrderDetails] Final items array length:', items.length);
+              
+              // Transform mealbox order to match OrderDetails format
+              return {
+                id: mealboxOrder.id,
+                orderNumber: mealboxOrder.order_number,
+                subtotal: mealboxOrder.subtotal?.toString() || '0',
+                deliveryFee: mealboxOrder.delivery_fee?.toString() || '0',
+                tax: mealboxOrder.tax?.toString() || '0',
+                total: mealboxOrder.total?.toString() || '0',
+                deliveryDate: mealboxOrder.delivery_date || '',
+                deliveryTime: mealboxOrder.delivery_time || '',
+                status: mealboxOrder.status || 'pending',
+                createdAt: mealboxOrder.created_at || '',
+                address: {
+                  id: mealboxOrder.address_id || '',
+                  label: addressLabel,
+                  address: addressText,
+                  landmark: null,
+                },
+                items: items,
+              };
+            } catch (mealboxError: any) {
+              // If not found in mealbox_orders, try sixty_min_mealbox_orders
+              try {
+                const sixtyMinMealboxOrder = await sixtyMinMealboxOrderService.getById(orderId);
+                
+                // Try to fetch items from payment record
+                let items: any[] = [];
+                try {
+                  const payments = await paymentService.getByOrderId(orderId);
+                  if (payments && payments.length > 0) {
+                    // Get items from the first payment record
+                    const firstPayment = payments[0];
+                    if (firstPayment.order_items) {
+                      const parsedItems = typeof firstPayment.order_items === 'string' 
+                        ? JSON.parse(firstPayment.order_items) 
+                        : firstPayment.order_items;
+                      items = Array.isArray(parsedItems) ? parsedItems.map((item: any) => {
+                        // Get stored image URL and process it through getSupabaseImageUrl
+                        const storedImageUrl = item.image || item.image_url || item.imageUrl;
+                        const processedImageUrl = storedImageUrl ? getSupabaseImageUrl(storedImageUrl) : PLACEHOLDER_IMAGE;
+                        
+                        return {
+                          id: item.dishId || item.id || '',
+                          quantity: item.quantity || 0,
+                          price: (item.price || 0).toString(),
+                          dish: {
+                            id: item.dishId || item.id || '',
+                            name: item.name || `Item ${item.dishId || ''}`,
+                            description: item.description || '',
+                            price: (item.price || 0).toString(),
+                            imageUrl: processedImageUrl,
+                            dietaryType: item.dietary_type || 'Regular',
+                          },
+                        };
+                      }) : [];
+                    }
+                  }
+                } catch (paymentError) {
+                  console.error('Error fetching payment items for 60-min mealbox order:', paymentError);
+                }
+                
+                // Transform 60-min mealbox order to match OrderDetails format
+                return {
+                  id: sixtyMinMealboxOrder.id,
+                  orderNumber: sixtyMinMealboxOrder.order_number,
+                  subtotal: sixtyMinMealboxOrder.subtotal?.toString() || '0',
+                  deliveryFee: sixtyMinMealboxOrder.delivery_fee?.toString() || '0',
+                  tax: sixtyMinMealboxOrder.tax?.toString() || '0',
+                  total: sixtyMinMealboxOrder.total?.toString() || '0',
+                  deliveryDate: sixtyMinMealboxOrder.delivery_date || '',
+                  deliveryTime: sixtyMinMealboxOrder.delivery_time || '',
+                  status: sixtyMinMealboxOrder.status || 'pending',
+                  createdAt: sixtyMinMealboxOrder.created_at || '',
+                  address: {
+                    id: '',
+                    label: 'Delivery Address',
+                    address: sixtyMinMealboxOrder.delivery_address || '',
+                    landmark: null,
+                  },
+                  items: items,
+                };
+              } catch (sixtyMinMealboxError: any) {
+                // If not found in sixty_min_mealbox_orders, try snack_box_orders
+                try {
+                  const snackBoxOrder = await snackBoxOrderService.getById(orderId);
+                  
+                  // Fetch all snack box dishes once for image lookup
+                  let allSnackBoxDishes: any[] = [];
+                  try {
+                    allSnackBoxDishes = await snackBoxService.getAll();
+                  } catch (dishError) {
+                    // Silently fail - will use placeholder
+                  }
+                  
+                  // Parse items from snack box order
+                  let items = [];
+                  if (snackBoxOrder.items) {
+                    try {
+                      const parsedItems = typeof snackBoxOrder.items === 'string' 
+                        ? JSON.parse(snackBoxOrder.items) 
+                        : snackBoxOrder.items;
+                      
+                      // Transform items and get images
+                      items = (Array.isArray(parsedItems) ? parsedItems : []).map((item: any) => {
+                        const storedImage = item.image || item.image_url || item.imageUrl || '';
+                        const dishId = item.dishId || item.id;
+                        const imageUrl = getSnackBoxDishImageUrl(dishId, storedImage, allSnackBoxDishes);
+                        
+                        return {
+                          id: dishId || '',
+                          quantity: item.quantity || 0,
+                          price: (item.price || 0).toString(),
+                          dish: {
+                            id: dishId || '',
+                            name: item.name || `Item ${dishId || ''}`,
+                            description: item.description || '',
+                            price: (item.price || 0).toString(),
+                            imageUrl: imageUrl,
+                            dietaryType: item.dietary_type || 'Regular',
+                          },
+                        };
+                      });
+                    } catch (parseError) {
+                      console.error('Error parsing snack box order items:', parseError);
+                    }
+                  }
+                  
+                  // Fetch address if address_id exists (snack box may have address_id or delivery_address)
+                  let snackAddressText = snackBoxOrder.delivery_address || '';
+                  let snackAddressLabel = 'Delivery Address';
+                  if (snackBoxOrder.address_id && !snackAddressText) {
+                    try {
+                      const addresses = await addressService.getAll();
+                      const address = addresses.find(addr => addr.id === snackBoxOrder.address_id);
+                      if (address) {
+                        snackAddressText = address.address || '';
+                        snackAddressLabel = address.label || 'Delivery Address';
+                      }
+                    } catch (addrError) {
+                      console.error('Error fetching address for snack box order:', addrError);
+                    }
+                  }
+                  
+                  // Transform snack box order to match OrderDetails format
+                  return {
+                    id: snackBoxOrder.id,
+                    orderNumber: snackBoxOrder.order_number,
+                    subtotal: snackBoxOrder.subtotal?.toString() || '0',
+                    deliveryFee: snackBoxOrder.platform_fee?.toString() || '0',
+                    tax: snackBoxOrder.gst?.toString() || '0',
+                    total: snackBoxOrder.total?.toString() || '0',
+                    deliveryDate: snackBoxOrder.delivery_date || '',
+                    deliveryTime: snackBoxOrder.delivery_time || '',
+                    status: snackBoxOrder.status || 'pending',
+                    createdAt: snackBoxOrder.created_at || '',
+                    address: {
+                      id: snackBoxOrder.address_id || '',
+                      label: snackAddressLabel,
+                      address: snackAddressText,
+                      landmark: null,
+                    },
+                    items: items,
+                  };
+                } catch (snackBoxError: any) {
+                  console.error('[OrderDetails] Error fetching snack box order:', snackBoxError);
+                  // If not found in snack_box_orders either, throw the snack box error
+                  throw snackBoxError;
+                }
+              }
+            }
           }
         }
       }
@@ -265,8 +733,8 @@ export default function OrderDetailsPage() {
     const totalAmount = parseFloat(order.total);
     if (!Number.isFinite(totalAmount) || totalAmount <= 0) return null;
 
-    // Case 4: If total <= ₹700, full payment was made - no schedule needed
-    if (totalAmount <= 700) {
+    // Case 4: If total <= ₹1000, full payment was made - no schedule needed
+    if (totalAmount <= 1000) {
       return {
         type: "full" as const,
         stages: [
@@ -428,93 +896,32 @@ export default function OrderDetailsPage() {
 
       const orderData = await createOrderResponse.json();
       const razorpayOrderId = orderData.orderId;
-      const isTestPayment = razorpayKeyId?.includes('test') || razorpayKeyId?.includes('rzp_test');
 
-      // Open Razorpay modal
-      const razorpay = new window.Razorpay({
-        key: razorpayKeyId,
-        amount: stage.amount * 100,
-        currency: 'INR',
-        name: 'Plattr',
-        description: `${stage.label} - Order #${order.orderNumber}`,
-        order_id: razorpayOrderId,
-        handler: async function (response: any) {
-          try {
-            // Verify payment
-            const verifyResponse = await fetch(getApiUrl('/api/payments/verify'), {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              credentials: 'include',
-              body: JSON.stringify({
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-              }),
-            });
-
-            if (!verifyResponse.ok) throw new Error('Payment verification failed');
-
-            const userId = localStorage.getItem('userId');
-            if (!userId) throw new Error('User not authenticated');
-
-            // Store payment details
-            console.log(`[Payment] Storing ${stage.key} payment details...`);
-            try {
-              await paymentService.addPaymentStage({
-                orderId: order.id,
-                orderType: 'mealbox',
-                orderNumber: order.orderNumber,
-                userId: userId,
-                paymentStage: stage.key as 'second' | 'final',
-                amount: stage.amount,
-                razorpayOrderId: response.razorpay_order_id,
-                razorpayPaymentId: response.razorpay_payment_id,
-                razorpaySignature: response.razorpay_signature,
-                razorpayReceipt: razorpayOrderId,
-                paymentStatus: 'success',
-                isTestPayment: isTestPayment,
-                metadata: {
-                  payment_date: new Date().toISOString(),
-                  payment_method: 'razorpay',
-                  stage_label: stage.label,
-                },
-              });
-              console.log(`[Payment] ✓ ${stage.key} payment stored successfully`);
-            } catch (paymentError: any) {
-              console.error(`[Payment] ✗ Error storing ${stage.key} payment:`, paymentError);
-              toast({
-                title: "Payment Record Warning",
-                description: "Payment successful but record failed to save. Support will be notified.",
-                variant: "destructive",
-              });
-            }
-
-            setPaidStages(prev => [...prev, stage.key]);
-            toast({
-              title: "Payment Successful!",
-              description: `${stage.label} of ₹${stage.amount} has been completed.`,
-            });
-          } catch (error: any) {
-            console.error('Payment verification error:', error);
-            toast({
-              title: "Payment Error",
-              description: error.message || "Failed to verify payment. Please contact support.",
-              variant: "destructive",
-            });
-          } finally {
-            setProcessingPayment(null);
-          }
-        },
-        prefill: {
-          contact: localStorage.getItem('phone') || '',
-          email: localStorage.getItem('email') || '',
-        },
-        theme: { color: '#1A9952' },
-        modal: {
-          ondismiss: function() { setProcessingPayment(null); },
+      // Open Razorpay modal directly
+      await openRazorpayModal({
+        razorpayKeyId: razorpayKeyId!,
+        razorpayOrderId: razorpayOrderId,
+        amount: stage.amount,
+        description: order ? `${stage.label} - Order #${order.orderNumber}` : "Order Payment",
+        orderType: "meal_box",
+        orderData: order ? {
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+          paymentStage: stage.key,
+          stageLabel: stage.label,
+          amount: stage.amount,
+        } : undefined,
+        onError: (error) => {
+          toast({
+            title: "Payment Error",
+            description: error,
+            variant: "destructive",
+          });
+          setProcessingPayment(null);
         },
       });
-      razorpay.open();
+      
+      setProcessingPayment(null);
     } catch (error: any) {
       console.error("Error initiating payment:", error);
       toast({
@@ -529,9 +936,21 @@ export default function OrderDetailsPage() {
   const paymentSchedule = calculatePaymentSchedule();
 
   return (
-    <div className="min-h-screen bg-background pb-6">
+    <div 
+      className="min-h-screen bg-background pb-6"
+      style={{
+        paddingBottom: '24px',
+      }}
+    >
       {/* Header */}
-      <div className="bg-card border-b sticky top-0 z-10" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+      <div 
+        className="bg-card border-b sticky z-10" 
+        style={{ 
+          top: 0,
+          paddingTop: '16px',
+          paddingBottom: '16px'
+        }}
+      >
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center gap-3">
           <Button
             variant="ghost"
@@ -720,13 +1139,35 @@ export default function OrderDetailsPage() {
             Order Items
           </h2>
           <div className="space-y-4">
-            {order.items.map((item) => (
+            {order.items && order.items.length > 0 ? order.items.map((item) => {
+              // Get image URL - use the one from dish (already processed by getSnackBoxDishImage)
+              const imageUrl = item.dish.imageUrl || PLACEHOLDER_IMAGE;
+              
+              // Debug: log the image URL being used
+              console.log('[OrderDetails] Rendering item:', item.dish.name, 'imageUrl:', imageUrl);
+              
+              return (
               <div key={item.id} className="flex gap-4" data-testid={`order-item-${item.dish.id}`}>
                 <img
-                  src={getSupabaseImageUrl((item.dish as any).image_url || item.dish.imageUrl) || '/placeholder.jpg'}
+                  src={imageUrl}
                   alt={item.dish.name}
                   className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
                   data-testid="img-dish"
+                  onError={(e) => {
+                    const img = e.target as HTMLImageElement;
+                    // Prevent infinite loop - only set placeholder if not already using it
+                    if (img.src !== PLACEHOLDER_IMAGE && !img.src.includes('data:image')) {
+                      console.error('[OrderDetails] Image failed to load:', imageUrl, 'falling back to placeholder');
+                      img.src = PLACEHOLDER_IMAGE;
+                    } else {
+                      // Already using placeholder, just hide the error
+                      console.warn('[OrderDetails] Placeholder image also failed, hiding image');
+                      img.style.display = 'none';
+                    }
+                  }}
+                  onLoad={() => {
+                    console.log('[OrderDetails] Image loaded successfully:', imageUrl);
+                  }}
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
@@ -750,7 +1191,13 @@ export default function OrderDetailsPage() {
                   </div>
                 </div>
               </div>
-            ))}
+            );
+            }) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <Package className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p>No items found for this order.</p>
+              </div>
+            )}
           </div>
         </Card>
 
@@ -794,6 +1241,7 @@ export default function OrderDetailsPage() {
           </p>
         </Card>
       </main>
+
     </div>
   );
 }

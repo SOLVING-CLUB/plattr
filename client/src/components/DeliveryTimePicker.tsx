@@ -18,6 +18,7 @@ interface DeliveryTimePickerProps {
   value?: string;
   onChange: (time: string) => void;
   selectedDate?: string;
+  disabledPeriods?: string[]; // Array of period IDs to disable (e.g., ["morning", "afternoon"])
 }
 
 const BREAKFAST_PERIODS: TimePeriod[] = [
@@ -93,8 +94,6 @@ const ALL_PERIODS: TimePeriod[] = [
     id: "morning",
     label: "Morning",
     slots: [
-      { label: "7:00 AM - 8:00 AM", value: "7:00 AM - 8:00 AM" },
-      { label: "8:00 AM - 9:00 AM", value: "8:00 AM - 9:00 AM" },
       { label: "9:00 AM - 10:00 AM", value: "9:00 AM - 10:00 AM" },
       { label: "10:00 AM - 11:00 AM", value: "10:00 AM - 11:00 AM" },
       { label: "11:00 AM - 12:00 PM", value: "11:00 AM - 12:00 PM" },
@@ -119,6 +118,8 @@ const ALL_PERIODS: TimePeriod[] = [
       { label: "6:00 PM - 7:00 PM", value: "6:00 PM - 7:00 PM" },
       { label: "7:00 PM - 8:00 PM", value: "7:00 PM - 8:00 PM" },
       { label: "8:00 PM - 9:00 PM", value: "8:00 PM - 9:00 PM" },
+      { label: "9:00 PM - 10:00 PM", value: "9:00 PM - 10:00 PM" },
+      { label: "10:00 PM - 11:00 PM", value: "10:00 PM - 11:00 PM" },
     ],
   },
 ];
@@ -170,24 +171,50 @@ export default function DeliveryTimePicker({
   mealType = "all", 
   value, 
   onChange,
-  selectedDate
+  selectedDate,
+  disabledPeriods = []
 }: DeliveryTimePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const periods = getPeriods(mealType);
-  const [activePeriod, setActivePeriod] = useState(periods[0]?.id || "");
+  
+  // Filter out disabled periods
+  const enabledPeriods = periods.filter(p => !disabledPeriods.includes(p.id));
+  
+  // Initialize active period to first enabled period
+  const [activePeriod, setActivePeriod] = useState(enabledPeriods[0]?.id || periods[0]?.id || "");
+  const [userSelectedPeriod, setUserSelectedPeriod] = useState<string | null>(null);
 
+  // Sync activePeriod with value only if user hasn't manually selected a different period
   useEffect(() => {
     if (value) {
-      for (const period of periods) {
-        if (period.slots.some(slot => slot.value === value)) {
-          setActivePeriod(period.id);
-          break;
+      const valuePeriod = periods.find(p => p.slots.some(slot => slot.value === value));
+      if (valuePeriod) {
+        // If user hasn't manually selected a period, sync period with value
+        // Or if value matches user's selected period, keep it in sync
+        if (!userSelectedPeriod || valuePeriod.id === userSelectedPeriod) {
+          if (!disabledPeriods.includes(valuePeriod.id)) {
+            setActivePeriod(valuePeriod.id);
+          }
         }
       }
+    } else if (!value && !userSelectedPeriod) {
+      // If no value and no user selection, default to first enabled period
+      if (enabledPeriods.length > 0 && activePeriod !== enabledPeriods[0].id) {
+        setActivePeriod(enabledPeriods[0].id);
+      }
     }
-  }, [value, periods]);
+  }, [value, periods, disabledPeriods, userSelectedPeriod, enabledPeriods, activePeriod]);
 
-  const currentPeriod = periods.find(p => p.id === activePeriod) || periods[0];
+  // If current active period becomes disabled, switch to first enabled period
+  useEffect(() => {
+    if (disabledPeriods.includes(activePeriod) && enabledPeriods.length > 0) {
+      const newPeriod = enabledPeriods[0].id;
+      setActivePeriod(newPeriod);
+      setUserSelectedPeriod(newPeriod);
+    }
+  }, [disabledPeriods, activePeriod, enabledPeriods]);
+
+  const currentPeriod = periods.find(p => p.id === activePeriod) || enabledPeriods[0] || periods[0];
 
   return (
     <div 
@@ -203,9 +230,12 @@ export default function DeliveryTimePicker({
         <div className="flex items-center gap-2">
           <Clock className="w-5 h-5 text-gray-500" />
           <span className="font-medium text-gray-800">Delivery time</span>
+          {value && (
+            <span className="text-xs text-gray-400 font-normal">(click to change)</span>
+          )}
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-gray-500 text-sm">
+          <span className={`text-sm ${value ? "text-gray-900 font-medium" : "text-gray-500"}`}>
             {value || "Select time"}
           </span>
           <ChevronDown 
@@ -220,40 +250,60 @@ export default function DeliveryTimePicker({
             className="flex w-full bg-gray-100 rounded-full p-1"
             data-testid="time-period-toggle"
           >
-            {periods.map((period) => (
-              <button
-                key={period.id}
-                onClick={() => setActivePeriod(period.id)}
-                className={`flex-1 px-4 py-2 rounded-full text-xs font-medium transition-colors text-center ${
-                  activePeriod === period.id
-                    ? "bg-white text-gray-900 shadow-sm"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
-                style={{ fontFamily: "Sweet Sans Pro" }}
-                data-testid={`button-period-${period.id}`}
-              >
-                {period.label}
-              </button>
-            ))}
+            {periods.map((period) => {
+              const isDisabled = disabledPeriods.includes(period.id);
+              return (
+                <button
+                  key={period.id}
+                  onClick={() => {
+                    if (!isDisabled) {
+                      setActivePeriod(period.id);
+                      setUserSelectedPeriod(period.id); // Mark that user manually selected this period
+                    }
+                  }}
+                  disabled={isDisabled}
+                  className={`flex-1 px-4 py-2 rounded-full text-xs font-medium transition-colors text-center ${
+                    isDisabled
+                      ? "opacity-50 cursor-not-allowed text-gray-400"
+                      : activePeriod === period.id
+                      ? "bg-white text-gray-900 shadow-sm"
+                      : "text-gray-600 hover:text-gray-900"
+                  }`}
+                  style={{ fontFamily: "Sweet Sans Pro" }}
+                  data-testid={`button-period-${period.id}`}
+                >
+                  {period.label}
+                </button>
+              );
+            })}
           </div>
 
           <div className="grid grid-cols-2 gap-2">
             {currentPeriod?.slots.map((slot) => {
               const disabled = isSlotDisabled(slot.value, selectedDate);
+              const isSelected = value === slot.value;
               return (
                 <button
                   key={slot.value}
-                  onClick={() => !disabled && onChange(slot.value)}
+                  onClick={() => {
+                    if (!disabled) {
+                      // Always call onChange, even if it's the same value, to allow re-selection
+                      onChange(slot.value);
+                      // Clear user selected period when a slot is selected, so value can control period
+                      setUserSelectedPeriod(null);
+                    }
+                  }}
                   disabled={disabled}
                   className={`px-3 py-2.5 rounded-xl text-xs font-medium border-2 transition-colors ${
                     disabled
                       ? "border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed"
-                      : value === slot.value
-                        ? "border-orange-500 bg-orange-50 text-orange-700"
-                        : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
+                      : isSelected
+                        ? "border-orange-500 bg-orange-50 text-orange-700 hover:border-orange-600"
+                        : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"
                   }`}
                   style={{ fontFamily: "Sweet Sans Pro" }}
                   data-testid={`button-time-${slot.value}`}
+                  type="button"
                 >
                   {slot.label}
                 </button>

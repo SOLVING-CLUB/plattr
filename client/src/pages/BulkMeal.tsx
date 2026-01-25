@@ -24,6 +24,7 @@ import { Slider } from "@/components/ui/slider";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
+import { useFestiveSettings } from "@/hooks/useFestiveSettings";
 // Define interfaces locally to resolve missing exports
 export interface Category {
   id: string;
@@ -61,6 +62,7 @@ export interface Dish {
   fat?: number | null;
   is_sixty_min?: boolean;
   isSixtyMin?: boolean;
+  quantity?: string | null; // Quantity field from database
 }
 import { getSupabaseImageUrl, getDishTypeImage } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
@@ -239,7 +241,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
   const { toast } = useToast();
   const [isDesktop, setIsDesktop] = useState(false);
   const isInputFocused = useInputFocus();
-  
+
   // Desktop detection
   useEffect(() => {
     const mql = window.matchMedia("(min-width: 768px)");
@@ -254,22 +256,38 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
 
   // Clear the 60-min flag if accessed directly (not through ExploreMenuPage)
   // When onNavigate is NOT provided, user is accessing /bulk-meals directly
-  // Also check for festive filter (Sankranthi)
+  // Also check for festive filter (from Supabase)
   const [festiveFilter, setFestiveFilter] = useState<string | null>(null);
-  const [availableFestiveFilter, setAvailableFestiveFilter] = useState<string | null>(null);
+  const [showFestiveToggle, setShowFestiveToggle] = useState(false); // Track if toggle should be shown (Method 1 only)
+  const { data: festiveSetting } = useFestiveSettings();
+  const availableFestiveFilter = festiveSetting?.filter_tag || null;
 
   useEffect(() => {
     if (!onNavigate) {
       localStorage.removeItem(SIXTY_MIN_ORDER_FLAG);
     }
 
-    // Check for festive filter
+    // Check for festive filter from localStorage
+    // Only apply filter if it exists (Method 1 was used)
+    // Method 2 doesn't set festiveFilter, so no filter will be applied and toggle won't show
     const filter = localStorage.getItem('festiveFilter');
     if (filter) {
-      setFestiveFilter(filter);
-      setAvailableFestiveFilter(filter);
+      // Only set filter if it matches the current festive setting's tag
+      if (festiveSetting && filter === festiveSetting.filter_tag) {
+        setFestiveFilter(filter);
+        setShowFestiveToggle(true); // Show toggle only if filter exists (Method 1)
+      } else {
+        // Clear invalid filter
+        localStorage.removeItem('festiveFilter');
+        setFestiveFilter(null);
+        setShowFestiveToggle(false);
+      }
+    } else {
+      // No filter in localStorage - clear any existing filter state and hide toggle
+      setFestiveFilter(null);
+      setShowFestiveToggle(false);
     }
-  }, [onNavigate]);
+  }, [onNavigate, festiveSetting]);
 
   // Scroll to top on page load
   useEffect(() => {
@@ -1037,8 +1055,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
 
   return (
     <PageWithLoader>
-      <div className="min-h-screen pb-24 relative bg-transparent">
-        {/* Hero Background - Mobile only */}
+      {/* Hero Background - Mobile only */}
         {!isDesktop && (
           <div
             className="absolute top-0 left-0 right-0 z-0"
@@ -1090,21 +1107,31 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                   Home
                 </span>
               </button>
-              <button
-                onClick={() => navigate("/concierge")}
-                data-testid="button-ai-menu-planner"
-                className="flex items-center justify-center px-3 py-2 rounded-[10px] shadow-md hover:opacity-90 transition-opacity"
-                style={{
-                  background: "linear-gradient(135deg, #06352A 0%, #1A9952 100%)",
-                  fontFamily: "Sweet Sans Pro",
-                  fontSize: "12px",
-                  fontWeight: 500,
-                  color: "#F5E9DB",
-                  height: "40px",
-                }}
-              >
-                AI Menu Planner
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => navigate("/concierge")}
+                  data-testid="button-ai-menu-planner"
+                  className="flex items-center justify-center px-3 py-2 rounded-[10px] shadow-md hover:opacity-90 transition-opacity"
+                  style={{
+                    background: "linear-gradient(135deg, #06352A 0%, #1A9952 100%)",
+                    fontFamily: "Sweet Sans Pro",
+                    fontSize: "12px",
+                    fontWeight: 500,
+                    color: "#F5E9DB",
+                    height: "40px",
+                  }}
+                >
+                  AI Menu Planner
+                </button>
+                <a
+                  href="tel:+917026644556"
+                  className="flex items-center justify-center w-10 h-10 bg-[#1A9952] rounded-[10px] shadow-md hover:bg-[#158043] transition-colors"
+                  data-testid="button-call"
+                  aria-label="Call us"
+                >
+                  <Phone className="w-5 h-5 text-white" />
+                </a>
+              </div>
             </div>
 
             {/* Service Navigation Tabs */}
@@ -1291,12 +1318,17 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
             </button>
           </div>
 
-          {/* Festive Filter Toggle */}
-          {availableFestiveFilter && (
+          {/* Festive Filter Toggle - Only show if Method 1 was used (festiveFilter was set) */}
+          {availableFestiveFilter && showFestiveToggle && (
             <div className="flex justify-center mt-3 mb-1">
               <div className="inline-flex p-1 bg-gray-100 rounded-full shadow-sm border border-gray-200">
                 <button
-                  onClick={() => { handleInteraction(); setFestiveFilter(null); }}
+                  onClick={() => {
+                    handleInteraction();
+                    setFestiveFilter(null);
+                    setShowFestiveToggle(false);
+                    localStorage.removeItem('festiveFilter');
+                  }}
                   className={cn(
                     "px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-300",
                     !festiveFilter
@@ -1318,14 +1350,14 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                   style={{ fontFamily: "Sweet Sans Pro" }}
                 >
                   <Sparkles className={cn("w-3 h-3", festiveFilter ? "text-yellow-400" : "text-gray-400")} />
-                  {availableFestiveFilter} Specials
+                  {festiveSetting?.festive_name || availableFestiveFilter} Specials
                 </button>
               </div>
             </div>
           )}
 
           {/* Filters & Sort - Single Row - Inside sticky container */}
-          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide pt-3 pb-2">
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide pt-2 pb-2">
             <button
               onClick={() => { handleInteraction(); setDietaryMode('all'); }}
               className={cn(
@@ -1425,7 +1457,7 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
           )}
         </div>
         {/* Content below sticky header */}
-        <div className="relative z-10 px-4" style={{ marginTop: "0px", paddingTop: "0px" }}>
+        <div className="relative z-10 px-4 pt-2">
 
           {/* Dish Selection Section */}
           <div className="space-y-2">
@@ -1546,16 +1578,18 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                       <div className="space-y-6">
                         <div className="space-y-2">
                           <p className="text-lg font-bold text-[#06352A]" style={{ fontFamily: "Sweet Sans Pro" }}>
-                            No {festiveFilter} Specials Here
+                            No {festiveSetting?.festive_name || festiveFilter} Specials Here
                           </p>
                           <p className="text-muted-foreground">
-                            This category doesn't have {festiveFilter} specials yet, but our full menu has plenty of delicious options for you!
+                            This category doesn't have {festiveSetting?.festive_name || festiveFilter} specials yet, but our full menu has plenty of delicious options for you!
                           </p>
                         </div>
                         <Button
                           onClick={() => {
                             handleInteraction();
                             setFestiveFilter(null);
+                            setShowFestiveToggle(false);
+                            localStorage.removeItem('festiveFilter');
                           }}
                           className="rounded-full px-8 py-3 bg-[#06352A] text-white hover:opacity-90 shadow-lg transition-all"
                           style={{ fontFamily: "Sweet Sans Pro" }}
@@ -1617,7 +1651,11 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                                 {dish.name}
                               </h3>
                               <span className="text-primary font-bold text-base whitespace-nowrap" data-testid={`text-dish-price-${dish.id}`}>
-                                ₹{parseFloat(dish.price as string).toFixed(0)} <span className="text-[10px] text-gray-500 font-normal">per serve</span>
+                                ₹{parseFloat(dish.price as string).toFixed(0)} {dish.quantity ? (
+                                  <span className="text-[10px] text-gray-500 font-normal">{dish.quantity}</span>
+                                ) : (
+                                  <span className="text-[10px] text-gray-500 font-normal">per serve</span>
+                                )}
                               </span>
                               <div className="mt-auto">
                                 <Button
@@ -1644,16 +1682,19 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                       })}
                     </div>
 
-                    {festiveFilter && (
+                    {/* Only show festive filter banner if Method 1 was used */}
+                    {festiveFilter && showFestiveToggle && (
                       <div className="mt-12 text-center pb-12 border-t border-gray-100 pt-12">
                         <div className="max-w-md mx-auto space-y-4">
                           <p className="text-muted-foreground text-sm" style={{ fontFamily: "Sweet Sans Pro" }}>
-                            Finished browsing {festiveFilter} specials? Check out our complete menu for more delicious options!
+                            Finished browsing {festiveSetting?.festive_name || festiveFilter} specials? Check out our complete menu for more delicious options!
                           </p>
                           <Button
                             onClick={() => {
                               handleInteraction();
                               setFestiveFilter(null);
+                              setShowFestiveToggle(false);
+                              localStorage.removeItem('festiveFilter');
                             }}
                             className="rounded-full px-8 py-3 bg-[#06352A] text-white hover:opacity-90 shadow-lg transition-all"
                             style={{ fontFamily: "Sweet Sans Pro" }}
@@ -1842,7 +1883,9 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
                 <div className="pt-4 border-t space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground mb-1">Price per serve</p>
+                      <p className="text-sm text-muted-foreground mb-1">
+                        {detailDish?.quantity ? `Price (${detailDish.quantity})` : 'Price per serve'}
+                      </p>
                       <p className="text-3xl font-bold text-primary">
                         ₹{detailDish ? parseFloat(detailDish.price as string).toFixed(0) : '0'}
                       </p>
@@ -1971,7 +2014,11 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
         {/* Floating Cart Bar - Green bar above bottom nav */}
         {cart.length > 0 && (
           <div
-            className="fixed bottom-[20px] left-0 right-0 z-40 px-4"
+            className="fixed left-0 right-0 z-40 px-4 floating-cart-bar"
+            style={{
+              bottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)',
+              top: 'auto',
+            }}
           >
             <button
               onClick={() => navigate("/bulk-meals-cart")}
@@ -2013,7 +2060,6 @@ export default function BulkMeals({ onNavigate }: BulkMealsProps = {}) {
           }}
           placeholder="Search for dishes..."
         />
-      </div>
     </PageWithLoader>
   );
 }

@@ -40,7 +40,7 @@ export default defineConfig({
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
   },
-  assetsInclude: ["**/*.MP4", "**/*.mp4", "**/*.mov", "**/*.MOV"],
+  assetsInclude: ["**/*.MP4", "**/*.mp4", "**/*.mov", "**/*.MOV", "**/*.PNG", "**/*.png"],
   server: {
     host: "0.0.0.0",
     allowedHosts: true,

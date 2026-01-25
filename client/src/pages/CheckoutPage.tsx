@@ -10,6 +10,7 @@ import OrderSummaryCard from "@/components/OrderSummaryCard";
 import DeliveryTimePicker from "@/components/DeliveryTimePicker";
 import DeliveryDatePicker from "@/components/DeliveryDatePicker";
 import CouponInput from "@/components/CouponInput";
+import { openRazorpayModal } from "@/lib/payment-utils";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { getSupabaseImageUrl } from "@/lib/supabase";
@@ -85,6 +86,8 @@ export default function CheckoutPage() {
     deliveryDate: string;
     deliveryTime: string;
   } | null>(null);
+  
+  
   const { toast } = useToast();
 
   // Load Razorpay script and get key ID
@@ -193,8 +196,8 @@ export default function CheckoutPage() {
 
   // Calculate initial payment amount based on payment schedule
   const calculateInitialPayment = () => {
-    // Case 4: If total <= ₹700, pay full amount
-    if (total <= 700) {
+    // Case 4: If total <= ₹1000, pay full amount
+    if (total <= 1000) {
       return total;
     }
 
@@ -299,7 +302,7 @@ export default function CheckoutPage() {
       return;
     }
 
-    if (!razorpayLoaded) {
+    if (!razorpayLoaded || !razorpayKeyId) {
       toast({
         title: "Payment Error",
         description: "Payment gateway is loading. Please wait a moment and try again.",
@@ -343,102 +346,25 @@ export default function CheckoutPage() {
 
       const { orderId, amount } = await createOrderResponse.json();
 
-      // Step 2: Check if Razorpay key is available
-      if (!razorpayKeyId) {
-        throw new Error('Payment gateway key not available. Please refresh the page.');
-      }
-
-      // Step 3: Open Razorpay checkout
-      const razorpay = (window as any).Razorpay({
-        key: razorpayKeyId,
-        amount: amount,
-        currency: 'INR',
-        name: 'Plattr',
-        description: 'Order Payment',
-        order_id: orderId,
-        handler: async function (response: any) {
-          try {
-            // Step 4: Verify payment via Supabase Edge Function
-            const verifyResponse = await fetch(`${SUPABASE_URL}/functions/v1/razorpay/verify`, {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-              }),
-            });
-
-            const verifyData = await verifyResponse.json();
-
-            if (!verifyData.verified) {
-              throw new Error('Payment verification failed');
-            }
-
-            // Payment verified successfully
-            setPaymentVerified(true);
-            
-            // Send REAL push notification via FCM (not a toast!)
-            const userId = localStorage.getItem('userId');
-            if (userId) {
-              fetch(`${SUPABASE_URL}/functions/v1/send-notification`, {
-                method: 'POST',
-                headers: {
-                  'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  user_id: userId,
-                  title: '💳 Payment Successful!',
-                  body: `₹${(amount / 100).toFixed(0)} payment verified. Tap to complete your order.`,
-                  event_name: 'payment_success',
-                  category: 'transactional',
-                  deep_link: 'plattr://checkout',
-                }),
-              }).catch(err => console.log('[Notification] Failed to send payment notification:', err));
-            }
-          } catch (error: any) {
-            console.error('Payment verification error:', error);
-            // Send error notification via FCM
-            const userId = localStorage.getItem('userId');
-            if (userId) {
-              fetch(`${SUPABASE_URL}/functions/v1/send-notification`, {
-                method: 'POST',
-                headers: {
-                  'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  user_id: userId,
-                  title: '❌ Payment Failed',
-                  body: error.message || 'Failed to verify payment. Please try again or contact support.',
-                  event_name: 'payment_failed',
-                  category: 'transactional',
-                }),
-              }).catch(err => console.log('[Notification] Failed to send error notification:', err));
-            }
-          } finally {
-            setIsProcessingPayment(false);
-          }
-        },
-        prefill: {
-          // You can prefill customer details if available
-        },
-        theme: {
-          color: '#1A9952', // Match your app's primary color
-        },
-        modal: {
-          ondismiss: function() {
-            console.log('[CheckoutPage] Razorpay modal dismissed');
-            setIsProcessingPayment(false);
-          },
+      // Open Razorpay modal directly
+      await openRazorpayModal({
+        razorpayKeyId: razorpayKeyId,
+        razorpayOrderId: orderId,
+        amount: amount / 100, // Convert from paise to rupees
+        description: "Order Payment",
+        orderType: "regular",
+        orderData: orderDataToSubmit,
+        onError: (error) => {
+          toast({
+            title: "Payment Error",
+            description: error,
+            variant: "destructive",
+          });
+          setIsProcessingPayment(false);
         },
       });
-
-      razorpay.open();
+      
+      setIsProcessingPayment(false);
     } catch (error: any) {
       console.error('Payment initiation error:', error);
       toast({
@@ -510,17 +436,18 @@ export default function CheckoutPage() {
         }).catch(err => console.log('[Notification] Failed to send order notification:', err));
       }
       
-      // Use setTimeout to ensure navigation happens after state updates
+      // Navigate to order status page
       setTimeout(() => {
-        const targetPath = order?.orderNumber && order?.id
-          ? `/order-confirmation?orderNumber=${order.orderNumber}&orderId=${order.id}`
-          : order?.orderNumber
-          ? `/order-confirmation?orderNumber=${order.orderNumber}`
-          : '/order-confirmation';
-        
-        console.log('[CheckoutPage] Navigating to order confirmation:', targetPath);
-        setLocation(targetPath, { replace: true });
-      }, 100);
+        if (order?.id) {
+          console.log('[CheckoutPage] Navigating to order status:', `/orders/${order.id}`);
+          setLocation(`/orders/${order.id}`, { replace: true });
+        } else if (order?.orderNumber) {
+          console.log('[CheckoutPage] Order created but ID not available, redirecting to orders page');
+          setLocation("/orders", { replace: true });
+        } else {
+          setLocation("/orders", { replace: true });
+        }
+      }, 200);
     } catch (error: any) {
       console.error('Order creation error:', error);
       toast({
@@ -582,14 +509,17 @@ export default function CheckoutPage() {
   }
 
   // Calculate totals from real cart data
+  const [doorstepDelivery, setDoorstepDelivery] = useState(false);
+  
   const subtotal = cartItems.reduce((sum, item) => {
     return sum + (parseFloat(item.dish.price) * item.quantity);
   }, 0);
   const baseDeliveryFee = 40;
   const deliveryFee = appliedCoupon?.isFreeDelivery ? 0 : baseDeliveryFee;
+  const doorstepDeliveryFee = doorstepDelivery ? 300 : 0;
   const tax = Math.round(subtotal * 0.05);
   const discount = appliedCoupon?.isFreeDelivery ? 0 : (appliedCoupon?.discount || 0);
-  const total = subtotal + deliveryFee + tax - discount;
+  const total = subtotal + deliveryFee + doorstepDeliveryFee + tax - discount;
 
   // Group items by category
   const groupedItems = cartItems.reduce((acc, item) => {
@@ -625,6 +555,9 @@ export default function CheckoutPage() {
     const totalAmount = total;
 
     if (totalAmount <= 0) return null;
+
+    // Case 4: If total <= ₹1000, full payment required - no schedule
+    if (totalAmount <= 1000) return null;
 
     if (isLongGap) {
       const advance = Math.round(totalAmount * 0.1);
@@ -681,8 +614,20 @@ export default function CheckoutPage() {
   const paymentSchedule = calculatePaymentSchedule();
 
   return (
-    <div className="min-h-screen bg-background pb-6">
-      <header className="sticky top-0 z-50 bg-background border-b p-3" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+    <div 
+      className="min-h-screen bg-background pb-6"
+      style={{
+        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)',
+      }}
+    >
+      <header 
+        className="fixed top-0 left-0 right-0 z-50 bg-background border-b" 
+        style={{ 
+          padding: 0,
+          margin: 0,
+        }}
+      >
+        <div className="p-3">
         <div className="max-w-7xl mx-auto flex items-center gap-3">
           <Button 
             variant="ghost" 
@@ -694,9 +639,15 @@ export default function CheckoutPage() {
           </Button>
           <h1 className="text-xl font-bold font-serif" data-testid="text-page-title">Checkout</h1>
         </div>
+        </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+      <main 
+        className="max-w-4xl mx-auto px-4 py-6 space-y-6"
+        style={{
+          paddingTop: 'calc(60px + 24px)'
+        }}
+      >
         <Card className="p-6" data-testid="card-order-review">
           <h2 className="text-lg font-semibold mb-4" data-testid="text-order-items">Order Items</h2>
           <div className="space-y-6">
@@ -771,6 +722,33 @@ export default function CheckoutPage() {
               />
             </div>
           </div>
+        </Card>
+
+        {/* Doorstep Delivery Addon */}
+        <Card className="p-6">
+          <label className="flex items-center justify-between cursor-pointer">
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                checked={doorstepDelivery}
+                onChange={(e) => setDoorstepDelivery(e.target.checked)}
+                className="w-5 h-5 rounded border-2 border-gray-300"
+                style={{ accentColor: "#1A9952" }}
+                data-testid="checkbox-doorstep-delivery"
+              />
+              <div>
+                <span className="text-sm font-semibold block" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                  Doorstep Delivery
+                </span>
+                <span className="text-xs text-gray-500" style={{ fontFamily: "Sweet Sans Pro" }}>
+                  Get your order delivered right to your doorstep
+                </span>
+              </div>
+            </div>
+            <span className="text-sm font-semibold" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+              ₹300
+            </span>
+          </label>
         </Card>
 
         <Card className="p-6" data-testid="card-delivery-schedule">
@@ -970,6 +948,7 @@ export default function CheckoutPage() {
         <OrderSummaryCard 
           subtotal={subtotal}
           deliveryFee={deliveryFee}
+          doorstepDeliveryFee={doorstepDeliveryFee}
           tax={tax}
           discount={discount}
         />
@@ -999,7 +978,7 @@ export default function CheckoutPage() {
             ) : !razorpayLoaded || !razorpayKeyId ? (
               "Initializing Payment..."
             ) : (
-              `${getPaymentButtonText()}${total <= 700 || (deliveryDate && (new Date(deliveryDate).setHours(0,0,0,0) - new Date().setHours(0,0,0,0)) < 86400000) ? '' : ` ₹${calculateInitialPayment().toFixed(0)}`}`
+              `${getPaymentButtonText()}${total <= 1000 || (deliveryDate && (new Date(deliveryDate).setHours(0,0,0,0) - new Date().setHours(0,0,0,0)) < 86400000) ? '' : ` ₹${calculateInitialPayment().toFixed(0)}`}`
             )}
           </Button>
 
@@ -1031,6 +1010,7 @@ export default function CheckoutPage() {
           </p>
         )}
       </main>
+
     </div>
   );
 }

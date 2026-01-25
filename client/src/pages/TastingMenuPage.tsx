@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useLocation } from "wouter";
 import { PageWithLoader } from "@/components/PageWithLoader";
 import Fuse from "fuse.js";
-import { ArrowLeft, MapPin, ShoppingCart, Search, Mic, ArrowUpDown, SlidersHorizontal, Star, Utensils, ChevronRight, UtensilsCrossed, Package, Truck, Building2, LayoutGrid, Leaf, Drumstick, Egg, Sparkles } from "lucide-react";
+import { ArrowLeft, MapPin, ShoppingCart, Search, Mic, ArrowUpDown, SlidersHorizontal, Star, Utensils, ChevronRight, UtensilsCrossed, Package, Truck, Building2, LayoutGrid, Leaf, Drumstick, Egg, Sparkles, Phone } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
 import { getSupabaseImageUrl, getCategoryImageUrl, getDishTypeImage } from "@/lib/supabase";
@@ -90,6 +90,7 @@ interface Dish {
   fat?: number | null;
   is_sixty_min?: boolean;
   isSixtyMin?: boolean;
+  quantity?: string | null; // Quantity field from database
 }
 
 // Type for category_meal_types junction table response
@@ -745,28 +746,37 @@ export default function TastingMenuPage() {
         {/* Sticky Back Button Header */}
         {!isDesktop && (
           <div
-            className="sticky top-0 z-50 px-4 pt-12 pb-3"
+            className="fixed top-0 left-0 right-0 z-50"
             style={{
               backgroundColor: scrollY > 50 ? 'white' : 'transparent',
               boxShadow: scrollY > 50 ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+              padding: 0,
+              margin: 0,
             }}
           >
-            <Button
-              variant="ghost"
-              size="sm"
-              className={scrollY > 50 ? "text-[#06352A] hover:text-[#06352A] hover:bg-gray-100" : "text-white hover:text-white hover:bg-white/20"}
-              onClick={() => setLocation("/")}
-              data-testid="button-back"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back
-            </Button>
+            <div className="px-4 py-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                className={scrollY > 50 ? "text-[#06352A] hover:text-[#06352A] hover:bg-gray-100" : "text-white hover:text-white hover:bg-white/20"}
+                onClick={() => setLocation("/")}
+                data-testid="button-back"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back
+              </Button>
+            </div>
           </div>
         )}
 
         {/* Header Section - Hidden on desktop */}
         {!isDesktop && (
-          <div className="relative z-10 px-4 pt-4 pb-6">
+          <div 
+            className="relative z-10 px-4 pb-6"
+            style={{
+              paddingTop: '16px',
+            }}
+          >
             {/* Home and AI Menu Planner */}
             <div className="flex items-center justify-between mb-6">
               <button
@@ -779,21 +789,31 @@ export default function TastingMenuPage() {
                   Home
                 </span>
               </button>
-              <button
-                onClick={() => setLocation("/concierge")}
-                data-testid="button-ai-menu-planner"
-                className="flex items-center justify-center px-3 py-2 rounded-[10px] shadow-md hover:opacity-90 transition-opacity"
-                style={{
-                  background: "linear-gradient(135deg, #06352A 0%, #1A9952 100%)",
-                  fontFamily: "Sweet Sans Pro",
-                  fontSize: "12px",
-                  fontWeight: 500,
-                  color: "#F5E9DB",
-                  height: "40px",
-                }}
-              >
-                AI Menu Planner
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setLocation("/concierge")}
+                  data-testid="button-ai-menu-planner"
+                  className="flex items-center justify-center px-3 py-2 rounded-[10px] shadow-md hover:opacity-90 transition-opacity"
+                  style={{
+                    background: "linear-gradient(135deg, #06352A 0%, #1A9952 100%)",
+                    fontFamily: "Sweet Sans Pro",
+                    fontSize: "12px",
+                    fontWeight: 500,
+                    color: "#F5E9DB",
+                    height: "40px",
+                  }}
+                >
+                  AI Menu Planner
+                </button>
+                <a
+                  href="tel:+917026644556"
+                  className="flex items-center justify-center w-10 h-10 bg-[#1A9952] rounded-[10px] shadow-md hover:bg-[#158043] transition-colors"
+                  data-testid="button-call"
+                  aria-label="Call us"
+                >
+                  <Phone className="w-5 h-5 text-white" />
+                </a>
+              </div>
             </div>
 
             {/* Service Navigation Tabs */}
@@ -1262,7 +1282,11 @@ export default function TastingMenuPage() {
                               <span className="text-primary font-bold text-lg" data-testid={`text-dish-price-${dish.id}`}>
                                 ₹{parseFloat(dish.price as string).toFixed(0)}
                               </span>
-                              <span className="text-xs text-gray-500">per serve</span>
+                              {dish.quantity ? (
+                                <span className="text-xs text-gray-500">{dish.quantity}</span>
+                              ) : (
+                                <span className="text-xs text-gray-500">per serve</span>
+                              )}
                             </div>
                           </div>
                         </div>

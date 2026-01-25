@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { MapPin } from "lucide-react";
+import { MapPin, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import headerBg from "@assets/Hero_1763854193361.png";
@@ -235,9 +235,11 @@ export default function AppHeader({
       <header 
         className="h-40"
         style={{
-          backgroundImage: `url(${headerBg})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center top',
+          backgroundColor: '#1A9952',
+          margin: 0,
+          padding: 0,
+          marginTop: 0,
+          paddingTop: 0,
         }}
       >
         <div className="h-full px-4 flex items-end justify-between pb-4">
@@ -253,21 +255,31 @@ export default function AppHeader({
               style={{ fontFamily: "Sweet Sans Pro" }}>{locationLabel}</span>
           </Button>
 
-          <button
-            onClick={() => setLocation("/concierge")}
-            data-testid="button-smart-menu-concierge"
-            className="flex items-center justify-center px-3 py-2 rounded-[10px] shadow-md hover:opacity-90 transition-opacity self-end"
-            style={{
-              background: "linear-gradient(135deg, #06352A 0%, #1A9952 100%)",
-              fontFamily: "Sweet Sans Pro",
-              fontSize: "12px",
-              fontWeight: 500,
-              color: "#F5E9DB",
-              height: "40px",
-            }}
-          >
-            AI Menu Planner
-          </button>
+          <div className="flex items-center gap-2 self-end">
+            <button
+              onClick={() => setLocation("/concierge")}
+              data-testid="button-smart-menu-concierge"
+              className="flex items-center justify-center px-3 py-2 rounded-[10px] shadow-md hover:opacity-90 transition-opacity"
+              style={{
+                background: "linear-gradient(135deg, #06352A 0%, #1A9952 100%)",
+                fontFamily: "Sweet Sans Pro",
+                fontSize: "12px",
+                fontWeight: 500,
+                color: "#F5E9DB",
+                height: "40px",
+              }}
+            >
+              AI Menu Planner
+            </button>
+            <a
+              href="tel:+917026644556"
+              className="flex items-center justify-center w-10 h-10 bg-[#1A9952] rounded-[10px] shadow-md hover:bg-[#158043] transition-colors"
+              data-testid="button-call"
+              aria-label="Call us"
+            >
+              <Phone className="w-5 h-5 text-white" />
+            </a>
+          </div>
         </div>
       </header>
     </>

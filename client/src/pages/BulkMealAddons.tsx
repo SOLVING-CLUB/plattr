@@ -1,15 +1,15 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Check } from "lucide-react";
+import { ArrowLeft, Check, Plus, Minus } from "lucide-react";
 import { useCart } from "@/context/CartContex";
 import FloatingNav from "@/pages/FloatingNav";
-import chefHatIcon from "@assets/tabler_chef-hat-filled_1763917839168.png";
-import servingStaffIcon from "@assets/ic_baseline-people_1763917839170.png";
-import decorIcon from "@assets/streamline-ultimate_party-decoration-bold_1763917839170.png";
-import tablewareIcon from "@assets/roentgen_fork-and-knife_1763917839169.png";
-import musicIcon from "@assets/roentgen_fork-and-knife_1763917839169.png";
-import cameraIcon from "@assets/mdi_camera3_1763917839155.png";
+// Cutlery addon images
+import servingSpoonIcon from "@assets/serving spoons.PNG?url";
+import spoonForkIcon from "@assets/fork and spoon wooden.PNG?url";
+import plateIcon from "@assets/wooden_plate.PNG?url";
+import waterBottleIcon from "@assets/water bottle.PNG?url";
+import tissueIcon from "@assets/tissues.PNG?url";
 
 const BULK_MEALS_ADDONS_KEY = "bulkMealsAddons";
 
@@ -28,6 +28,45 @@ export default function BulkMealsAddons() {
       }
     }
     return [];
+  });
+
+  // Quantity state for Serving Spoons (per piece pricing)
+  const [servingSpoonQuantity, setServingSpoonQuantity] = useState<number>(() => {
+    const stored = localStorage.getItem(`${BULK_MEALS_ADDONS_KEY}_serving_spoon_qty`);
+    if (stored) {
+      try {
+        return parseInt(stored) || 0;
+      } catch {
+        return 0;
+      }
+    }
+    return 0;
+  });
+
+  // Quantity state for Plates (per piece pricing)
+  const [plateQuantity, setPlateQuantity] = useState<number>(() => {
+    const stored = localStorage.getItem(`${BULK_MEALS_ADDONS_KEY}_plate_qty`);
+    if (stored) {
+      try {
+        return parseInt(stored) || 0;
+      } catch {
+        return 0;
+      }
+    }
+    return 0;
+  });
+
+  // Quantity state for Water Bottles (per piece pricing)
+  const [waterBottleQuantity, setWaterBottleQuantity] = useState<number>(() => {
+    const stored = localStorage.getItem(`${BULK_MEALS_ADDONS_KEY}_water_bottle_qty`);
+    if (stored) {
+      try {
+        return parseInt(stored) || 0;
+      } catch {
+        return 0;
+      }
+    }
+    return 0;
   });
 
   useEffect(() => {
@@ -56,6 +95,45 @@ export default function BulkMealsAddons() {
       ? selectedAddOns.filter(id => id !== addonId)
       : [...selectedAddOns, addonId];
     saveAddons(newAddons);
+    
+    // Reset quantity when unselecting serving spoons
+    if (addonId === 'serving_spoons' && !newAddons.includes('serving_spoons')) {
+      setServingSpoonQuantity(0);
+      localStorage.removeItem(`${BULK_MEALS_ADDONS_KEY}_serving_spoon_qty`);
+    }
+  };
+
+  const updateServingSpoonQuantity = (quantity: number) => {
+    setServingSpoonQuantity(quantity);
+    localStorage.setItem(`${BULK_MEALS_ADDONS_KEY}_serving_spoon_qty`, quantity.toString());
+    // Auto-select if quantity > 0
+    if (quantity > 0 && !selectedAddOns.includes('serving_spoons')) {
+      saveAddons([...selectedAddOns, 'serving_spoons']);
+    } else if (quantity === 0 && selectedAddOns.includes('serving_spoons')) {
+      saveAddons(selectedAddOns.filter(id => id !== 'serving_spoons'));
+    }
+  };
+
+  const updatePlateQuantity = (quantity: number) => {
+    setPlateQuantity(quantity);
+    localStorage.setItem(`${BULK_MEALS_ADDONS_KEY}_plate_qty`, quantity.toString());
+    // Auto-select if quantity > 0
+    if (quantity > 0 && !selectedAddOns.includes('plates')) {
+      saveAddons([...selectedAddOns, 'plates']);
+    } else if (quantity === 0 && selectedAddOns.includes('plates')) {
+      saveAddons(selectedAddOns.filter(id => id !== 'plates'));
+    }
+  };
+
+  const updateWaterBottleQuantity = (quantity: number) => {
+    setWaterBottleQuantity(quantity);
+    localStorage.setItem(`${BULK_MEALS_ADDONS_KEY}_water_bottle_qty`, quantity.toString());
+    // Auto-select if quantity > 0
+    if (quantity > 0 && !selectedAddOns.includes('water_bottles')) {
+      saveAddons([...selectedAddOns, 'water_bottles']);
+    } else if (quantity === 0 && selectedAddOns.includes('water_bottles')) {
+      saveAddons(selectedAddOns.filter(id => id !== 'water_bottles'));
+    }
   };
 
   const totalServings = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -88,12 +166,12 @@ export default function BulkMealsAddons() {
         </div>
 
         {/* Header with Skip Button */}
-        <div className="flex items-start justify-between mb-6">
+        <div className="flex items-start justify-between mb-8">
           <div>
-            <h2 className="text-xl sm:text-2xl font-bold mb-2" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+            <h2 className="text-xl sm:text-2xl font-bold mb-1" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
               Select Add-Ons
             </h2>
-            <p className="text-sm text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
+            <p className="text-sm text-gray-600 mt-0.5" style={{ fontFamily: "Sweet Sans Pro" }}>
               For {totalServings} serves from Bulk Meals
             </p>
           </div>
@@ -108,185 +186,210 @@ export default function BulkMealsAddons() {
           </Button>
         </div>
 
-        {/* Add-Ons List */}
-        <div className="space-y-4 mb-6">
-          {/* Live Cooking Counters */}
+        {/* Add-Ons List - Cutlery */}
+        <div className="space-y-4 mb-8">
+          {/* Serving Spoons - ₹20 per piece */}
           <div 
-            className="flex items-start gap-4 p-4 border-2 rounded-lg"
+            className="flex items-center gap-3 p-4 border-2 rounded-lg"
             style={{ 
-              borderColor: selectedAddOns.includes('cooking') ? "#1A9952" : "#E5E7EB",
-              backgroundColor: selectedAddOns.includes('cooking') ? "#F0F9F4" : "white"
+              borderColor: servingSpoonQuantity > 0 ? "#1A9952" : "#E5E7EB",
+              backgroundColor: servingSpoonQuantity > 0 ? "#F0F9F4" : "white"
             }}
           >
-            <img src={chefHatIcon} alt="Chef" className="w-12 h-12 object-contain flex-shrink-0" />
-            <div className="flex-1">
-              <h3 className="font-semibold text-base mb-1" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                Live Cooking Counters
-              </h3>
-              <p className="text-xs text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
-                Professional chefs prepare food live at your event location, offering a unique culinary experience.
-              </p>
+            <img src={servingSpoonIcon} alt="Serving Spoons" className="w-12 h-12 object-contain flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-semibold text-base flex-1" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                  Serving Spoons
+                </h3>
+                <span className="text-sm font-semibold ml-4 flex-shrink-0" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                  ₹20/piece
+                </span>
+              </div>
+              <div className="flex items-center gap-2 mt-2">
+                <button
+                  onClick={() => updateServingSpoonQuantity(Math.max(0, servingSpoonQuantity - 1))}
+                  className="w-8 h-8 rounded border-2 flex items-center justify-center"
+                  style={{
+                    borderColor: "#1A9952",
+                    backgroundColor: servingSpoonQuantity > 0 ? "#1A9952" : "white"
+                  }}
+                  disabled={servingSpoonQuantity === 0}
+                >
+                  <Minus className={`w-4 h-4 ${servingSpoonQuantity > 0 ? "text-white" : "text-gray-400"}`} />
+                </button>
+                <span className="text-base font-semibold min-w-[2rem] text-center" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                  {servingSpoonQuantity}
+                </span>
+                <button
+                  onClick={() => updateServingSpoonQuantity(servingSpoonQuantity + 1)}
+                  className="w-8 h-8 rounded border-2 flex items-center justify-center"
+                  style={{
+                    borderColor: "#1A9952",
+                    backgroundColor: "#1A9952"
+                  }}
+                >
+                  <Plus className="w-4 h-4 text-white" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Spoons & Forks - Free */}
+          <div 
+            className="flex items-center gap-3 p-4 border-2 rounded-lg"
+            style={{ 
+              borderColor: selectedAddOns.includes('spoons_forks') ? "#1A9952" : "#E5E7EB",
+              backgroundColor: selectedAddOns.includes('spoons_forks') ? "#F0F9F4" : "white"
+            }}
+          >
+            <img src={spoonForkIcon} alt="Spoons & Forks" className="w-12 h-12 object-contain flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-base flex-1" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                  Spoons & Forks
+                </h3>
+                <span className="text-sm font-semibold text-green-600 ml-4 flex-shrink-0" style={{ fontFamily: "Sweet Sans Pro" }}>
+                  Free
+                </span>
+              </div>
             </div>
             <button
-              onClick={() => toggleAddon('cooking')}
+              onClick={() => toggleAddon('spoons_forks')}
               className="w-6 h-6 rounded border-2 flex items-center justify-center flex-shrink-0"
               style={{
                 borderColor: "#1A9952",
-                backgroundColor: selectedAddOns.includes('cooking') ? "#1A9952" : "white"
+                backgroundColor: selectedAddOns.includes('spoons_forks') ? "#1A9952" : "white"
               }}
-              data-testid="addon-cooking"
+              data-testid="addon-spoons-forks"
             >
-              {selectedAddOns.includes('cooking') && <Check className="w-4 h-4 text-white" />}
+              {selectedAddOns.includes('spoons_forks') && <Check className="w-4 h-4 text-white" />}
             </button>
           </div>
 
-          {/* Serving Staff */}
+          {/* Plates - ₹10 per piece */}
           <div 
-            className="flex items-start gap-4 p-4 border-2 rounded-lg"
+            className="flex items-center gap-3 p-4 border-2 rounded-lg"
             style={{ 
-              borderColor: selectedAddOns.includes('staff') ? "#1A9952" : "#E5E7EB",
-              backgroundColor: selectedAddOns.includes('staff') ? "#F0F9F4" : "white"
+              borderColor: plateQuantity > 0 ? "#1A9952" : "#E5E7EB",
+              backgroundColor: plateQuantity > 0 ? "#F0F9F4" : "white"
             }}
           >
-            <img src={servingStaffIcon} alt="Staff" className="w-12 h-12 object-contain flex-shrink-0" />
-            <div className="flex-1">
-              <h3 className="font-semibold text-base mb-1" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                Serving Staff
-              </h3>
-              <p className="text-xs text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
-                Professional serving staff to help set up, serve, and manage your food during the event.
-              </p>
+            <img src={plateIcon} alt="Plates" className="w-12 h-12 object-contain flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-semibold text-base flex-1" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                  Plates
+                </h3>
+                <span className="text-sm font-semibold ml-4 flex-shrink-0" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                  ₹10/piece
+                </span>
+              </div>
+              <div className="flex items-center gap-2 mt-2">
+                <button
+                  onClick={() => updatePlateQuantity(Math.max(0, plateQuantity - 1))}
+                  className="w-8 h-8 rounded border-2 flex items-center justify-center"
+                  style={{
+                    borderColor: "#1A9952",
+                    backgroundColor: plateQuantity > 0 ? "#1A9952" : "white"
+                  }}
+                  disabled={plateQuantity === 0}
+                >
+                  <Minus className={`w-4 h-4 ${plateQuantity > 0 ? "text-white" : "text-gray-400"}`} />
+                </button>
+                <span className="text-base font-semibold min-w-[2rem] text-center" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                  {plateQuantity}
+                </span>
+                <button
+                  onClick={() => updatePlateQuantity(plateQuantity + 1)}
+                  className="w-8 h-8 rounded border-2 flex items-center justify-center"
+                  style={{
+                    borderColor: "#1A9952",
+                    backgroundColor: "#1A9952"
+                  }}
+                >
+                  <Plus className="w-4 h-4 text-white" />
+                </button>
+              </div>
             </div>
-            <button
-              onClick={() => toggleAddon('staff')}
-              className="w-6 h-6 rounded border-2 flex items-center justify-center flex-shrink-0"
-              style={{
-                borderColor: "#1A9952",
-                backgroundColor: selectedAddOns.includes('staff') ? "#1A9952" : "white"
-              }}
-              data-testid="addon-staff"
-            >
-              {selectedAddOns.includes('staff') && <Check className="w-4 h-4 text-white" />}
-            </button>
           </div>
 
-          {/* Decor */}
+          {/* Water Bottles - ₹10 per piece */}
           <div 
-            className="flex items-start gap-4 p-4 border-2 rounded-lg"
+            className="flex items-center gap-3 p-4 border-2 rounded-lg"
             style={{ 
-              borderColor: selectedAddOns.includes('decor') ? "#1A9952" : "#E5E7EB",
-              backgroundColor: selectedAddOns.includes('decor') ? "#F0F9F4" : "white"
+              borderColor: waterBottleQuantity > 0 ? "#1A9952" : "#E5E7EB",
+              backgroundColor: waterBottleQuantity > 0 ? "#F0F9F4" : "white"
             }}
           >
-            <img src={decorIcon} alt="Decor" className="w-12 h-12 object-contain flex-shrink-0" />
-            <div className="flex-1">
-              <h3 className="font-semibold text-base mb-1" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                Decor
-              </h3>
-              <p className="text-xs text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
-                Transform your event space with professional theme-based decoration.
-              </p>
+            <img src={waterBottleIcon} alt="Water Bottles" className="w-12 h-12 object-contain flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-semibold text-base flex-1" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                  Water Bottles
+                </h3>
+                <span className="text-sm font-semibold ml-4 flex-shrink-0" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                  ₹10/piece
+                </span>
+              </div>
+              <div className="flex items-center gap-2 mt-2">
+                <button
+                  onClick={() => updateWaterBottleQuantity(Math.max(0, waterBottleQuantity - 1))}
+                  className="w-8 h-8 rounded border-2 flex items-center justify-center"
+                  style={{
+                    borderColor: "#1A9952",
+                    backgroundColor: waterBottleQuantity > 0 ? "#1A9952" : "white"
+                  }}
+                  disabled={waterBottleQuantity === 0}
+                >
+                  <Minus className={`w-4 h-4 ${waterBottleQuantity > 0 ? "text-white" : "text-gray-400"}`} />
+                </button>
+                <span className="text-base font-semibold min-w-[2rem] text-center" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                  {waterBottleQuantity}
+                </span>
+                <button
+                  onClick={() => updateWaterBottleQuantity(waterBottleQuantity + 1)}
+                  className="w-8 h-8 rounded border-2 flex items-center justify-center"
+                  style={{
+                    borderColor: "#1A9952",
+                    backgroundColor: "#1A9952"
+                  }}
+                >
+                  <Plus className="w-4 h-4 text-white" />
+                </button>
+              </div>
             </div>
-            <button
-              onClick={() => toggleAddon('decor')}
-              className="w-6 h-6 rounded border-2 flex items-center justify-center flex-shrink-0"
-              style={{
-                borderColor: "#1A9952",
-                backgroundColor: selectedAddOns.includes('decor') ? "#1A9952" : "white"
-              }}
-              data-testid="addon-decor"
-            >
-              {selectedAddOns.includes('decor') && <Check className="w-4 h-4 text-white" />}
-            </button>
           </div>
 
-          {/* Tableware & Crockery */}
+          {/* Tissues - Free */}
           <div 
-            className="flex items-start gap-4 p-4 border-2 rounded-lg"
+            className="flex items-center gap-3 p-4 border-2 rounded-lg"
             style={{ 
-              borderColor: selectedAddOns.includes('tableware') ? "#1A9952" : "#E5E7EB",
-              backgroundColor: selectedAddOns.includes('tableware') ? "#F0F9F4" : "white"
+              borderColor: selectedAddOns.includes('tissues') ? "#1A9952" : "#E5E7EB",
+              backgroundColor: selectedAddOns.includes('tissues') ? "#F0F9F4" : "white"
             }}
           >
-            <img src={tablewareIcon} alt="Tableware" className="w-12 h-12 object-contain flex-shrink-0" />
-            <div className="flex-1">
-              <h3 className="font-semibold text-base mb-1" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                Tableware & Crockery
-              </h3>
-              <p className="text-xs text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
-                Premium biodegradable tableware and cutlery for a sustainable event.
-              </p>
+            <img src={tissueIcon} alt="Tissues" className="w-12 h-12 object-contain flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-base flex-1" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
+                  Tissues
+                </h3>
+                <span className="text-sm font-semibold text-green-600 ml-4 flex-shrink-0" style={{ fontFamily: "Sweet Sans Pro" }}>
+                  Free
+                </span>
+              </div>
             </div>
             <button
-              onClick={() => toggleAddon('tableware')}
+              onClick={() => toggleAddon('tissues')}
               className="w-6 h-6 rounded border-2 flex items-center justify-center flex-shrink-0"
               style={{
                 borderColor: "#1A9952",
-                backgroundColor: selectedAddOns.includes('tableware') ? "#1A9952" : "white"
+                backgroundColor: selectedAddOns.includes('tissues') ? "#1A9952" : "white"
               }}
-              data-testid="addon-tableware"
+              data-testid="addon-tissues"
             >
-              {selectedAddOns.includes('tableware') && <Check className="w-4 h-4 text-white" />}
-            </button>
-          </div>
-
-          {/* Live Music */}
-          <div 
-            className="flex items-start gap-4 p-4 border-2 rounded-lg"
-            style={{ 
-              borderColor: selectedAddOns.includes('music') ? "#1A9952" : "#E5E7EB",
-              backgroundColor: selectedAddOns.includes('music') ? "#F0F9F4" : "white"
-            }}
-          >
-            <img src={musicIcon} alt="Music" className="w-12 h-12 object-contain flex-shrink-0" />
-            <div className="flex-1">
-              <h3 className="font-semibold text-base mb-1" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                Live Music
-              </h3>
-              <p className="text-xs text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
-                Music performance that entertains your guests.
-              </p>
-            </div>
-            <button
-              onClick={() => toggleAddon('music')}
-              className="w-6 h-6 rounded border-2 flex items-center justify-center flex-shrink-0"
-              style={{
-                borderColor: "#1A9952",
-                backgroundColor: selectedAddOns.includes('music') ? "#1A9952" : "white"
-              }}
-              data-testid="addon-music"
-            >
-              {selectedAddOns.includes('music') && <Check className="w-4 h-4 text-white" />}
-            </button>
-          </div>
-
-          {/* Photography */}
-          <div 
-            className="flex items-start gap-4 p-4 border-2 rounded-lg"
-            style={{ 
-              borderColor: selectedAddOns.includes('photography') ? "#1A9952" : "#E5E7EB",
-              backgroundColor: selectedAddOns.includes('photography') ? "#F0F9F4" : "white"
-            }}
-          >
-            <img src={cameraIcon} alt="Photography" className="w-12 h-12 object-contain flex-shrink-0" />
-            <div className="flex-1">
-              <h3 className="font-semibold text-base mb-1" style={{ fontFamily: "Sweet Sans Pro", color: "#06352A" }}>
-                Photography
-              </h3>
-              <p className="text-xs text-gray-600" style={{ fontFamily: "Sweet Sans Pro" }}>
-                Professional photography to capture memories.
-              </p>
-            </div>
-            <button
-              onClick={() => toggleAddon('photography')}
-              className="w-6 h-6 rounded border-2 flex items-center justify-center flex-shrink-0"
-              style={{
-                borderColor: "#1A9952",
-                backgroundColor: selectedAddOns.includes('photography') ? "#1A9952" : "white"
-              }}
-              data-testid="addon-photography"
-            >
-              {selectedAddOns.includes('photography') && <Check className="w-4 h-4 text-white" />}
+              {selectedAddOns.includes('tissues') && <Check className="w-4 h-4 text-white" />}
             </button>
           </div>
         </div>
@@ -294,7 +397,7 @@ export default function BulkMealsAddons() {
         {/* Enter Delivery Details Button */}
         <Button
           onClick={() => setLocation("/bulk-meals-delivery")}
-          className="w-full py-6 text-lg font-semibold border-0"
+          className="w-full py-6 text-lg font-semibold border-0 mt-6"
           style={{ 
             fontFamily: "Sweet Sans Pro",
             backgroundColor: "#1A9952",

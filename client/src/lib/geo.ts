@@ -1,6 +1,18 @@
 import { getCurrentPosition } from './locationPermission';
 
-export const EXPLORE_MENU_CENTER = {
+// 60-minute delivery service area coordinates
+// Each coordinate represents a service center with a 5km radius
+// TODO: Add more coordinates as service areas expand
+export const SIXTY_MIN_SERVICE_COORDINATES: Array<{ lat: number; lng: number }> = [
+  // Sample coordinate - replace with actual coordinates
+  { lat: 12.850257, lng: 77.650970 },
+  // Add more coordinates here as needed:
+  // { lat: 12.XXXXX, lng: 77.XXXXX },
+  // { lat: 12.XXXXX, lng: 77.XXXXX },
+];
+
+// Legacy single coordinate (kept for backward compatibility)
+export const EXPLORE_MENU_CENTER = SIXTY_MIN_SERVICE_COORDINATES[0] || {
   lat: 12.850257,
   lng: 77.650970,
 };
@@ -30,14 +42,52 @@ function toRad(deg: number): number {
   return deg * (Math.PI / 180);
 }
 
+/**
+ * Check if a location is within 5km radius of any 60-minute service coordinate
+ * @param lat Latitude of the location to check
+ * @param lng Longitude of the location to check
+ * @returns true if within 5km of any service coordinate, false otherwise
+ */
 export function isWithinExploreMenuRadius(lat: number, lng: number): boolean {
-  const distance = haversineDistance(
-    lat,
-    lng,
-    EXPLORE_MENU_CENTER.lat,
-    EXPLORE_MENU_CENTER.lng
-  );
-  return distance <= EXPLORE_MENU_RADIUS_KM;
+  // Check against all service coordinates
+  for (const center of SIXTY_MIN_SERVICE_COORDINATES) {
+    const distance = haversineDistance(
+      lat,
+      lng,
+      center.lat,
+      center.lng
+    );
+    if (distance <= EXPLORE_MENU_RADIUS_KM) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Get the minimum distance from a location to any 60-minute service coordinate
+ * @param lat Latitude of the location to check
+ * @param lng Longitude of the location to check
+ * @returns Minimum distance in kilometers
+ */
+export function getMinDistanceToServiceArea(lat: number, lng: number): number {
+  if (SIXTY_MIN_SERVICE_COORDINATES.length === 0) {
+    return Infinity;
+  }
+  
+  let minDistance = Infinity;
+  for (const center of SIXTY_MIN_SERVICE_COORDINATES) {
+    const distance = haversineDistance(
+      lat,
+      lng,
+      center.lat,
+      center.lng
+    );
+    if (distance < minDistance) {
+      minDistance = distance;
+    }
+  }
+  return minDistance;
 }
 
 export type GeoStatus = 
@@ -70,7 +120,12 @@ function getSavedAddressData(): SavedLocation | null {
   return null;
 }
 
-async function geocodeAddress(address: string): Promise<{ lat: number; lng: number } | null> {
+/**
+ * Geocode an address string to get latitude and longitude coordinates
+ * @param address The address string to geocode
+ * @returns Coordinates object with lat and lng, or null if geocoding fails
+ */
+export async function geocodeAddress(address: string): Promise<{ lat: number; lng: number } | null> {
   // Try multiple search strategies
   const searchQueries = [
     address,
@@ -153,14 +208,9 @@ export async function checkExploreMenuAccess(): Promise<{
 
   if (result.success && result.position) {
     const { latitude, longitude } = result.position.coords;
-    const distance = haversineDistance(
-      latitude,
-      longitude,
-      EXPLORE_MENU_CENTER.lat,
-      EXPLORE_MENU_CENTER.lng
-    );
+    const distance = getMinDistanceToServiceArea(latitude, longitude);
     
-    console.log('Checking browser geolocation:', { latitude, longitude }, 'Distance:', distance);
+    console.log('Checking browser geolocation:', { latitude, longitude }, 'Min distance:', distance);
     
     if (distance <= EXPLORE_MENU_RADIUS_KM) {
       return { status: 'in-range', distance };

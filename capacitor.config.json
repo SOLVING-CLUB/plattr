@@ -4,6 +4,10 @@
   "webDir": "dist/public",
   "server": {
     "androidScheme": "https"
+  },
+  "ios": {
+    "contentInset": "automatic",
+    "scrollEnabled": true
   }
 }
 

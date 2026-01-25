@@ -207,7 +207,7 @@ export default function VerificationScreen() {
       }}
     >
       {/* Main Content */}
-      <div className="flex-1 px-4 sm:px-6 overflow-y-auto" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 48px)' }}>
+      <div className="flex-1 px-4 sm:px-6 overflow-y-auto" style={{ paddingTop: '48px' }}>
         {/* Logo */}
         <div className="mb-4 sm:mb-6" style={{ marginBottom: "20px", }}>
           <img

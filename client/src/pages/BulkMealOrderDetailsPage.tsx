@@ -10,6 +10,7 @@ import { bulkMealOrderService, sixtyMinBulkOrderService, paymentService } from "
 import { useGoBack } from "@/hooks/useGoBack";
 import { useToast } from "@/hooks/use-toast";
 import { getApiUrl } from "@/config/api";
+import { openRazorpayModal } from "@/lib/payment-utils";
 
 declare global {
   interface Window {
@@ -66,6 +67,7 @@ export default function BulkMealOrderDetailsPage() {
   const [razorpayKeyId, setRazorpayKeyId] = useState<string | null>(null);
   const [processingPayment, setProcessingPayment] = useState<string | null>(null); // Stores the stage key being paid
   const [paidStages, setPaidStages] = useState<string[]>(['initial']); // Track which stages are paid
+  
   
   // Load Razorpay script
   useEffect(() => {
@@ -134,8 +136,8 @@ export default function BulkMealOrderDetailsPage() {
 
     const total = parseFloat(order.total?.toString() || '0');
     
-    // Case 4: If total <= ₹700, full payment was made - no schedule needed
-    if (total <= 700) {
+    // Case 4: If total <= ₹1000, full payment was made - no schedule needed
+    if (total <= 1000) {
       return [
         {
           key: 'full',
@@ -278,109 +280,17 @@ export default function BulkMealOrderDetailsPage() {
       const orderData = await createOrderResponse.json();
       const razorpayOrderId = orderData.orderId;
 
-      // Determine if test payment
-      const isTestPayment = razorpayKeyId?.includes('test') || razorpayKeyId?.includes('rzp_test');
-
-      // Open Razorpay modal
-      const razorpay = new window.Razorpay({
-        key: razorpayKeyId,
-        amount: stage.amount * 100,
-        currency: 'INR',
-        name: 'Plattr',
-        description: `${stage.label} - Order #${order.order_number}`,
-        order_id: razorpayOrderId,
-        handler: async function (response: any) {
-          try {
-            // Verify payment
-            const verifyResponse = await fetch(getApiUrl('/api/payments/verify'), {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              credentials: 'include',
-              body: JSON.stringify({
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-              }),
-            });
-
-            if (!verifyResponse.ok) {
-              throw new Error('Payment verification failed');
-            }
-
-            // Get user ID
-            const userId = localStorage.getItem('userId');
-            if (!userId) {
-              throw new Error('User not authenticated');
-            }
-
-            // Store payment details
-            console.log(`[Payment] Storing ${stage.key} payment details...`);
-            
-            try {
-              await paymentService.addPaymentStage({
-                orderId: order.id,
-                orderType: 'bulk_meal', // TODO: detect if sixty_min_bulk
-                orderNumber: order.order_number,
-                userId: userId,
-                paymentStage: stage.key as 'second' | 'final',
-                amount: stage.amount,
-                razorpayOrderId: response.razorpay_order_id,
-                razorpayPaymentId: response.razorpay_payment_id,
-                razorpaySignature: response.razorpay_signature,
-                razorpayReceipt: razorpayOrderId,
-                paymentStatus: 'success',
-                isTestPayment: isTestPayment,
-                metadata: {
-                  payment_date: new Date().toISOString(),
-                  payment_method: 'razorpay',
-                  stage_label: stage.label,
-                },
-              });
-              console.log(`[Payment] ✓ ${stage.key} payment stored successfully`);
-            } catch (paymentError: any) {
-              console.error(`[Payment] ✗ Error storing ${stage.key} payment:`, paymentError);
-              // Don't throw - payment was successful, just storage failed
-              toast({
-                title: "Payment Record Warning",
-                description: "Payment successful but record failed to save. Support will be notified.",
-                variant: "destructive",
-              });
-            }
-
-            // Update local state
-            setPaidStages(prev => [...prev, stage.key]);
-
-            toast({
-              title: "Payment Successful!",
-              description: `${stage.label} of ₹${stage.amount} has been completed.`,
-            });
-
-          } catch (error: any) {
-            console.error('Payment verification error:', error);
-            toast({
-              title: "Payment Error",
-              description: error.message || "Failed to verify payment. Please contact support.",
-              variant: "destructive",
-            });
-          } finally {
-            setProcessingPayment(null);
-          }
-        },
-        prefill: {
-          contact: localStorage.getItem('phone') || '',
-          email: localStorage.getItem('email') || '',
-        },
-        theme: {
-          color: '#1A9952',
-        },
-        modal: {
-          ondismiss: function() {
-            setProcessingPayment(null);
-          },
-        },
-      });
-
-      razorpay.open();
+      // Use Payment Bottom Sheet instead of Razorpay modal (avoids notch issues)
+      // Store stage info for payment processing
+      setCurrentPaymentStage(stage);
+      setRazorpayOrderIdForSheet(razorpayOrderId);
+      setPaymentAmount(stage.amount);
+      setIsPaymentSheetOpen(true);
+      setProcessingPayment(null);
+      
+      // Using simple Razorpay modal directly
+      // Payment verification will happen in PaymentCallbackPage
+      return; // Exit early - bottom sheet will handle payment
     } catch (error: any) {
       console.error("Error initiating payment:", error);
       toast({
@@ -440,9 +350,22 @@ export default function BulkMealOrderDetailsPage() {
   const paymentSchedule = calculatePaymentSchedule();
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div 
+      className="min-h-screen bg-background pb-24"
+      style={{
+        paddingBottom: '96px',
+        paddingTop: '0'
+      }}
+    >
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-background border-b">
+      <div 
+        className="sticky z-10 bg-background border-b"
+        style={{
+          top: 0,
+          paddingTop: '16px',
+          paddingBottom: '16px'
+        }}
+      >
         <div className="flex items-center gap-4 p-4">
           <Button
             variant="ghost"
@@ -679,6 +602,7 @@ export default function BulkMealOrderDetailsPage() {
           </div>
         </Card>
       </div>
+
     </div>
   );
 }

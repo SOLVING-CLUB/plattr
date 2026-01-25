@@ -40,6 +40,10 @@
   justify-content: center;
   align-items: flex-start;
   padding-top: 80px;
+  /* Ensure overlay respects safe areas */
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .notification-center {
@@ -242,12 +246,14 @@
 @media (max-width: 768px) {
   .notification-center {
     width: 100%;
-    max-height: 100vh;
+    max-height: calc(100vh - env(safe-area-inset-bottom, 0px));
     border-radius: 0;
     padding-top: 0;
+    margin-top: 0;
   }
 
   .notification-overlay {
     padding-top: 0;
+    align-items: flex-start;
   }
 }

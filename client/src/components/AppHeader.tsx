@@ -66,7 +66,10 @@ export default function AppHeader({ onBackClick, onSearch, searchQuery }: AppHea
   }, []);
   
   return (
-    <header className="sticky top-0 z-50 bg-background border-b" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+    <header 
+      className="fixed top-0 left-0 right-0 z-50 bg-background border-b" 
+      style={{ padding: 0, margin: 0 }}
+    >
       <div className="flex items-center gap-2 p-3 max-w-7xl mx-auto">
         {onBackClick && (
           <Button 
